@@ -1,0 +1,15 @@
+@import "tailwindcss";
+
+@theme inline {
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+}
+
+/* Recharts tooltip + cursor tweaks for the dark theme */
+.recharts-default-tooltip {
+  border-radius: 0.5rem !important;
+}
