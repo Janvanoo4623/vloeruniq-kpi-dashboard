@@ -1,0 +1,5 @@
+.data
+.env*
+DEPLOY-VALUES.txt
+config.tsv
+.github
