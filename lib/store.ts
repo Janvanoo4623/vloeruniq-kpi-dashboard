@@ -12,10 +12,15 @@ const KEY_PREFIX = 'vloeruniq:';
 
 type Key = 'token' | 'snapshot' | 'meta' | 'config';
 
+// Support both env-var naming schemes the Vercel Upstash/Redis integrations use.
+function redisEnv(): { url: string; token: string } | null {
+  const url = process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL;
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN;
+  return url && token ? { url, token } : null;
+}
+
 function useRedis(): boolean {
-  return Boolean(
-    process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN,
-  );
+  return redisEnv() !== null;
 }
 
 // ── Upstash backend (lazy) ──────────────────────────────────────────────
@@ -23,7 +28,9 @@ let redisClient: import('@upstash/redis').Redis | null = null;
 async function redis() {
   if (!redisClient) {
     const { Redis } = await import('@upstash/redis');
-    redisClient = Redis.fromEnv();
+    const cfg = redisEnv();
+    if (!cfg) throw new Error('No Upstash/Redis env vars configured.');
+    redisClient = new Redis({ url: cfg.url, token: cfg.token });
   }
   return redisClient;
 }
