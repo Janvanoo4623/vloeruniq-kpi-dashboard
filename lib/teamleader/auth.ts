@@ -6,7 +6,7 @@
 // rotate the token twice and invalidate the one we just stored). All callers
 // funnel through getAccessToken(), which serializes via a single in-flight
 // promise. See docs/ARCHITECTURE.md "THE TOKEN-OWNERSHIP RULE".
-import { store } from '../store';
+import { getToken, setToken } from '../db';
 import type { TokenState } from '../types';
 import { TOKEN_URL } from './constants';
 
@@ -18,7 +18,7 @@ function required(name: string): string {
 
 /** Load the token from the store, seeding from env on first run. */
 async function loadToken(): Promise<TokenState> {
-  const stored = await store.getToken();
+  const stored = await getToken();
   if (stored?.refreshToken) return stored;
 
   const seed = process.env.TEAMLEADER_REFRESH_TOKEN;
@@ -29,7 +29,7 @@ async function loadToken(): Promise<TokenState> {
     );
   }
   const seeded: TokenState = { refreshToken: seed };
-  await store.setToken(seeded);
+  await setToken(seeded);
   return seeded;
 }
 
@@ -60,7 +60,7 @@ async function doRefresh(refreshToken: string): Promise<string> {
   }
 
   const expiresIn = typeof data.expires_in === 'number' ? data.expires_in : 3600;
-  await store.setToken({
+  await setToken({
     refreshToken: data.refresh_token ?? refreshToken, // persist the rotated token NOW
     accessToken: data.access_token,
     accessTokenExpiresAt: Date.now() + expiresIn * 1000,
@@ -98,8 +98,8 @@ export async function invalidateAccessToken(): Promise<void> {
     await inflight.catch(() => {});
     return;
   }
-  const token = await store.getToken();
+  const token = await getToken();
   if (token) {
-    await store.setToken({ ...token, accessToken: undefined, accessTokenExpiresAt: 0 });
+    await setToken({ ...token, accessToken: undefined, accessTokenExpiresAt: 0 });
   }
 }

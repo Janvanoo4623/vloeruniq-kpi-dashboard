@@ -9,7 +9,9 @@
     "lint": "eslint",
     "sync": "tsx scripts/sync.ts",
     "seed:demo": "tsx scripts/seed-demo.ts",
-    "import:config": "tsx scripts/import-config.ts"
+    "import:config": "tsx scripts/import-config.ts",
+    "seed:supabase": "tsx scripts/seed-supabase.ts",
+    "oauth": "tsx scripts/oauth.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.110.2",

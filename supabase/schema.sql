@@ -95,3 +95,11 @@ create table if not exists deals (
   synced_at timestamptz default now()
 );
 create index if not exists deals_date on deals (date_accepted);
+
+-- Cached computed snapshot (single row) for fast dashboard reads.
+create table if not exists snapshot_cache (
+  id int primary key default 1,
+  data jsonb,
+  updated_at timestamptz default now(),
+  constraint snapshot_cache_singleton check (id = 1)
+);

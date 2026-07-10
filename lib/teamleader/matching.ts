@@ -2,24 +2,18 @@
 // and margin computation. Faithful port of the Apps Script's parseQuotation.
 // See docs/DATA-MODEL.md.
 
-import {
-  LABOR_COST_PER_M2,
-  PRIMER_COST_PER_M2,
-  GLUE_COST_PER_M2,
-  LEVELING_COST_PER_M2,
-} from './constants';
 import { dateOnly, deriveDateParts, round } from './dates';
 import { canonicalProduct } from '../format';
 import type { PriceConfig } from './price-map';
-import type { CustomerInfo, QuotationRow, QuotationStatus } from '../types';
+import type { CustomerInfo, QuotationLine, QuotationRow, QuotationStatus } from '../types';
 import type { TLQuotationSummary, TLQuotationDetail } from './tl-types';
 
-/** One matched floor line, used to aggregate top-products. */
-export interface ProductLine {
-  code: string;
-  revenue: number; // ex VAT
-  m2: number;
-  margin: number | null; // null when the product has no configured price
+/** Cost inputs (€/m²) resolved for a quotation's date (date-effective). */
+export interface Costs {
+  labor: number;
+  primer: number;
+  glue: number;
+  leveling: number;
 }
 
 // Description starts with a floor-product type.
@@ -34,7 +28,8 @@ export function parseQuotation(
   detail: TLQuotationDetail | null,
   customerLookup: Record<string, CustomerInfo>,
   priceConfig: PriceConfig,
-): { row: QuotationRow; lines: ProductLine[] } {
+  costs: Costs,
+): QuotationRow {
   const status = summary.status as QuotationStatus;
   const totalExcl = summary.total?.tax_exclusive?.amount ?? 0;
   const totalIncl = summary.total?.tax_inclusive?.amount ?? 0;
@@ -62,7 +57,7 @@ export function parseQuotation(
   let m2WithMatch = 0;
   let hasMatch = false;
   const products: string[] = []; // matched floor products (P-numbers / names), distinct
-  const lines: ProductLine[] = []; // per-product line stats for top-products aggregation
+  const lines: QuotationLine[] = []; // per-product line stats for top-products aggregation
 
   for (const group of detail?.grouped_lines ?? []) {
     for (const item of group.line_items ?? []) {
@@ -110,10 +105,10 @@ export function parseQuotation(
         let materialCostPerM2 = matchedPrice;
         if (desc.includes('lijmen')) {
           // Glued PVC: purchase + primer + glue + leveling.
-          materialCostPerM2 += PRIMER_COST_PER_M2 + GLUE_COST_PER_M2 + LEVELING_COST_PER_M2;
+          materialCostPerM2 += costs.primer + costs.glue + costs.leveling;
         }
         // Click PVC: material is just the purchase price.
-        const lineCost = materialCostPerM2 * quantity + LABOR_COST_PER_M2 * quantity;
+        const lineCost = materialCostPerM2 * quantity + costs.labor * quantity;
         totalCost += materialCostPerM2 * quantity;
         m2WithMatch += quantity;
         hasMatch = true;
@@ -133,7 +128,7 @@ export function parseQuotation(
   let verified = false;
 
   if (hasMatch && m2WithMatch > 0) {
-    const laborCost = LABOR_COST_PER_M2 * m2WithMatch;
+    const laborCost = costs.labor * m2WithMatch;
     const finalCost = totalCost + laborCost;
     cost = round(finalCost);
     // Margin is measured against floor revenue only.
@@ -171,7 +166,8 @@ export function parseQuotation(
     matchCoverage,
     verified,
     products,
+    lines,
   };
 
-  return { row, lines };
+  return row;
 }

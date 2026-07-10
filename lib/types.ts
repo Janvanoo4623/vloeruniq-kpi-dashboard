@@ -28,6 +28,15 @@ export interface QuotationRow {
   matchCoverage: number | null; // % of m² that matched a price
   verified: boolean; // 100% coverage and margin present
   products: string[]; // matched floor products (P-numbers / names), distinct, in order
+  lines?: QuotationLine[]; // per-product line stats (populated at sync time, stored in DB)
+}
+
+/** One matched floor line's stats (for top-products aggregation + DB storage). */
+export interface QuotationLine {
+  code: string;
+  revenue: number;
+  m2: number;
+  margin: number | null;
 }
 
 /** One row of the Run Time table (per won deal). */

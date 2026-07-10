@@ -46,12 +46,10 @@ export function resolveCost(
  * from the full effective-dated price rows. Feeds the existing matcher, which
  * stays date-agnostic — we just hand it the right prices for that quotation.
  */
-export interface DatedPriceConfig {
-  pNumbers: Record<string, number>;
-  nameMatches: { name: string; label: string; price: number }[];
-}
-
-export function priceConfigForDate(rows: PriceRow[], date: string): DatedPriceConfig {
+export function priceConfigForDate(
+  rows: PriceRow[],
+  date: string,
+): import('./teamleader/price-map').PriceConfig {
   const codes = new Set(rows.map((r) => r.code));
   const pNumbers: Record<string, number> = {};
   const nameMatches: { name: string; label: string; price: number }[] = [];

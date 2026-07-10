@@ -3,8 +3,15 @@
 import { apiCall, mapLimit } from './client';
 import { dateOnly } from './dates';
 import { parseQuotation } from './matching';
-import { FETCH_CONCURRENCY, PAGE_SIZE } from './constants';
-import type { PriceConfig } from './price-map';
+import {
+  FETCH_CONCURRENCY,
+  PAGE_SIZE,
+  LABOR_COST_PER_M2,
+  PRIMER_COST_PER_M2,
+  GLUE_COST_PER_M2,
+  LEVELING_COST_PER_M2,
+} from './constants';
+import { priceConfigForDate, resolveCost, type PriceRow, type CostRow } from '../pricing';
 import type { CustomerInfo, QuotationRow, QuotationStatus } from '../types';
 import type { TLQuotationSummary, TLQuotationDetail } from './tl-types';
 
@@ -61,11 +68,16 @@ async function fetchQuotationDetail(id: string): Promise<TLQuotationDetail | nul
   return resp.data ?? null;
 }
 
-/** Fetch all relevant quotations; return rows + flat product lines for aggregation. */
+/**
+ * Fetch all relevant quotations; return rows + flat product lines. Prices/costs
+ * are resolved per quotation's date (date-effective), so a price edit never
+ * changes older quotations. See lib/pricing.ts.
+ */
 export async function fetchQuotations(
   cutoff: string,
   customerLookup: Record<string, CustomerInfo>,
-  priceConfig: PriceConfig,
+  priceRows: PriceRow[],
+  costRows: CostRow[],
 ): Promise<{ rows: QuotationRow[]; productLines: AggLine[] }> {
   const summaries: TLQuotationSummary[] = [
     ...(await fetchQuotationsByStatus('accepted', cutoff, true)),
@@ -73,10 +85,20 @@ export async function fetchQuotations(
     ...(await fetchQuotationsByStatus('refused', cutoff, true)),
   ];
 
+  const today = new Date().toISOString().split('T')[0];
+
   const results = await mapLimit(summaries, FETCH_CONCURRENCY, async (q) => {
     try {
       const detail = await fetchQuotationDetail(q.id);
-      return parseQuotation(q, detail, customerLookup, priceConfig);
+      const date = dateOnly(q.created_at) || dateOnly(q.updated_at) || today;
+      const priceConfig = priceConfigForDate(priceRows, date);
+      const costs = {
+        labor: resolveCost(costRows, 'labor', date, LABOR_COST_PER_M2),
+        primer: resolveCost(costRows, 'primer', date, PRIMER_COST_PER_M2),
+        glue: resolveCost(costRows, 'glue', date, GLUE_COST_PER_M2),
+        leveling: resolveCost(costRows, 'leveling', date, LEVELING_COST_PER_M2),
+      };
+      return parseQuotation(q, detail, customerLookup, priceConfig, costs);
     } catch {
       // Mirror the script: skip quotations whose detail fetch fails.
       return null;
@@ -85,11 +107,11 @@ export async function fetchQuotations(
 
   const rows: QuotationRow[] = [];
   const productLines: AggLine[] = [];
-  for (const r of results) {
-    if (!r) continue;
-    rows.push(r.row);
-    for (const l of r.lines) {
-      productLines.push({ ...l, status: r.row.status, quotationId: r.row.id });
+  for (const row of results) {
+    if (!row) continue;
+    rows.push(row);
+    for (const l of row.lines ?? []) {
+      productLines.push({ ...l, status: row.status, quotationId: row.id });
     }
   }
 
