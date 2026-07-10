@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import type { Snapshot, SyncMeta } from '@/lib/types';
 import { weeklySeries } from '@/lib/series';
 import {
@@ -96,6 +97,13 @@ export default function Dashboard({
             <span className={refreshing ? 'animate-spin' : ''}>↻</span>
             {refreshing ? 'Bezig…' : 'Vernieuwen'}
           </button>
+          <Link
+            href="/instellingen"
+            title="Instellingen"
+            className="rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-600 transition hover:text-neutral-900"
+          >
+            ⚙
+          </Link>
           <button
             onClick={logout}
             className="rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-600 transition hover:text-neutral-900"

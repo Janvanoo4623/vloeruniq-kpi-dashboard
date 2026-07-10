@@ -10,6 +10,24 @@ import type {
   TokenState,
 } from './types';
 
+const today = () => new Date().toISOString().split('T')[0];
+
+export interface CurrentPrice {
+  code: string;
+  price: number;
+  effectiveFrom: string;
+}
+export interface CurrentCost {
+  key: string;
+  value: number;
+  effectiveFrom: string;
+}
+export interface Exclusion {
+  id: string;
+  reason: string | null;
+  createdAt: string;
+}
+
 const num = (v: unknown): number => (v == null ? 0 : Number(v));
 const numOrNull = (v: unknown): number | null => (v == null ? null : Number(v));
 
@@ -156,6 +174,78 @@ export async function setSnapshot(snapshot: Snapshot): Promise<void> {
     .from('snapshot_cache')
     .upsert({ id: 1, data: snapshot, updated_at: new Date().toISOString() });
   if (error) throw new Error(`db.setSnapshot: ${error.message}`);
+}
+
+// ── Settings: current prices / costs (date-effective) ───────────────────
+/** Current effective price per product code (as of today). */
+export async function getCurrentPrices(): Promise<CurrentPrice[]> {
+  const rows = await getPriceRows();
+  const d = today();
+  const byCode = new Map<string, { price: number; effectiveFrom: string }>();
+  for (const r of rows) {
+    if (r.effectiveFrom > d) continue; // not yet effective
+    const cur = byCode.get(r.code);
+    if (!cur || r.effectiveFrom > cur.effectiveFrom) {
+      byCode.set(r.code, { price: r.price, effectiveFrom: r.effectiveFrom });
+    }
+  }
+  return [...byCode.entries()]
+    .map(([code, v]) => ({ code, price: v.price, effectiveFrom: v.effectiveFrom }))
+    .sort((a, b) => a.code.localeCompare(b.code));
+}
+
+/** Insert a new effective-dated price (default: effective today). */
+export async function addPrice(code: string, price: number, effectiveFrom?: string): Promise<void> {
+  const { error } = await supabase()
+    .from('product_prices')
+    .insert({ code: code.trim(), price, effective_from: effectiveFrom ?? today() });
+  if (error) throw new Error(`db.addPrice: ${error.message}`);
+}
+
+/** Current effective cost per key (labor/primer/glue/leveling). */
+export async function getCurrentCosts(): Promise<CurrentCost[]> {
+  const rows = await getCostRows();
+  const d = today();
+  const byKey = new Map<string, { value: number; effectiveFrom: string }>();
+  for (const r of rows) {
+    if (r.effectiveFrom > d) continue;
+    const cur = byKey.get(r.key);
+    if (!cur || r.effectiveFrom > cur.effectiveFrom) {
+      byKey.set(r.key, { value: r.value, effectiveFrom: r.effectiveFrom });
+    }
+  }
+  return [...byKey.entries()]
+    .map(([key, v]) => ({ key, value: v.value, effectiveFrom: v.effectiveFrom }))
+    .sort((a, b) => a.key.localeCompare(b.key));
+}
+
+export async function addCost(key: string, value: number, effectiveFrom?: string): Promise<void> {
+  const { error } = await supabase()
+    .from('cost_settings')
+    .insert({ key: key.trim(), value, effective_from: effectiveFrom ?? today() });
+  if (error) throw new Error(`db.addCost: ${error.message}`);
+}
+
+// ── Settings: exclusions ────────────────────────────────────────────────
+export async function listExclusions(): Promise<Exclusion[]> {
+  const { data, error } = await supabase()
+    .from('excluded_quotations')
+    .select('id, reason, created_at')
+    .order('created_at', { ascending: false });
+  if (error) throw new Error(`db.listExclusions: ${error.message}`);
+  return (data ?? []).map((r) => ({ id: r.id, reason: r.reason, createdAt: r.created_at }));
+}
+
+export async function addExclusion(id: string, reason: string | null): Promise<void> {
+  const { error } = await supabase()
+    .from('excluded_quotations')
+    .upsert({ id: id.trim(), reason: reason?.trim() || null });
+  if (error) throw new Error(`db.addExclusion: ${error.message}`);
+}
+
+export async function removeExclusion(id: string): Promise<void> {
+  const { error } = await supabase().from('excluded_quotations').delete().eq('id', id);
+  if (error) throw new Error(`db.removeExclusion: ${error.message}`);
 }
 
 // Re-export the numeric coercers for callers that read raw rows.
