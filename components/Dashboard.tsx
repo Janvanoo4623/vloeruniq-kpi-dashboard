@@ -23,6 +23,7 @@ import RunTimeTrendChart from './charts/RunTimeTrendChart';
 import CountsByWeekChart from './charts/CountsByWeekChart';
 import LeadSourceDonut from './charts/LeadSourceDonut';
 import RegionList from './charts/RegionList';
+import LeadSourceTable from './LeadSourceTable';
 import TrendsView from './TrendsView';
 
 interface Comparison {
@@ -320,6 +321,12 @@ export default function Dashboard({
             </ChartCard>
             <ChartCard title="Omzet per regio" subtitle="Top plaatsen (geaccepteerd)">
               <RegionList data={snap.regions} />
+            </ChartCard>
+          </div>
+
+          <div className="mt-4">
+            <ChartCard title="Leadbron-kwaliteit" subtitle="Omzet, dealgrootte, marge en doorlooptijd per bron">
+              <LeadSourceTable data={snap.leadSources} />
             </ChartCard>
           </div>
 

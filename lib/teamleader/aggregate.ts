@@ -5,7 +5,7 @@ import { compareWeeksDesc, getISOWeek, round } from './dates';
 import type { AggLine } from './quotations';
 import type {
   InvoicingSummary,
-  LeadSource,
+  LeadSourceStat,
   ProductStat,
   QuotationRow,
   RegionStat,
@@ -86,19 +86,46 @@ export function buildSnapshot(
     if (r.dealId && r.leadSource) dealLeadSource[r.dealId] = r.leadSource;
   }
 
-  const bySource: Record<string, { revenue: number; count: number }> = {};
+  const bySource: Record<string, { revenue: number; count: number; margin: number; marginRev: number }> = {};
   for (const q of quotations) {
     if (q.status !== 'accepted') continue;
     const sources = (dealLeadSource[q.dealId] || 'Onbekend').split(',').map((s) => s.trim());
     for (const src of sources) {
       const name = src || 'Onbekend';
-      const e = (bySource[name] ??= { revenue: 0, count: 0 });
+      const e = (bySource[name] ??= { revenue: 0, count: 0, margin: 0, marginRev: 0 });
       e.revenue += q.revenueExVat;
+      e.count += 1;
+      if (q.margin !== null) {
+        e.margin += q.margin;
+        e.marginRev += q.revenueExVat;
+      }
+    }
+  }
+
+  // Run time per lead source (from won deals).
+  const runBySource: Record<string, { days: number; count: number }> = {};
+  for (const r of runTimeRows) {
+    if (!r.leadSource) continue;
+    for (const src of r.leadSource.split(',').map((s) => s.trim())) {
+      const name = src || 'Onbekend';
+      const e = (runBySource[name] ??= { days: 0, count: 0 });
+      e.days += r.runTimeDays;
       e.count += 1;
     }
   }
-  const leadSources: LeadSource[] = Object.entries(bySource)
-    .map(([name, d]) => ({ name, revenue: round(d.revenue), count: d.count }))
+
+  const leadSources: LeadSourceStat[] = Object.entries(bySource)
+    .map(([name, d]) => {
+      const rt = runBySource[name];
+      return {
+        name,
+        revenue: round(d.revenue),
+        count: d.count,
+        marginPct: d.marginRev > 0 ? round((d.margin / d.marginRev) * 100, 1) : null,
+        avgDealSize: d.count > 0 ? round(d.revenue / d.count) : 0,
+        avgRunTimeDays: rt && rt.count > 0 ? round(rt.days / rt.count, 1) : null,
+      };
+    })
     .sort((a, b) => b.revenue - a.revenue);
 
   // ── Revenue per region (accepted, by customer city) ─────────────────

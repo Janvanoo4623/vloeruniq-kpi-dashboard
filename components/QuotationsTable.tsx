@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { Fragment, useMemo, useState } from 'react';
 import type { QuotationRow, QuotationStatus } from '@/lib/types';
 import { formatEuro, formatNumber, formatPercent, formatProduct } from '@/lib/format';
 
@@ -27,6 +27,7 @@ export default function QuotationsTable({ rows }: { rows: QuotationRow[] }) {
   const [sortKey, setSortKey] = useState<SortKey>('date');
   const [asc, setAsc] = useState(false);
   const [query, setQuery] = useState('');
+  const [expanded, setExpanded] = useState<string | null>(null);
 
   const filtered = useMemo(() => {
     let r = rows;
@@ -129,7 +130,11 @@ export default function QuotationsTable({ rows }: { rows: QuotationRow[] }) {
           </thead>
           <tbody className="divide-y divide-neutral-100">
             {filtered.map((q) => (
-              <tr key={q.id} className="hover:bg-neutral-50">
+              <Fragment key={q.id}>
+              <tr
+                onClick={() => setExpanded((e) => (e === q.id ? null : q.id))}
+                className="cursor-pointer hover:bg-neutral-50"
+              >
                 <td className="whitespace-nowrap px-3 py-2 text-neutral-500 tabular-nums">
                   {rowDate(q)}
                 </td>
@@ -172,6 +177,14 @@ export default function QuotationsTable({ rows }: { rows: QuotationRow[] }) {
                   )}
                 </td>
               </tr>
+              {expanded === q.id && (
+                <tr className="bg-neutral-50/60">
+                  <td colSpan={9} className="px-4 py-3">
+                    <QuotationDetail q={q} />
+                  </td>
+                </tr>
+              )}
+              </Fragment>
             ))}
             {filtered.length === 0 && (
               <tr>
@@ -211,6 +224,51 @@ function Th({
 function marginColor(margin: number | null): string {
   if (margin == null) return 'text-neutral-400';
   return margin >= 0 ? 'text-neutral-800' : 'text-rose-600';
+}
+
+function QuotationDetail({ q }: { q: QuotationRow }) {
+  const lines = q.lines ?? [];
+  return (
+    <div>
+      <div className="mb-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-neutral-500">
+        <span>Vloeromzet: <strong className="text-neutral-700">{formatEuro(q.omzetVloer, true)}</strong></span>
+        <span>M²: <strong className="text-neutral-700">{formatNumber(q.totalM2)}</strong></span>
+        <span>Prijs/m²: <strong className="text-neutral-700">{formatEuro(q.prijsPerM2, true)}</strong></span>
+        <span>Kostprijs: <strong className="text-neutral-700">{formatEuro(q.cost, true)}</strong></span>
+        <span>Dekking: <strong className="text-neutral-700">{formatPercent(q.matchCoverage)}</strong></span>
+      </div>
+      {lines.length > 0 ? (
+        <table className="w-full text-xs">
+          <thead className="text-neutral-400">
+            <tr>
+              <th className="py-1 text-left font-medium">Product</th>
+              <th className="py-1 text-right font-medium">M²</th>
+              <th className="py-1 text-right font-medium">Omzet</th>
+              <th className="py-1 text-right font-medium">Marge</th>
+            </tr>
+          </thead>
+          <tbody>
+            {lines.map((l, i) => (
+              <tr key={i} className="border-t border-neutral-100">
+                <td className="py-1">
+                  <span className="rounded bg-neutral-100 px-1.5 py-0.5 font-medium text-neutral-700">
+                    {formatProduct(l.code)}
+                  </span>
+                </td>
+                <td className="py-1 text-right tabular-nums text-neutral-600">{formatNumber(l.m2)}</td>
+                <td className="py-1 text-right tabular-nums text-neutral-600">{formatEuro(l.revenue, true)}</td>
+                <td className="py-1 text-right tabular-nums text-neutral-600">{formatEuro(l.margin, true)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      ) : (
+        <span className="text-xs text-neutral-400">
+          Geen gematchte vloerregels{q.matchCoverage != null && q.matchCoverage < 100 ? ' — voeg ontbrekende prijzen toe in Instellingen.' : '.'}
+        </span>
+      )}
+    </div>
+  );
 }
 
 function ProductBadges({ products }: { products: string[] }) {

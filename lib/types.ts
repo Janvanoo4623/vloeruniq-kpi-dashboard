@@ -96,6 +96,13 @@ export interface RegionStat {
   count: number;
 }
 
+/** Enriched lead-source stats (accepted revenue + margin + deal size + run time). */
+export interface LeadSourceStat extends LeadSource {
+  marginPct: number | null;
+  avgDealSize: number;
+  avgRunTimeDays: number | null;
+}
+
 /** Aggregated stats per floor product (P-number / name). */
 export interface ProductStat {
   code: string;
@@ -148,7 +155,7 @@ export interface Snapshot {
     totals: { avgRunTimeDays: number; dealsTracked: number };
     byWeek: Record<string, WeekRunTime>;
   };
-  leadSources: LeadSource[];
+  leadSources: LeadSourceStat[];
   regions: RegionStat[];
   topProducts: ProductStat[];
   invoicing: InvoicingSummary;
