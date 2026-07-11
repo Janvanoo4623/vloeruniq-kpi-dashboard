@@ -23,6 +23,7 @@ import RunTimeTrendChart from './charts/RunTimeTrendChart';
 import CountsByWeekChart from './charts/CountsByWeekChart';
 import LeadSourceDonut from './charts/LeadSourceDonut';
 import RegionList from './charts/RegionList';
+import TrendsView from './TrendsView';
 
 interface Comparison {
   from: string;
@@ -55,6 +56,7 @@ export default function Dashboard({
   const [dataLoading, setDataLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [view, setView] = useState<'overzicht' | 'trends'>('overzicht');
 
   const series = useMemo(() => (snap ? weeklySeries(snap) : []), [snap]);
 
@@ -156,9 +158,22 @@ export default function Dashboard({
         </div>
       </header>
 
-      {/* Date selector */}
-      <div className="mt-4">
+      {/* Date selector + view toggle */}
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
         <DateRangePicker value={range} onChange={fetchData} loading={dataLoading} />
+        <div className="flex rounded-lg border border-neutral-200 bg-white p-0.5 text-sm">
+          {(['overzicht', 'trends'] as const).map((v) => (
+            <button
+              key={v}
+              onClick={() => setView(v)}
+              className={`rounded-md px-3 py-1.5 font-medium transition ${
+                view === v ? 'bg-neutral-900 text-white' : 'text-neutral-500 hover:text-neutral-900'
+              }`}
+            >
+              {v === 'overzicht' ? 'Overzicht' : 'Trends'}
+            </button>
+          ))}
+        </div>
       </div>
 
       {message && (
@@ -270,6 +285,12 @@ export default function Dashboard({
             />
           </div>
 
+          {view === 'trends' ? (
+            <div className="mt-6">
+              <TrendsView snapshot={snap} />
+            </div>
+          ) : (
+          <>
           {/* Charts */}
           <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-3">
             <ChartCard title="Omzet per week" subtitle="Geaccepteerd vs. open (ex. btw)" className="lg:col-span-2">
@@ -302,6 +323,8 @@ export default function Dashboard({
           <div className="mt-4">
             <DataTables snapshot={snap} />
           </div>
+          </>
+          )}
 
           <footer className="mt-8 pb-4 text-center text-xs text-neutral-400">
             Snapshot {formatDateTime(snap.generatedAt)}

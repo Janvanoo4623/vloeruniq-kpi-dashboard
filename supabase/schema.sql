@@ -96,6 +96,19 @@ create table if not exists deals (
 );
 create index if not exists deals_date on deals (date_accepted);
 
+-- Invoices (for quoted-vs-invoiced, period-filterable).
+create table if not exists invoices (
+  id text primary key,
+  invoice_date date,
+  status text,           -- draft | booked | outstanding | ...
+  paid boolean,
+  total_excl numeric,    -- ex VAT
+  due_incl numeric,      -- outstanding amount incl VAT
+  customer_id text,
+  synced_at timestamptz default now()
+);
+create index if not exists invoices_date on invoices (invoice_date);
+
 -- Cached computed snapshot (single row) for fast dashboard reads.
 create table if not exists snapshot_cache (
   id int primary key default 1,

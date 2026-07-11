@@ -4,6 +4,7 @@ import { supabase } from './supabase';
 import { deriveDateParts } from './teamleader/dates';
 import type { PriceRow, CostRow } from './pricing';
 import type {
+  InvoiceRow,
   QuotationLine,
   QuotationRow,
   RunTimeRow,
@@ -325,6 +326,40 @@ export async function getAllQuotations(): Promise<QuotationRow[]> {
 
 export async function getAllDeals(): Promise<RunTimeRow[]> {
   return (await readAll('deals')).map(rowToDeal);
+}
+
+function rowToInvoice(r: Row): InvoiceRow {
+  return {
+    id: r.id as string,
+    invoiceDate: (r.invoice_date as string) ?? '',
+    status: (r.status as string) ?? '',
+    paid: Boolean(r.paid),
+    totalExcl: num(r.total_excl),
+    dueIncl: num(r.due_incl),
+    customerId: (r.customer_id as string) ?? '',
+  };
+}
+
+export async function upsertInvoices(rows: InvoiceRow[]): Promise<void> {
+  if (rows.length === 0) return;
+  const payload = rows.map((inv) => ({
+    id: inv.id,
+    invoice_date: inv.invoiceDate || null,
+    status: inv.status,
+    paid: inv.paid,
+    total_excl: inv.totalExcl,
+    due_incl: inv.dueIncl,
+    customer_id: inv.customerId || null,
+    synced_at: new Date().toISOString(),
+  }));
+  for (let i = 0; i < payload.length; i += 500) {
+    const { error } = await supabase().from('invoices').upsert(payload.slice(i, i + 500));
+    if (error) throw new Error(`db.upsertInvoices: ${error.message}`);
+  }
+}
+
+export async function getAllInvoices(): Promise<InvoiceRow[]> {
+  return (await readAll('invoices')).map(rowToInvoice);
 }
 
 // Re-export the numeric coercers for callers that read raw rows.

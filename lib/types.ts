@@ -116,6 +116,17 @@ export interface InvoicingSummary {
   openCount: number;
 }
 
+/** One invoice (stored in Supabase, for period-filterable invoicing). */
+export interface InvoiceRow {
+  id: string;
+  invoiceDate: string; // YYYY-MM-DD
+  status: string; // draft | booked | ...
+  paid: boolean;
+  totalExcl: number;
+  dueIncl: number;
+  customerId: string;
+}
+
 /** Customer info from the deals.list side-load (name + address). */
 export interface CustomerInfo {
   name: string;

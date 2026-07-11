@@ -7,7 +7,7 @@ import { DAYS_LOOKBACK } from './constants';
 import { getCutoffDate } from './dates';
 import { buildCustomerLookup, fetchRunTime } from './deals';
 import { fetchQuotations } from './quotations';
-import { fetchInvoicing } from './invoices';
+import { fetchInvoices, summarizeInvoices } from './invoices';
 import { buildSnapshot } from './aggregate';
 
 const STALE_LOCK_MS = 15 * 60 * 1000;
@@ -24,7 +24,9 @@ export async function runSync(): Promise<{ snapshot: Snapshot; pushed: number }>
     priceRows,
     costRows,
   );
-  const invoicing = await fetchInvoicing(cutoff);
+  const invoices = await fetchInvoices(cutoff);
+  await db.upsertInvoices(invoices);
+  const invoicing = summarizeInvoices(invoices);
 
   // Prior execution dates (from the cached snapshot) drive write-back detection.
   const prevSnapshot = await db.getSnapshot();

@@ -11,7 +11,7 @@ async function main() {
   const t0 = Date.now();
   const r = await backfillAll();
   const secs = ((Date.now() - t0) / 1000).toFixed(0);
-  console.log(`[backfill] klaar in ${secs}s: ${r.quotations} offertes, ${r.deals} deals opgeslagen in Supabase.`);
+  console.log(`[backfill] klaar in ${secs}s: ${r.quotations} offertes, ${r.deals} deals, ${r.invoices} facturen opgeslagen in Supabase.`);
   process.exit(0);
 }
 

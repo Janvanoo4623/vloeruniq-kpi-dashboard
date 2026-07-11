@@ -1,10 +1,10 @@
-// GET /api/data?from&to&compare — aggregate stored quotations/deals for a date
-// range, with optional period comparison. Session-gated by proxy.ts. Powers the
-// dashboard's date selector.
+// GET /api/data?from&to&compare — aggregate stored quotations/deals/invoices for
+// a date range, with optional period comparison. Session-gated by proxy.ts.
 import { NextResponse } from 'next/server';
-import { getAllQuotations, getAllDeals, getExclusions, getSnapshot } from '@/lib/db';
+import { getAllQuotations, getAllDeals, getExclusions, getAllInvoices } from '@/lib/db';
+import { summarizeInvoices } from '@/lib/teamleader/invoices';
 import { snapshotForRange } from '@/lib/range';
-import type { InvoicingSummary } from '@/lib/types';
+import type { InvoiceRow, InvoicingSummary } from '@/lib/types';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -27,6 +27,9 @@ const EMPTY_INVOICING: InvoicingSummary = {
   openCount: 0,
 };
 
+const invoicingForRange = (invoices: InvoiceRow[], from: string, to: string): InvoicingSummary =>
+  summarizeInvoices(invoices.filter((inv) => inv.invoiceDate >= from && inv.invoiceDate <= to));
+
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const today = iso(Date.now());
@@ -34,16 +37,23 @@ export async function GET(request: Request) {
   const from = url.searchParams.get('from') || iso(Date.now() - 89 * DAY);
   const compare = url.searchParams.get('compare') || 'none'; // none | previous | year
 
-  const [quotations, deals, exclusions, cached] = await Promise.all([
+  const [quotations, deals, exclusions, invoices] = await Promise.all([
     getAllQuotations(),
     getAllDeals(),
     getExclusions(),
-    getSnapshot(),
+    getAllInvoices(),
   ]);
-  const invoicing = cached?.invoicing ?? EMPTY_INVOICING;
   const generatedAt = new Date().toISOString();
 
-  const snapshot = snapshotForRange(quotations, deals, from, to, exclusions, invoicing, generatedAt);
+  const snapshot = snapshotForRange(
+    quotations,
+    deals,
+    from,
+    to,
+    exclusions,
+    invoicingForRange(invoices, from, to),
+    generatedAt,
+  );
 
   let comparison = null;
   if (compare === 'previous' || compare === 'year') {
@@ -63,6 +73,7 @@ export async function GET(request: Request) {
       to: prevTo,
       revenue: prev.revenue.totals,
       runTime: prev.runTime.totals,
+      invoicing: invoicingForRange(invoices, prevFrom, prevTo),
     };
   }
 
