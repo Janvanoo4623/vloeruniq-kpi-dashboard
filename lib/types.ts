@@ -123,7 +123,7 @@ export interface InvoicingSummary {
   openCount: number;
 }
 
-/** One invoice (stored in Supabase, for period-filterable invoicing). */
+/** One invoice (stored in Supabase, for period-filterable invoicing + aging). */
 export interface InvoiceRow {
   id: string;
   invoiceDate: string; // YYYY-MM-DD
@@ -132,6 +132,24 @@ export interface InvoiceRow {
   totalExcl: number;
   dueIncl: number;
   customerId: string;
+  dueOn: string; // due date YYYY-MM-DD ('' if none)
+  customerName: string;
+}
+
+/** Outstanding invoices bucketed by age relative to the due date. */
+export interface AgingBucket {
+  label: string;
+  amount: number; // incl VAT
+  count: number;
+}
+
+export interface OverdueInvoice {
+  id: string;
+  customerName: string;
+  invoiceDate: string;
+  dueOn: string;
+  amount: number; // due incl VAT
+  daysOverdue: number;
 }
 
 /** Customer info from the deals.list side-load (name + address). */

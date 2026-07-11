@@ -337,6 +337,8 @@ function rowToInvoice(r: Row): InvoiceRow {
     totalExcl: num(r.total_excl),
     dueIncl: num(r.due_incl),
     customerId: (r.customer_id as string) ?? '',
+    dueOn: (r.due_on as string) ?? '',
+    customerName: (r.customer_name as string) ?? '',
   };
 }
 
@@ -350,6 +352,8 @@ export async function upsertInvoices(rows: InvoiceRow[]): Promise<void> {
     total_excl: inv.totalExcl,
     due_incl: inv.dueIncl,
     customer_id: inv.customerId || null,
+    due_on: inv.dueOn || null,
+    customer_name: inv.customerName || null,
     synced_at: new Date().toISOString(),
   }));
   for (let i = 0; i < payload.length; i += 500) {

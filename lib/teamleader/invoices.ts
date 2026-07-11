@@ -2,18 +2,19 @@
 // summarize booked/paid/outstanding. Summary can be computed for any date range.
 import { fetchAllPages } from './client';
 import { round } from './dates';
-import type { InvoiceRow, InvoicingSummary } from '../types';
+import type { AgingBucket, InvoiceRow, InvoicingSummary, OverdueInvoice } from '../types';
 
 interface TLInvoice {
   id?: string;
   invoice_date?: string;
   status?: string; // 'draft' | 'booked' | 'outstanding' | ...
   paid?: boolean;
+  due_on?: string | null;
   total?: {
     tax_exclusive?: { amount: number };
     due?: { amount: number };
   };
-  invoicee?: { customer?: { id?: string } | null } | null;
+  invoicee?: { name?: string; customer?: { id?: string } | null } | null;
 }
 
 /** Fetch invoices with invoice_date on/after `cutoff` and map to InvoiceRow. */
@@ -31,7 +32,56 @@ export async function fetchInvoices(cutoff: string): Promise<InvoiceRow[]> {
       totalExcl: inv.total?.tax_exclusive?.amount ?? 0,
       dueIncl: inv.total?.due?.amount ?? 0,
       customerId: inv.invoicee?.customer?.id ?? '',
+      dueOn: inv.due_on ?? '',
+      customerName: inv.invoicee?.name ?? '',
     }));
+}
+
+const BUCKETS = [
+  { label: 'Nog niet vervallen', min: -Infinity, max: 0 },
+  { label: '1–30 dagen', min: 1, max: 30 },
+  { label: '31–60 dagen', min: 31, max: 60 },
+  { label: '61–90 dagen', min: 61, max: 90 },
+  { label: '90+ dagen', min: 91, max: Infinity },
+] as const;
+
+/** Bucket outstanding (unpaid, non-draft) invoices by days past due, as of `asOf`. */
+export function computeAging(
+  invoices: InvoiceRow[],
+  asOf: string,
+): { buckets: AgingBucket[]; overdue: OverdueInvoice[]; totalOutstanding: number } {
+  const asOfMs = Date.parse(asOf);
+  const DAY = 86400000;
+  const buckets: AgingBucket[] = BUCKETS.map((b) => ({ label: b.label, amount: 0, count: 0 }));
+  const overdue: OverdueInvoice[] = [];
+  let totalOutstanding = 0;
+
+  for (const inv of invoices) {
+    if (inv.status === 'draft' || inv.paid || inv.dueIncl <= 0) continue;
+    const ref = inv.dueOn || inv.invoiceDate;
+    if (!ref) continue;
+    const daysOverdue = Math.floor((asOfMs - Date.parse(ref)) / DAY);
+    totalOutstanding += inv.dueIncl;
+    const bi = BUCKETS.findIndex((b) => daysOverdue >= b.min && daysOverdue <= b.max);
+    if (bi >= 0) {
+      buckets[bi].amount += inv.dueIncl;
+      buckets[bi].count += 1;
+    }
+    if (daysOverdue > 0) {
+      overdue.push({
+        id: inv.id,
+        customerName: inv.customerName || inv.customerId || '—',
+        invoiceDate: inv.invoiceDate,
+        dueOn: inv.dueOn,
+        amount: inv.dueIncl,
+        daysOverdue,
+      });
+    }
+  }
+
+  buckets.forEach((b) => (b.amount = round(b.amount)));
+  overdue.sort((a, b) => b.daysOverdue - a.daysOverdue);
+  return { buckets, overdue: overdue.slice(0, 20), totalOutstanding: round(totalOutstanding) };
 }
 
 /** Aggregate a list of invoices (ignoring drafts) into a summary. */

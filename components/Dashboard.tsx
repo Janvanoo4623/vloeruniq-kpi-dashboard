@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import type { Snapshot, SyncMeta, RevenueTotals } from '@/lib/types';
+import type { Snapshot, SyncMeta, RevenueTotals, AgingBucket, OverdueInvoice } from '@/lib/types';
 import { weeklySeries } from '@/lib/series';
 import {
   formatDateTime,
@@ -24,7 +24,14 @@ import CountsByWeekChart from './charts/CountsByWeekChart';
 import LeadSourceDonut from './charts/LeadSourceDonut';
 import RegionList from './charts/RegionList';
 import LeadSourceTable from './LeadSourceTable';
+import CashflowCard from './CashflowCard';
 import TrendsView from './TrendsView';
+
+interface Aging {
+  buckets: AgingBucket[];
+  overdue: OverdueInvoice[];
+  totalOutstanding: number;
+}
 
 interface Comparison {
   from: string;
@@ -46,9 +53,11 @@ function deltaPct(cur: number, prev: number | undefined | null): number | null {
 export default function Dashboard({
   snapshot,
   meta,
+  aging,
 }: {
   snapshot: Snapshot | null;
   meta: SyncMeta | null;
+  aging: Aging;
 }) {
   const router = useRouter();
   const [snap, setSnap] = useState<Snapshot | null>(snapshot);
@@ -327,6 +336,16 @@ export default function Dashboard({
           <div className="mt-4">
             <ChartCard title="Leadbron-kwaliteit" subtitle="Omzet, dealgrootte, marge en doorlooptijd per bron">
               <LeadSourceTable data={snap.leadSources} />
+            </ChartCard>
+          </div>
+
+          <div className="mt-4">
+            <ChartCard title="Cashflow — openstaand naar ouderdom" subtitle="Onbetaalde facturen t.o.v. de vervaldatum (huidige stand)">
+              <CashflowCard
+                buckets={aging.buckets}
+                overdue={aging.overdue}
+                totalOutstanding={aging.totalOutstanding}
+              />
             </ChartCard>
           </div>
 
