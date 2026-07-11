@@ -87,18 +87,32 @@ export async function fetchQuotations(
 
   const today = new Date().toISOString().split('T')[0];
 
+  // Cost keys applied only to glued PVC; everything else (labor + custom extras)
+  // applies to every matched floor m².
+  const GLUED_KEYS = new Set(['primer', 'glue', 'leveling']);
+  const FALLBACK: Record<string, number> = {
+    labor: LABOR_COST_PER_M2,
+    primer: PRIMER_COST_PER_M2,
+    glue: GLUE_COST_PER_M2,
+    leveling: LEVELING_COST_PER_M2,
+  };
+  const costKeys = [...new Set(costRows.map((r) => r.key))];
+
   const results = await mapLimit(summaries, FETCH_CONCURRENCY, async (q) => {
     try {
       const detail = await fetchQuotationDetail(q.id);
       const date = dateOnly(q.created_at) || dateOnly(q.updated_at) || today;
       const priceConfig = priceConfigForDate(priceRows, date);
-      const costs = {
-        labor: resolveCost(costRows, 'labor', date, LABOR_COST_PER_M2),
-        primer: resolveCost(costRows, 'primer', date, PRIMER_COST_PER_M2),
-        glue: resolveCost(costRows, 'glue', date, GLUE_COST_PER_M2),
-        leveling: resolveCost(costRows, 'leveling', date, LEVELING_COST_PER_M2),
-      };
-      return parseQuotation(q, detail, customerLookup, priceConfig, costs);
+
+      let alwaysPerM2 = 0;
+      let gluedPerM2 = 0;
+      for (const key of costKeys) {
+        const v = resolveCost(costRows, key, date, FALLBACK[key] ?? 0);
+        if (GLUED_KEYS.has(key)) gluedPerM2 += v;
+        else alwaysPerM2 += v;
+      }
+
+      return parseQuotation(q, detail, customerLookup, priceConfig, { alwaysPerM2, gluedPerM2 });
     } catch {
       // Mirror the script: skip quotations whose detail fetch fails.
       return null;

@@ -228,23 +228,39 @@ function PricesTab({ prices, post, busy }: { prices: CurrentPrice[]; post: Post;
 }
 
 // ── Kosten ───────────────────────────────────────────────────────────────
+const BUILTIN_COSTS = ['labor', 'primer', 'glue', 'leveling'];
+const GLUED_COSTS = new Set(['primer', 'glue', 'leveling']);
+
+function costLabel(key: string): string {
+  return COST_LABELS[key] ?? key.charAt(0).toUpperCase() + key.slice(1);
+}
+
 function CostsTab({ costs, post, busy }: { costs: CurrentCost[]; post: Post; busy: boolean }) {
   const [edits, setEdits] = useState<Record<string, string>>({});
-  const order = ['labor', 'primer', 'glue', 'leveling'];
-  const known = new Map(costs.map((c) => [c.key, c]));
+  const [newName, setNewName] = useState('');
+  const [newValue, setNewValue] = useState('');
+
+  const byKey = new Map(costs.map((c) => [c.key, c]));
+  const extraKeys = costs.map((c) => c.key).filter((k) => !BUILTIN_COSTS.includes(k)).sort();
+  const orderedKeys = [...BUILTIN_COSTS.filter((k) => byKey.has(k)), ...extraKeys];
 
   return (
     <Card>
-      <p className="mb-3 text-sm text-neutral-500">Kosten per m² (arbeid geldt voor alle vloeren; primer/lijm/egaline alleen bij gelijmd PVC).</p>
+      <p className="mb-3 text-sm text-neutral-500">
+        Kosten per m². <strong>Arbeid</strong> en <strong>extra kosten</strong> gelden voor élke
+        gematchte vloer; <strong>primer/lijm/egaline</strong> alleen bij gelijmd PVC.
+      </p>
+
       <div className="space-y-2">
-        {order.map((key) => {
-          const c = known.get(key);
+        {orderedKeys.map((key) => {
+          const c = byKey.get(key);
           const cur = c?.value ?? 0;
           const val = edits[key] ?? String(cur);
           const changed = Number(val) !== cur && val.trim() !== '';
+          const scope = GLUED_COSTS.has(key) ? 'gelijmd PVC' : 'per m²';
           return (
             <div key={key} className="flex items-center gap-3 rounded-lg border border-neutral-100 px-3 py-2">
-              <span className="w-24 text-sm font-medium text-neutral-700">{COST_LABELS[key] ?? key}</span>
+              <span className="w-28 shrink-0 text-sm font-medium text-neutral-700">{costLabel(key)}</span>
               <span className="text-neutral-400">€</span>
               <input
                 type="number"
@@ -253,7 +269,9 @@ function CostsTab({ costs, post, busy }: { costs: CurrentCost[]; post: Post; bus
                 onChange={(e) => setEdits((s) => ({ ...s, [key]: e.target.value }))}
                 className="w-28 rounded border border-neutral-200 px-2 py-1 text-sm tabular-nums outline-none focus:border-emerald-500"
               />
-              <span className="text-xs text-neutral-400">/ m² · geldig sinds {c?.effectiveFrom ?? '—'}</span>
+              <span className="hidden text-xs text-neutral-400 sm:inline">
+                {scope} · sinds {c?.effectiveFrom ?? '—'}
+              </span>
               <button
                 disabled={busy || !changed}
                 onClick={async () => {
@@ -267,6 +285,45 @@ function CostsTab({ costs, post, busy }: { costs: CurrentCost[]; post: Post; bus
             </div>
           );
         })}
+      </div>
+
+      <div className="mt-4 flex flex-wrap items-end gap-2 border-t border-neutral-100 pt-4">
+        <div>
+          <label className="block text-xs text-neutral-500">Nieuwe kostenpost (naam)</label>
+          <input
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+            placeholder="bv. transport"
+            className="mt-1 w-48 rounded-lg border border-neutral-200 px-3 py-1.5 text-sm outline-none focus:border-emerald-500"
+          />
+        </div>
+        <div>
+          <label className="block text-xs text-neutral-500">Bedrag / m²</label>
+          <input
+            type="number"
+            step="0.01"
+            value={newValue}
+            onChange={(e) => setNewValue(e.target.value)}
+            placeholder="0,00"
+            className="mt-1 w-28 rounded-lg border border-neutral-200 px-3 py-1.5 text-sm outline-none focus:border-emerald-500"
+          />
+        </div>
+        <button
+          disabled={busy || !newName.trim() || !newValue.trim()}
+          onClick={async () => {
+            const ok = await post({ type: 'cost', key: newName.trim().toLowerCase(), value: Number(newValue) });
+            if (ok) {
+              setNewName('');
+              setNewValue('');
+            }
+          }}
+          className="rounded-lg bg-emerald-600 px-3.5 py-2 text-sm font-medium text-white transition hover:bg-emerald-500 disabled:opacity-40"
+        >
+          Toevoegen
+        </button>
+        <p className="w-full text-xs text-neutral-400">
+          Extra kosten gelden per m² op alle gematchte vloer, vanaf vandaag (niet met terugwerkende kracht).
+        </p>
       </div>
     </Card>
   );

@@ -8,12 +8,14 @@ import type { PriceConfig } from './price-map';
 import type { CustomerInfo, QuotationLine, QuotationRow, QuotationStatus } from '../types';
 import type { TLQuotationSummary, TLQuotationDetail } from './tl-types';
 
-/** Cost inputs (€/m²) resolved for a quotation's date (date-effective). */
+/**
+ * Cost inputs (€/m²) resolved for a quotation's date (date-effective).
+ * - alwaysPerM2: applied to every matched floor m² (labor + any custom extra costs).
+ * - gluedPerM2: applied only to glued PVC (primer + glue + leveling).
+ */
 export interface Costs {
-  labor: number;
-  primer: number;
-  glue: number;
-  leveling: number;
+  alwaysPerM2: number;
+  gluedPerM2: number;
 }
 
 // Description starts with a floor-product type.
@@ -105,10 +107,10 @@ export function parseQuotation(
         let materialCostPerM2 = matchedPrice;
         if (desc.includes('lijmen')) {
           // Glued PVC: purchase + primer + glue + leveling.
-          materialCostPerM2 += costs.primer + costs.glue + costs.leveling;
+          materialCostPerM2 += costs.gluedPerM2;
         }
         // Click PVC: material is just the purchase price.
-        const lineCost = materialCostPerM2 * quantity + costs.labor * quantity;
+        const lineCost = materialCostPerM2 * quantity + costs.alwaysPerM2 * quantity;
         totalCost += materialCostPerM2 * quantity;
         m2WithMatch += quantity;
         hasMatch = true;
@@ -128,7 +130,7 @@ export function parseQuotation(
   let verified = false;
 
   if (hasMatch && m2WithMatch > 0) {
-    const laborCost = costs.labor * m2WithMatch;
+    const laborCost = costs.alwaysPerM2 * m2WithMatch;
     const finalCost = totalCost + laborCost;
     cost = round(finalCost);
     // Margin is measured against floor revenue only.
