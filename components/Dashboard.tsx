@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import type { Snapshot, SyncMeta } from '@/lib/types';
+import type { Snapshot, SyncMeta, RevenueTotals } from '@/lib/types';
 import { weeklySeries } from '@/lib/series';
 import {
   formatDateTime,
@@ -16,12 +16,30 @@ import {
 import KpiCard from './KpiCard';
 import ChartCard from './ChartCard';
 import DataTables from './DataTables';
+import DateRangePicker, { presetRange, type RangeState } from './DateRangePicker';
 import RevenueByWeekChart from './charts/RevenueByWeekChart';
 import MarginTrendChart from './charts/MarginTrendChart';
 import RunTimeTrendChart from './charts/RunTimeTrendChart';
 import CountsByWeekChart from './charts/CountsByWeekChart';
 import LeadSourceDonut from './charts/LeadSourceDonut';
 import RegionList from './charts/RegionList';
+
+interface Comparison {
+  from: string;
+  to: string;
+  revenue: RevenueTotals;
+  runTime: { avgRunTimeDays: number; dealsTracked: number };
+}
+
+const initialRange = (): RangeState => {
+  const r = presetRange('90');
+  return { preset: '90', from: r.from, to: r.to, compare: 'none' };
+};
+
+function deltaPct(cur: number, prev: number | undefined | null): number | null {
+  if (prev == null || prev === 0) return null;
+  return Math.round(((cur - prev) / prev) * 1000) / 10;
+}
 
 export default function Dashboard({
   snapshot,
@@ -31,10 +49,35 @@ export default function Dashboard({
   meta: SyncMeta | null;
 }) {
   const router = useRouter();
+  const [snap, setSnap] = useState<Snapshot | null>(snapshot);
+  const [range, setRange] = useState<RangeState>(initialRange);
+  const [comparison, setComparison] = useState<Comparison | null>(null);
+  const [dataLoading, setDataLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
-  const series = useMemo(() => (snapshot ? weeklySeries(snapshot) : []), [snapshot]);
+  const series = useMemo(() => (snap ? weeklySeries(snap) : []), [snap]);
+
+  async function fetchData(r: RangeState) {
+    setDataLoading(true);
+    try {
+      const res = await fetch(
+        `/api/data?from=${r.from}&to=${r.to}&compare=${r.compare}`,
+      );
+      const data = await res.json();
+      if (res.ok && data.snapshot) {
+        setSnap(data.snapshot);
+        setComparison(data.comparison ?? null);
+        setRange(r);
+      } else {
+        setMessage(data.error || 'Data laden mislukt.');
+      }
+    } catch {
+      setMessage('Data laden mislukt (netwerk).');
+    } finally {
+      setDataLoading(false);
+    }
+  }
 
   async function refresh() {
     setRefreshing(true);
@@ -43,13 +86,10 @@ export default function Dashboard({
       const res = await fetch('/api/refresh', { method: 'POST' });
       const data = await res.json();
       if (res.ok && data.dispatched) {
-        // Background sync started in GitHub Actions; data isn't ready yet.
-        setMessage(
-          'Synchronisatie gestart op de achtergrond (~1–2 min). Ververs daarna de pagina.',
-        );
+        setMessage('Synchronisatie gestart op de achtergrond (~1–2 min). Ververs daarna de pagina.');
       } else if (res.ok && data.ok) {
-        router.refresh();
         setMessage('Data bijgewerkt.');
+        await fetchData(range);
       } else if (res.status === 409) {
         setMessage('Er loopt al een synchronisatie.');
       } else {
@@ -68,7 +108,10 @@ export default function Dashboard({
     router.refresh();
   }
 
-  const totals = snapshot?.revenue.totals;
+  const totals = snap?.revenue.totals;
+  const cmp = comparison?.revenue;
+  const deltaLabel = range.compare === 'year' ? 'vs vorig jaar' : 'vs vorige';
+  const showDeltas = comparison != null;
 
   return (
     <div className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
@@ -79,12 +122,12 @@ export default function Dashboard({
             Vloeruniq KPI Dashboard
           </h1>
           <p className="mt-0.5 text-sm text-neutral-500">
-            Laatste {snapshot?.lookbackDays ?? 90} dagen · Teamleader
+            {range.from} t/m {range.to} · Teamleader
           </p>
         </div>
         <div className="flex items-center gap-3">
           <div className="hidden text-right sm:block">
-            <p className="text-xs text-neutral-400">Laatst bijgewerkt</p>
+            <p className="text-xs text-neutral-400">Laatst gesynchroniseerd</p>
             <p className="text-xs font-medium text-neutral-600" title={formatDateTime(meta?.lastSyncAt)}>
               {timeAgo(meta?.lastSyncAt)}
             </p>
@@ -113,18 +156,18 @@ export default function Dashboard({
         </div>
       </header>
 
+      {/* Date selector */}
+      <div className="mt-4">
+        <DateRangePicker value={range} onChange={fetchData} loading={dataLoading} />
+      </div>
+
       {message && (
         <div className="mt-4 rounded-lg border border-neutral-200 bg-white px-4 py-2 text-sm text-neutral-700 shadow-sm">
           {message}
         </div>
       )}
-      {refreshing && (
-        <p className="mt-2 text-xs text-neutral-500">
-          De synchronisatie haalt data op uit Teamleader en kan enkele minuten duren…
-        </p>
-      )}
 
-      {!snapshot || !totals ? (
+      {!snap || !totals ? (
         <EmptyState onRefresh={refresh} refreshing={refreshing} meta={meta} />
       ) : (
         <>
@@ -135,12 +178,16 @@ export default function Dashboard({
               value={formatEuro(totals.acceptedRevenue)}
               sub={`${totals.acceptedCount} offertes`}
               accent="emerald"
+              deltaPct={showDeltas ? deltaPct(totals.acceptedRevenue, cmp?.acceptedRevenue) : null}
+              deltaLabel={deltaLabel}
             />
             <KpiCard
               label="Omzet open"
               value={formatEuro(totals.openRevenue)}
               sub={`${totals.openCount} offertes`}
               accent="sky"
+              deltaPct={showDeltas ? deltaPct(totals.openRevenue, cmp?.openRevenue) : null}
+              deltaLabel={deltaLabel}
             />
             <KpiCard
               label="Conversie"
@@ -152,47 +199,70 @@ export default function Dashboard({
               label="Gem. omzet / deal"
               value={formatEuro(totals.avgRevenuePerDeal)}
               accent="neutral"
+              deltaPct={showDeltas ? deltaPct(totals.avgRevenuePerDeal, cmp?.avgRevenuePerDeal) : null}
+              deltaLabel={deltaLabel}
             />
             <KpiCard
               label="Totale marge"
               value={formatEuro(totals.totalMargin)}
               sub={`${formatPercent(totals.avgMarginPct)} gemiddeld`}
               accent="violet"
+              deltaPct={showDeltas ? deltaPct(totals.totalMargin, cmp?.totalMargin) : null}
+              deltaLabel={deltaLabel}
             />
-            <KpiCard label="M² verkocht" value={formatNumber(totals.m2Sold)} accent="emerald" />
+            <KpiCard
+              label="M² verkocht"
+              value={formatNumber(totals.m2Sold)}
+              accent="emerald"
+              deltaPct={showDeltas ? deltaPct(totals.m2Sold, cmp?.m2Sold) : null}
+              deltaLabel={deltaLabel}
+            />
             <KpiCard
               label="Gem. doorlooptijd"
-              value={formatDays(snapshot.runTime.totals.avgRunTimeDays)}
+              value={formatDays(snap.runTime.totals.avgRunTimeDays)}
               accent="cyan"
+              deltaPct={
+                showDeltas
+                  ? deltaPct(snap.runTime.totals.avgRunTimeDays, comparison?.runTime.avgRunTimeDays)
+                  : null
+              }
+              deltaLabel={deltaLabel}
+              higherIsBetter={false}
             />
             <KpiCard
               label="Deals gevolgd"
-              value={formatNumber(snapshot.runTime.totals.dealsTracked)}
+              value={formatNumber(snap.runTime.totals.dealsTracked)}
               accent="neutral"
+              deltaPct={
+                showDeltas
+                  ? deltaPct(snap.runTime.totals.dealsTracked, comparison?.runTime.dealsTracked)
+                  : null
+              }
+              deltaLabel={deltaLabel}
             />
             <KpiCard
               label="Gefactureerd"
-              value={formatEuro(snapshot.invoicing.invoicedExcl)}
-              sub={`${snapshot.invoicing.invoiceCount} facturen`}
+              value={formatEuro(snap.invoicing.invoicedExcl)}
+              sub={`${snap.invoicing.invoiceCount} facturen`}
               accent="sky"
             />
             <KpiCard
               label="Betaald"
-              value={formatEuro(snapshot.invoicing.paidExcl)}
-              sub={`${snapshot.invoicing.paidCount} betaald`}
+              value={formatEuro(snap.invoicing.paidExcl)}
+              sub={`${snap.invoicing.paidCount} betaald`}
               accent="emerald"
             />
             <KpiCard
               label="Openstaand"
-              value={formatEuro(snapshot.invoicing.outstandingIncl)}
-              sub={`${snapshot.invoicing.openCount} open · incl. btw`}
+              value={formatEuro(snap.invoicing.outstandingIncl)}
+              sub={`${snap.invoicing.openCount} open · incl. btw`}
               accent="rose"
             />
             <KpiCard
               label="Betaald %"
               value={formatPercent(
-                snapshot.invoicing.invoicedExcl > 0
-                  ? Math.round((snapshot.invoicing.paidExcl / snapshot.invoicing.invoicedExcl) * 1000) / 10
+                snap.invoicing.invoicedExcl > 0
+                  ? Math.round((snap.invoicing.paidExcl / snap.invoicing.invoicedExcl) * 1000) / 10
                   : null,
               )}
               sub="van gefactureerd"
@@ -202,19 +272,11 @@ export default function Dashboard({
 
           {/* Charts */}
           <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-3">
-            <ChartCard
-              title="Omzet per week"
-              subtitle="Geaccepteerd vs. open (ex. btw)"
-              className="lg:col-span-2"
-            >
+            <ChartCard title="Omzet per week" subtitle="Geaccepteerd vs. open (ex. btw)" className="lg:col-span-2">
               <RevenueByWeekChart data={series} />
             </ChartCard>
             <ChartCard title="Omzet per leadbron" subtitle="Geaccepteerde offertes">
-              {snapshot.leadSources.length > 0 ? (
-                <LeadSourceDonut data={snapshot.leadSources} />
-              ) : (
-                <EmptyChart />
-              )}
+              {snap.leadSources.length > 0 ? <LeadSourceDonut data={snap.leadSources} /> : <EmptyChart />}
             </ChartCard>
           </div>
 
@@ -232,18 +294,18 @@ export default function Dashboard({
               <CountsByWeekChart data={series} />
             </ChartCard>
             <ChartCard title="Omzet per regio" subtitle="Top plaatsen (geaccepteerd)">
-              <RegionList data={snapshot.regions} />
+              <RegionList data={snap.regions} />
             </ChartCard>
           </div>
 
-          {/* Combined tables: Offertes / Weekoverzicht switch */}
+          {/* Combined tables */}
           <div className="mt-4">
-            <DataTables snapshot={snapshot} />
+            <DataTables snapshot={snap} />
           </div>
 
           <footer className="mt-8 pb-4 text-center text-xs text-neutral-400">
-            Snapshot gegenereerd op {formatDateTime(snapshot.generatedAt)}
-            {meta?.counts ? ` · ${meta.counts.quotations} offertes · ${meta.counts.runTime} deals` : ''}
+            Snapshot {formatDateTime(snap.generatedAt)}
+            {meta?.counts ? ` · ${meta.counts.quotations} offertes · ${meta.counts.runTime} deals gesynct` : ''}
           </footer>
         </>
       )}
@@ -264,9 +326,7 @@ function EmptyState({
     <div className="mt-10 flex flex-col items-center justify-center rounded-2xl border border-dashed border-neutral-300 bg-white px-6 py-16 text-center shadow-sm">
       <h2 className="text-lg font-medium text-neutral-800">Nog geen data</h2>
       <p className="mt-2 max-w-md text-sm text-neutral-500">
-        Er is nog geen snapshot. Draai lokaal{' '}
-        <code className="rounded bg-neutral-100 px-1.5 py-0.5 text-neutral-700">npm run sync</code>{' '}
-        of klik op vernieuwen om data uit Teamleader op te halen.
+        Er is nog geen snapshot. Klik op vernieuwen om data uit Teamleader op te halen.
       </p>
       {meta?.status === 'error' && meta.error && (
         <p className="mt-3 max-w-md text-sm text-rose-600">Laatste fout: {meta.error}</p>
@@ -285,8 +345,6 @@ function EmptyState({
 
 function EmptyChart() {
   return (
-    <div className="flex h-[200px] items-center justify-center text-sm text-neutral-400">
-      Geen data
-    </div>
+    <div className="flex h-[200px] items-center justify-center text-sm text-neutral-400">Geen data</div>
   );
 }

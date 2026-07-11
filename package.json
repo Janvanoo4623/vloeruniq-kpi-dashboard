@@ -11,7 +11,8 @@
     "seed:demo": "tsx scripts/seed-demo.ts",
     "import:config": "tsx scripts/import-config.ts",
     "seed:supabase": "tsx scripts/seed-supabase.ts",
-    "oauth": "tsx scripts/oauth.ts"
+    "oauth": "tsx scripts/oauth.ts",
+    "backfill": "tsx scripts/backfill.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.110.2",

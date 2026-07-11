@@ -1,8 +1,10 @@
 // Supabase data-access layer. All reads/writes go through here so the rest of
 // the app stays storage-agnostic. Server-side only.
 import { supabase } from './supabase';
+import { deriveDateParts } from './teamleader/dates';
 import type { PriceRow, CostRow } from './pricing';
 import type {
+  QuotationLine,
   QuotationRow,
   RunTimeRow,
   Snapshot,
@@ -246,6 +248,83 @@ export async function addExclusion(id: string, reason: string | null): Promise<v
 export async function removeExclusion(id: string): Promise<void> {
   const { error } = await supabase().from('excluded_quotations').delete().eq('id', id);
   if (error) throw new Error(`db.removeExclusion: ${error.message}`);
+}
+
+// ── Read all quotations / deals (for date-range aggregation) ────────────
+type Row = Record<string, unknown>;
+
+function rowToQuotation(r: Row): QuotationRow {
+  const status = r.status as QuotationRow['status'];
+  const dateCreated = (r.date_created as string) ?? '';
+  const dateAccepted = (r.date_accepted as string) ?? '';
+  const relevant = (status === 'accepted' || status === 'refused') && dateAccepted ? dateAccepted : dateCreated;
+  const { month, quarter, year } = deriveDateParts(relevant);
+  const lines = (r.lines as QuotationLine[]) ?? [];
+  const totalM2 = num(r.total_m2);
+  const omzetVloer = num(r.omzet_vloer);
+  return {
+    id: r.id as string,
+    name: (r.name as string) ?? '',
+    dealId: (r.deal_id as string) ?? '',
+    customerName: (r.customer_name as string) ?? '',
+    city: (r.city as string) ?? '',
+    postalCode: (r.postal_code as string) ?? '',
+    status,
+    dateCreated,
+    dateAccepted,
+    month,
+    quarter,
+    year,
+    revenueExVat: num(r.revenue_ex_vat),
+    revenueInclVat: num(r.revenue_incl_vat),
+    omzetVloer,
+    totalM2,
+    prijsPerM2: totalM2 > 0 ? Math.round((omzetVloer / totalM2) * 100) / 100 : 0,
+    cost: numOrNull(r.cost),
+    margin: numOrNull(r.margin),
+    marginPct: numOrNull(r.margin_pct),
+    matchCoverage: numOrNull(r.match_coverage),
+    verified: Boolean(r.verified),
+    products: [...new Set(lines.map((l) => l.code))],
+    lines,
+  };
+}
+
+function rowToDeal(r: Row): RunTimeRow {
+  const dateAccepted = (r.date_accepted as string) ?? '';
+  const { month, quarter, year } = deriveDateParts(dateAccepted);
+  return {
+    dealId: r.id as string,
+    title: (r.title as string) ?? '',
+    dateAccepted,
+    dateExecution: (r.date_execution as string) ?? '',
+    runTimeDays: num(r.run_time_days),
+    leadSource: (r.lead_source as string) ?? '',
+    month,
+    quarter,
+    year,
+  };
+}
+
+async function readAll(table: string): Promise<Row[]> {
+  const out: Row[] = [];
+  const size = 1000;
+  for (let from = 0; ; from += size) {
+    const { data, error } = await supabase().from(table).select('*').range(from, from + size - 1);
+    if (error) throw new Error(`db.readAll(${table}): ${error.message}`);
+    const rows = (data ?? []) as Row[];
+    out.push(...rows);
+    if (rows.length < size) break;
+  }
+  return out;
+}
+
+export async function getAllQuotations(): Promise<QuotationRow[]> {
+  return (await readAll('quotations')).map(rowToQuotation);
+}
+
+export async function getAllDeals(): Promise<RunTimeRow[]> {
+  return (await readAll('deals')).map(rowToDeal);
 }
 
 // Re-export the numeric coercers for callers that read raw rows.
