@@ -34,8 +34,7 @@ export default function CountsByWeekChart({ data }: { data: WeeklyPoint[] }) {
         />
         <Legend wrapperStyle={{ fontSize: 12, color: CHART.text }} />
         <Bar stackId="c" dataKey="acceptedCount" name="Geaccepteerd" fill={CHART.accepted} radius={[0, 0, 0, 0]} />
-        <Bar stackId="c" dataKey="openCount" name="Open" fill={CHART.open} />
-        <Bar stackId="c" dataKey="refusedCount" name="Geweigerd" fill={CHART.refused} radius={[3, 3, 0, 0]} />
+        <Bar stackId="c" dataKey="openCount" name="Open" fill={CHART.open} radius={[3, 3, 0, 0]} />
       </BarChart>
     </ResponsiveContainer>
   );

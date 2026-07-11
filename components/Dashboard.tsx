@@ -114,6 +114,8 @@ export default function Dashboard({
   const cmp = comparison?.revenue;
   const deltaLabel = range.compare === 'year' ? 'vs vorig jaar' : 'vs vorige';
   const showDeltas = comparison != null;
+  const marginPerM2 = totals && totals.m2Sold > 0 ? totals.totalMargin / totals.m2Sold : null;
+  const prevMarginPerM2 = cmp && cmp.m2Sold > 0 ? cmp.totalMargin / cmp.m2Sold : null;
 
   return (
     <div className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
@@ -205,10 +207,12 @@ export default function Dashboard({
               deltaLabel={deltaLabel}
             />
             <KpiCard
-              label="Conversie"
-              value={formatPercent(totals.conversionPct)}
-              sub={`${totals.refusedCount} geweigerd`}
+              label="Marge / m²"
+              value={formatEuro(marginPerM2, true)}
+              sub="per verkochte m²"
               accent="amber"
+              deltaPct={showDeltas ? deltaPct(marginPerM2 ?? 0, prevMarginPerM2) : null}
+              deltaLabel={deltaLabel}
             />
             <KpiCard
               label="Gem. omzet / deal"

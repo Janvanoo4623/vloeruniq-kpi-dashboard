@@ -81,7 +81,7 @@ export default function QuotationsTable({ rows }: { rows: QuotationRow[] }) {
     <div>
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <div className="flex rounded-lg border border-neutral-200 p-0.5 text-xs">
-          {(['all', 'accepted', 'open', 'refused'] as const).map((s) => (
+          {(['all', 'accepted', 'open'] as const).map((s) => (
             <button
               key={s}
               onClick={() => setStatusFilter(s)}

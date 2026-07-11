@@ -99,16 +99,16 @@ export default function TrendsView({ snapshot }: { snapshot: Snapshot }) {
           </ResponsiveContainer>
         </ChartCard>
 
-        <ChartCard title="Conversie & doorlooptijd" subtitle="Conversie % en gem. looptijd (dagen)">
+        <ChartCard title="Doorlooptijd & volume" subtitle="Geaccepteerde offertes (#) en gem. looptijd (dagen)">
           <ResponsiveContainer width="100%" height={280}>
             <ComposedChart data={data} margin={{ top: 4, right: 8, left: 4, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke={CHART.grid} vertical={false} />
               {xAxis}
-              <YAxis yAxisId="pct" tickFormatter={(v) => `${v}%`} tick={AXIS_TICK} axisLine={false} tickLine={false} width={40} />
+              <YAxis yAxisId="count" tick={AXIS_TICK} axisLine={false} tickLine={false} width={32} allowDecimals={false} />
               <YAxis yAxisId="days" orientation="right" tick={AXIS_TICK} axisLine={false} tickLine={false} width={36} />
-              <Tooltip content={<ChartTooltip format={(v, k) => (k === 'avgRunTime' ? formatDays(v) : formatPercent(v))} />} />
+              <Tooltip content={<ChartTooltip format={(v, k) => (k === 'avgRunTime' ? formatDays(v) : String(v))} />} />
               <Legend wrapperStyle={{ fontSize: 12, color: CHART.text }} />
-              <Line yAxisId="pct" type="monotone" dataKey="conversionPct" name="Conversie %" stroke={CHART.marginPct} strokeWidth={2} dot={false} connectNulls />
+              <Bar yAxisId="count" dataKey="acceptedCount" name="Geaccepteerd (#)" fill={CHART.accepted} radius={[3, 3, 0, 0]} />
               <Line yAxisId="days" type="monotone" dataKey="avgRunTime" name="Doorlooptijd (d)" stroke={CHART.runTime} strokeWidth={2} dot={false} connectNulls />
             </ComposedChart>
           </ResponsiveContainer>

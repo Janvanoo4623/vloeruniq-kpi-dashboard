@@ -49,3 +49,6 @@ next-env.d.ts
 
 # deploy values (secrets) — never commit
 /DEPLOY-VALUES.txt
+
+# extra price import file
+/prices2.tsv
