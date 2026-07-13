@@ -2,7 +2,14 @@
 // summarize booked/paid/outstanding. Summary can be computed for any date range.
 import { fetchAllPages } from './client';
 import { round } from './dates';
-import type { AgingBucket, InvoiceRow, InvoicingSummary, OverdueInvoice } from '../types';
+import { formatProduct } from '../format';
+import type {
+  AgingBucket,
+  InvoiceRow,
+  InvoicingSummary,
+  OverdueInvoice,
+  QuotationRow,
+} from '../types';
 
 interface TLInvoice {
   id?: string;
@@ -45,14 +52,60 @@ const BUCKETS = [
   { label: '90+ dagen', min: 91, max: Infinity },
 ] as const;
 
+/** Customer(s) to omit from the "langst openstaand" list (e.g. intercompany). */
+const OVERDUE_EXCLUDE = /nv\s*vloeren/i;
+
+const normName = (s: string): string => s.trim().toLowerCase().replace(/\s+/g, ' ');
+
+/**
+ * Index accepted quotations by customer name so an invoice can borrow the
+ * floor product(s) + m² of the matching project. When a customer has several
+ * quotations we keep them all and pick the closest by ex-VAT amount at lookup.
+ */
+function indexQuotations(quotations: QuotationRow[]): Map<string, QuotationRow[]> {
+  const byCustomer = new Map<string, QuotationRow[]>();
+  for (const q of quotations) {
+    if (!q.customerName) continue;
+    const key = normName(q.customerName);
+    (byCustomer.get(key) ?? byCustomer.set(key, []).get(key)!).push(q);
+  }
+  return byCustomer;
+}
+
+/** Find the quotation best matching an invoice (same customer, nearest ex-VAT total). */
+function matchQuotation(
+  inv: InvoiceRow,
+  byCustomer: Map<string, QuotationRow[]>,
+): QuotationRow | null {
+  const candidates = inv.customerName ? byCustomer.get(normName(inv.customerName)) : undefined;
+  if (!candidates || candidates.length === 0) return null;
+  let best = candidates[0];
+  let bestDiff = Math.abs(inv.totalExcl - best.revenueExVat);
+  for (const q of candidates.slice(1)) {
+    const diff = Math.abs(inv.totalExcl - q.revenueExVat);
+    if (diff < bestDiff) {
+      best = q;
+      bestDiff = diff;
+    }
+  }
+  return best;
+}
+
 /** Bucket outstanding (unpaid, non-draft) invoices by days past due, as of `asOf`. */
 export function computeAging(
   invoices: InvoiceRow[],
   asOf: string,
+  quotations: QuotationRow[] = [],
 ): { buckets: AgingBucket[]; overdue: OverdueInvoice[]; totalOutstanding: number } {
   const asOfMs = Date.parse(asOf);
   const DAY = 86400000;
-  const buckets: AgingBucket[] = BUCKETS.map((b) => ({ label: b.label, amount: 0, count: 0 }));
+  const byCustomer = indexQuotations(quotations);
+  const buckets: AgingBucket[] = BUCKETS.map((b) => ({
+    label: b.label,
+    amount: 0,
+    count: 0,
+    invoices: [],
+  }));
   const overdue: OverdueInvoice[] = [];
   let totalOutstanding = 0;
 
@@ -62,12 +115,30 @@ export function computeAging(
     if (!ref) continue;
     const daysOverdue = Math.floor((asOfMs - Date.parse(ref)) / DAY);
     totalOutstanding += inv.dueIncl;
+
+    const q = matchQuotation(inv, byCustomer);
+    const vloer =
+      q && q.products.length > 0
+        ? [...new Set(q.products.map(formatProduct))].join(', ')
+        : null;
+
     const bi = BUCKETS.findIndex((b) => daysOverdue >= b.min && daysOverdue <= b.max);
     if (bi >= 0) {
       buckets[bi].amount += inv.dueIncl;
       buckets[bi].count += 1;
+      buckets[bi].invoices.push({
+        id: inv.id,
+        customerName: inv.customerName || inv.customerId || '—',
+        invoiceDate: inv.invoiceDate,
+        dueOn: inv.dueOn,
+        amount: inv.dueIncl,
+        daysOverdue,
+        vloer,
+        m2: q ? q.totalM2 : null,
+      });
     }
-    if (daysOverdue > 0) {
+
+    if (daysOverdue > 0 && !OVERDUE_EXCLUDE.test(inv.customerName)) {
       overdue.push({
         id: inv.id,
         customerName: inv.customerName || inv.customerId || '—',
@@ -79,7 +150,10 @@ export function computeAging(
     }
   }
 
-  buckets.forEach((b) => (b.amount = round(b.amount)));
+  buckets.forEach((b) => {
+    b.amount = round(b.amount);
+    b.invoices.sort((a, c) => c.amount - a.amount);
+  });
   overdue.sort((a, b) => b.daysOverdue - a.daysOverdue);
   return { buckets, overdue: overdue.slice(0, 20), totalOutstanding: round(totalOutstanding) };
 }

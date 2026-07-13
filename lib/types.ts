@@ -136,11 +136,24 @@ export interface InvoiceRow {
   customerName: string;
 }
 
+/** One outstanding invoice within an aging bucket (drives the drill-down modal). */
+export interface AgingInvoice {
+  id: string;
+  customerName: string;
+  invoiceDate: string;
+  dueOn: string;
+  amount: number; // due incl VAT
+  daysOverdue: number;
+  vloer: string | null; // matched floor product(s) from the customer's quotation
+  m2: number | null; // matched quotation m²
+}
+
 /** Outstanding invoices bucketed by age relative to the due date. */
 export interface AgingBucket {
   label: string;
   amount: number; // incl VAT
   count: number;
+  invoices: AgingInvoice[];
 }
 
 export interface OverdueInvoice {
