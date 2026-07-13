@@ -264,14 +264,27 @@ function QuotationModal({ q, onClose }: { q: QuotationRow; onClose: () => void }
               {q.dateAccepted && ` · ${dateLabel} ${q.dateAccepted}`}
             </p>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-lg p-1 text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700"
-            aria-label="Sluiten"
-          >
-            ✕
-          </button>
+          <div className="flex shrink-0 flex-col items-end gap-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-lg p-1 text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700"
+              aria-label="Sluiten"
+            >
+              ✕
+            </button>
+            <div className="flex items-center gap-2 whitespace-nowrap text-xs text-neutral-500">
+              <span>
+                Dekking:{' '}
+                <strong className="text-neutral-700">{formatPercent(q.matchCoverage)}</strong>
+              </span>
+              {q.verified && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-emerald-700 ring-1 ring-emerald-200">
+                  ✓ Geverifieerd
+                </span>
+              )}
+            </div>
+          </div>
         </div>
 
         {/* Body */}
@@ -289,18 +302,6 @@ function QuotationModal({ q, onClose }: { q: QuotationRow; onClose: () => void }
               value={formatPercent(q.marginPct)}
               className={marginColor(q.margin)}
             />
-          </div>
-
-          <div className="mt-3 flex items-center gap-2 text-xs text-neutral-500">
-            <span>
-              Dekking:{' '}
-              <strong className="text-neutral-700">{formatPercent(q.matchCoverage)}</strong>
-            </span>
-            {q.verified && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-emerald-700 ring-1 ring-emerald-200">
-                ✓ Geverifieerd
-              </span>
-            )}
           </div>
 
           {/* Floor lines */}
