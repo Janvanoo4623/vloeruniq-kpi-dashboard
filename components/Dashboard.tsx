@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import type { Snapshot, SyncMeta, RevenueTotals, AgingBucket, OverdueInvoice } from '@/lib/types';
+import type { PipelineStats } from '@/lib/pipeline';
 import { weeklySeries } from '@/lib/series';
 import {
   formatDateTime,
@@ -25,6 +26,7 @@ import LeadSourceDonut from './charts/LeadSourceDonut';
 import RegionList from './charts/RegionList';
 import LeadSourceTable from './LeadSourceTable';
 import CashflowCard from './CashflowCard';
+import PipelineCard from './PipelineCard';
 import TrendsView from './TrendsView';
 
 interface Aging {
@@ -54,11 +56,13 @@ export default function Dashboard({
   snapshot,
   meta,
   aging,
+  pipeline,
   pricedCodes,
 }: {
   snapshot: Snapshot | null;
   meta: SyncMeta | null;
   aging: Aging;
+  pipeline: PipelineStats;
   pricedCodes?: string[];
 }) {
   const pricedSet = useMemo(() => new Set(pricedCodes ?? []), [pricedCodes]);
@@ -339,6 +343,12 @@ export default function Dashboard({
           <div className="mt-4">
             <ChartCard title="Leadbron-kwaliteit" subtitle="Omzet, dealgrootte, marge en doorlooptijd per bron">
               <LeadSourceTable data={snap.leadSources} />
+            </ChartCard>
+          </div>
+
+          <div className="mt-4">
+            <ChartCard title="Pijplijn — verwachte omzet uit open offertes" subtitle="Gewogen met de historische winkans (huidige stand)">
+              <PipelineCard pipeline={pipeline} pricedCodes={pricedSet} />
             </ChartCard>
           </div>
 
