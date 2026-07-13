@@ -38,7 +38,14 @@ export async function POST(request: Request) {
         const code = String(body.code ?? '').trim();
         const price = Number(body.price);
         if (!code || !Number.isFinite(price) || price < 0) return bad('Ongeldige prijs of code.');
-        await addPrice(code, price);
+        // A missing price (never configured) is backdated so it applies to older
+        // quotations too; a normal price edit stays non-retroactive (today).
+        let effectiveFrom: string | undefined;
+        if (body.effectiveFrom != null) {
+          effectiveFrom = String(body.effectiveFrom).trim();
+          if (!/^\d{4}-\d{2}-\d{2}$/.test(effectiveFrom)) return bad('Ongeldige ingangsdatum.');
+        }
+        await addPrice(code, price, effectiveFrom);
         break;
       }
       case 'cost': {

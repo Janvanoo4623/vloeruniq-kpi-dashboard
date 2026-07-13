@@ -11,7 +11,13 @@ function rowDate(q: QuotationRow): string {
   return q.dateAccepted || q.dateCreated || '';
 }
 
-export default function QuotationsTable({ rows }: { rows: QuotationRow[] }) {
+export default function QuotationsTable({
+  rows,
+  pricedCodes,
+}: {
+  rows: QuotationRow[];
+  pricedCodes?: Set<string>;
+}) {
   const [statusFilter, setStatusFilter] = useState<'all' | QuotationStatus>('all');
   const [sortKey, setSortKey] = useState<SortKey>('date');
   const [asc, setAsc] = useState(false);
@@ -180,7 +186,9 @@ export default function QuotationsTable({ rows }: { rows: QuotationRow[] }) {
         </table>
       </div>
 
-      {selected && <QuotationModal q={selected} onClose={() => setSelectedId(null)} />}
+      {selected && (
+        <QuotationModal q={selected} onClose={() => setSelectedId(null)} pricedCodes={pricedCodes} />
+      )}
     </div>
   );
 }

@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import type { QuotationRow, QuotationStatus } from '@/lib/types';
 import { formatEuro, formatNumber, formatPercent, formatProduct } from '@/lib/format';
+import PriceInput from './PriceInput';
 
 export const STATUS_STYLE: Record<QuotationStatus, string> = {
   accepted: 'bg-emerald-50 text-emerald-700 ring-emerald-200',
@@ -21,14 +22,27 @@ export function marginColor(margin: number | null): string {
   return margin >= 0 ? 'text-neutral-800' : 'text-rose-600';
 }
 
-export default function QuotationModal({ q, onClose }: { q: QuotationRow; onClose: () => void }) {
+export default function QuotationModal({
+  q,
+  onClose,
+  pricedCodes,
+}: {
+  q: QuotationRow;
+  onClose: () => void;
+  pricedCodes?: Set<string>;
+}) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
   }, [onClose]);
 
+  const [savedCodes, setSavedCodes] = useState<Set<string>>(new Set());
   const lines = q.lines ?? [];
+  // A line is fillable when it has no margin (unpriced) and isn't already priced.
+  const isUnpriced = (code: string, margin: number | null) =>
+    margin === null && !pricedCodes?.has(code.toLowerCase()) && !savedCodes.has(code.toLowerCase());
+  const hasUnpriced = lines.some((l) => isUnpriced(l.code, l.margin));
   const location = [q.postalCode, q.city].filter(Boolean).join(' ');
   const dateLabel = q.status === 'refused' ? 'Geweigerd' : 'Geaccepteerd';
 
@@ -132,12 +146,27 @@ export default function QuotationModal({ q, onClose }: { q: QuotationRow; onClos
                           {formatEuro(l.revenue, true)}
                         </td>
                         <td className="px-3 py-1.5 text-right tabular-nums">
-                          <span className={marginColor(l.margin)}>{formatEuro(l.margin, true)}</span>
+                          {isUnpriced(l.code, l.margin) ? (
+                            <PriceInput
+                              code={l.code}
+                              onSaved={(c) =>
+                                setSavedCodes((s) => new Set(s).add(c.toLowerCase()))
+                              }
+                            />
+                          ) : (
+                            <span className={marginColor(l.margin)}>{formatEuro(l.margin, true)}</span>
+                          )}
                         </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
+                {hasUnpriced && (
+                  <p className="border-t border-neutral-100 bg-amber-50/50 px-3 py-1.5 text-xs text-amber-700">
+                    Vul de inkoopprijs (€/m²) in bij regels zonder marge. Wordt in de marges
+                    verwerkt bij de eerstvolgende synchronisatie.
+                  </p>
+                )}
               </div>
             ) : (
               <span className="text-xs text-neutral-400">

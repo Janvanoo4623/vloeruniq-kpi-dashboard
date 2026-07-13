@@ -54,11 +54,14 @@ export default function Dashboard({
   snapshot,
   meta,
   aging,
+  pricedCodes,
 }: {
   snapshot: Snapshot | null;
   meta: SyncMeta | null;
   aging: Aging;
+  pricedCodes?: string[];
 }) {
+  const pricedSet = useMemo(() => new Set(pricedCodes ?? []), [pricedCodes]);
   const router = useRouter();
   const [snap, setSnap] = useState<Snapshot | null>(snapshot);
   const [range, setRange] = useState<RangeState>(initialRange);
@@ -351,7 +354,7 @@ export default function Dashboard({
 
           {/* Combined tables */}
           <div className="mt-4">
-            <DataTables snapshot={snap} />
+            <DataTables snapshot={snap} pricedCodes={pricedSet} />
           </div>
           </>
           )}
