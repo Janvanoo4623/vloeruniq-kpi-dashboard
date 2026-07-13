@@ -1,14 +1,17 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import type { QuotationRow } from '@/lib/types';
 import { formatEuro, formatNumber, formatPercent } from '@/lib/format';
+import QuotationModal from './QuotationModal';
 
 function rowDate(q: QuotationRow): string {
   return q.dateAccepted || q.dateCreated || '';
 }
 
 export default function AttentionTable({ rows }: { rows: QuotationRow[] }) {
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const selected = selectedId ? rows.find((q) => q.id === selectedId) ?? null : null;
   const lowMargin = useMemo(
     () =>
       rows
@@ -47,7 +50,11 @@ export default function AttentionTable({ rows }: { rows: QuotationRow[] }) {
               {lowMargin.map((q) => {
                 const neg = (q.margin ?? 0) < 0;
                 return (
-                  <tr key={q.id} className="hover:bg-neutral-50">
+                  <tr
+                    key={q.id}
+                    onClick={() => setSelectedId(q.id)}
+                    className="cursor-pointer hover:bg-neutral-50"
+                  >
                     <td className="px-3 py-2">
                       <div className="max-w-[180px] truncate text-neutral-800">{q.customerName || '—'}</div>
                       <div className="text-xs text-neutral-400">{rowDate(q)}</div>
@@ -87,7 +94,11 @@ export default function AttentionTable({ rows }: { rows: QuotationRow[] }) {
             </thead>
             <tbody className="divide-y divide-neutral-100">
               {lowCoverage.map((q) => (
-                <tr key={q.id} className="hover:bg-neutral-50">
+                <tr
+                  key={q.id}
+                  onClick={() => setSelectedId(q.id)}
+                  className="cursor-pointer hover:bg-neutral-50"
+                >
                   <td className="px-3 py-2">
                     <div className="max-w-[220px] truncate text-neutral-800">{q.customerName || '—'}</div>
                     <div className="max-w-[220px] truncate text-xs text-neutral-400">{q.name} · {rowDate(q)}</div>
@@ -105,6 +116,8 @@ export default function AttentionTable({ rows }: { rows: QuotationRow[] }) {
           </table>
         </div>
       </div>
+
+      {selected && <QuotationModal q={selected} onClose={() => setSelectedId(null)} />}
     </div>
   );
 }
