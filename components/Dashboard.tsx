@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import type { Snapshot, SyncMeta, RevenueTotals, AgingBucket, OverdueInvoice } from '@/lib/types';
 import type { PipelineStats } from '@/lib/pipeline';
+import type { PaymentStats } from '@/lib/payments';
 import { weeklySeries } from '@/lib/series';
 import {
   formatDateTime,
@@ -27,6 +28,7 @@ import RegionList from './charts/RegionList';
 import LeadSourceTable from './LeadSourceTable';
 import CashflowCard from './CashflowCard';
 import PipelineCard from './PipelineCard';
+import PaymentsCard from './PaymentsCard';
 import TrendsView from './TrendsView';
 
 interface Aging {
@@ -57,12 +59,14 @@ export default function Dashboard({
   meta,
   aging,
   pipeline,
+  payments,
   pricedCodes,
 }: {
   snapshot: Snapshot | null;
   meta: SyncMeta | null;
   aging: Aging;
   pipeline: PipelineStats;
+  payments: PaymentStats;
   pricedCodes?: string[];
 }) {
   const pricedSet = useMemo(() => new Set(pricedCodes ?? []), [pricedCodes]);
@@ -360,6 +364,12 @@ export default function Dashboard({
                 totalOutstanding={aging.totalOutstanding}
                 pricedCodes={pricedSet}
               />
+            </ChartCard>
+          </div>
+
+          <div className="mt-4">
+            <ChartCard title="Betaalgedrag — hoe snel klanten betalen" subtitle="Gemiddelde betaaltermijn o.b.v. betaaldatum (huidige stand)">
+              <PaymentsCard payments={payments} />
             </ChartCard>
           </div>
 

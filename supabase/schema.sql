@@ -110,6 +110,7 @@ create table if not exists invoices (
 create index if not exists invoices_date on invoices (invoice_date);
 alter table invoices add column if not exists due_on date;         -- vervaldatum
 alter table invoices add column if not exists customer_name text;  -- factuur-tenaamstelling
+alter table invoices add column if not exists paid_at date;        -- betaaldatum (voor betaaltermijn/DSO)
 
 -- Cached computed snapshot (single row) for fast dashboard reads.
 create table if not exists snapshot_cache (

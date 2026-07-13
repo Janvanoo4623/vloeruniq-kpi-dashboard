@@ -339,6 +339,7 @@ function rowToInvoice(r: Row): InvoiceRow {
     customerId: (r.customer_id as string) ?? '',
     dueOn: (r.due_on as string) ?? '',
     customerName: (r.customer_name as string) ?? '',
+    paidAt: (r.paid_at as string) ?? '',
   };
 }
 
@@ -354,6 +355,7 @@ export async function upsertInvoices(rows: InvoiceRow[]): Promise<void> {
     customer_id: inv.customerId || null,
     due_on: inv.dueOn || null,
     customer_name: inv.customerName || null,
+    paid_at: inv.paidAt || null,
     synced_at: new Date().toISOString(),
   }));
   for (let i = 0; i < payload.length; i += 500) {

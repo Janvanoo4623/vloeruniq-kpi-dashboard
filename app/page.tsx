@@ -8,6 +8,7 @@ import {
 } from '@/lib/db';
 import { computeAging } from '@/lib/teamleader/invoices';
 import { computePipeline } from '@/lib/pipeline';
+import { computePaymentStats } from '@/lib/payments';
 import Dashboard from '@/components/Dashboard';
 
 export const dynamic = 'force-dynamic';
@@ -24,6 +25,7 @@ export default async function Home() {
   const today = new Date().toISOString().split('T')[0];
   const aging = computeAging(invoices, today, quotations);
   const pipeline = computePipeline(quotations, exclusions, today);
+  const payments = computePaymentStats(invoices, today);
   const pricedCodes = prices.map((p) => p.code.toLowerCase());
   return (
     <Dashboard
@@ -31,6 +33,7 @@ export default async function Home() {
       meta={meta}
       aging={aging}
       pipeline={pipeline}
+      payments={payments}
       pricedCodes={pricedCodes}
     />
   );

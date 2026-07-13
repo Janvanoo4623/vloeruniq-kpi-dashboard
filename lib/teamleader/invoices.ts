@@ -1,7 +1,7 @@
 // Invoices: fetch raw invoices from Teamleader (stored in Supabase) and
 // summarize booked/paid/outstanding. Summary can be computed for any date range.
 import { fetchAllPages } from './client';
-import { round } from './dates';
+import { dateOnly, round } from './dates';
 import { formatProduct } from '../format';
 import type {
   AgingBucket,
@@ -16,6 +16,7 @@ interface TLInvoice {
   invoice_date?: string;
   status?: string; // 'draft' | 'booked' | 'outstanding' | ...
   paid?: boolean;
+  paid_at?: string | null; // datetime when fully paid
   due_on?: string | null;
   total?: {
     tax_exclusive?: { amount: number };
@@ -41,6 +42,7 @@ export async function fetchInvoices(cutoff: string): Promise<InvoiceRow[]> {
       customerId: inv.invoicee?.customer?.id ?? '',
       dueOn: inv.due_on ?? '',
       customerName: inv.invoicee?.name ?? '',
+      paidAt: inv.paid_at ? dateOnly(inv.paid_at) : '',
     }));
 }
 

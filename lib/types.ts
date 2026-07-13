@@ -134,6 +134,7 @@ export interface InvoiceRow {
   customerId: string;
   dueOn: string; // due date YYYY-MM-DD ('' if none)
   customerName: string;
+  paidAt: string; // payment date YYYY-MM-DD ('' if unpaid / unknown)
 }
 
 /** One outstanding invoice within an aging bucket (drives the drill-down modal). */
