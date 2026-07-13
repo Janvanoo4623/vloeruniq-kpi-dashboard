@@ -348,6 +348,7 @@ export default function Dashboard({
                 buckets={aging.buckets}
                 overdue={aging.overdue}
                 totalOutstanding={aging.totalOutstanding}
+                pricedCodes={pricedSet}
               />
             </ChartCard>
           </div>

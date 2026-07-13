@@ -147,6 +147,7 @@ export function computeAging(
         dueOn: inv.dueOn,
         amount: inv.dueIncl,
         daysOverdue,
+        quotation: q,
       });
     }
   }

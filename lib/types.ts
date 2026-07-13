@@ -163,6 +163,7 @@ export interface OverdueInvoice {
   dueOn: string;
   amount: number; // due incl VAT
   daysOverdue: number;
+  quotation: QuotationRow | null; // matched quotation (drives the drill-down modal)
 }
 
 /** Customer info from the deals.list side-load (name + address). */

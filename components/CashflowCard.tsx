@@ -1,8 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import type { AgingBucket, OverdueInvoice } from '@/lib/types';
+import type { AgingBucket, OverdueInvoice, QuotationRow } from '@/lib/types';
 import { formatEuro, formatNumber } from '@/lib/format';
+import QuotationModal from './QuotationModal';
 
 const COLORS = ['bg-emerald-500', 'bg-amber-400', 'bg-orange-500', 'bg-rose-500', 'bg-rose-700'];
 
@@ -10,13 +11,16 @@ export default function CashflowCard({
   buckets,
   overdue,
   totalOutstanding,
+  pricedCodes,
 }: {
   buckets: AgingBucket[];
   overdue: OverdueInvoice[];
   totalOutstanding: number;
+  pricedCodes?: Set<string>;
 }) {
   const max = Math.max(1, ...buckets.map((b) => b.amount));
   const [openIdx, setOpenIdx] = useState<number | null>(null);
+  const [quotation, setQuotation] = useState<QuotationRow | null>(null);
   const active = openIdx == null ? null : buckets[openIdx];
 
   return (
@@ -74,16 +78,26 @@ export default function CashflowCard({
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral-100">
-              {overdue.map((o) => (
-                <tr key={o.id} className="hover:bg-neutral-50">
-                  <td className="px-3 py-2">
-                    <div className="max-w-[200px] truncate text-neutral-800">{o.customerName}</div>
-                    <div className="text-xs text-neutral-400">vervallen {o.dueOn || o.invoiceDate}</div>
-                  </td>
-                  <td className="px-3 py-2 text-right tabular-nums font-medium text-rose-600">{o.daysOverdue}d</td>
-                  <td className="px-3 py-2 text-right tabular-nums text-neutral-700">{formatEuro(o.amount)}</td>
-                </tr>
-              ))}
+              {overdue.map((o) => {
+                const clickable = o.quotation != null;
+                return (
+                  <tr
+                    key={o.id}
+                    onClick={() => o.quotation && setQuotation(o.quotation)}
+                    className={`hover:bg-neutral-50 ${clickable ? 'cursor-pointer' : ''}`}
+                  >
+                    <td className="px-3 py-2">
+                      <div className="flex max-w-[200px] items-center gap-1 truncate text-neutral-800">
+                        {o.customerName}
+                        {clickable && <span className="text-neutral-300">›</span>}
+                      </div>
+                      <div className="text-xs text-neutral-400">vervallen {o.dueOn || o.invoiceDate}</div>
+                    </td>
+                    <td className="px-3 py-2 text-right tabular-nums font-medium text-rose-600">{o.daysOverdue}d</td>
+                    <td className="px-3 py-2 text-right tabular-nums text-neutral-700">{formatEuro(o.amount)}</td>
+                  </tr>
+                );
+              })}
               {overdue.length === 0 && (
                 <tr>
                   <td colSpan={3} className="px-3 py-6 text-center text-sm text-neutral-400">
@@ -98,6 +112,10 @@ export default function CashflowCard({
 
       {active && (
         <BucketModal bucket={active} color={COLORS[openIdx!] ?? 'bg-neutral-400'} onClose={() => setOpenIdx(null)} />
+      )}
+
+      {quotation && (
+        <QuotationModal q={quotation} onClose={() => setQuotation(null)} pricedCodes={pricedCodes} />
       )}
     </div>
   );
