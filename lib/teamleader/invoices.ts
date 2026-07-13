@@ -52,8 +52,8 @@ const BUCKETS = [
   { label: '90+ dagen', min: 91, max: Infinity },
 ] as const;
 
-/** Customer(s) to omit from the "langst openstaand" list (e.g. intercompany). */
-const OVERDUE_EXCLUDE = /nv\s*vloeren/i;
+/** Customer(s) to omit from cashflow entirely (e.g. intercompany). */
+const CASHFLOW_EXCLUDE = /nv\s*vloeren/i;
 
 const normName = (s: string): string => s.trim().toLowerCase().replace(/\s+/g, ' ');
 
@@ -111,6 +111,7 @@ export function computeAging(
 
   for (const inv of invoices) {
     if (inv.status === 'draft' || inv.paid || inv.dueIncl <= 0) continue;
+    if (CASHFLOW_EXCLUDE.test(inv.customerName)) continue;
     const ref = inv.dueOn || inv.invoiceDate;
     if (!ref) continue;
     const daysOverdue = Math.floor((asOfMs - Date.parse(ref)) / DAY);
@@ -138,7 +139,7 @@ export function computeAging(
       });
     }
 
-    if (daysOverdue > 0 && !OVERDUE_EXCLUDE.test(inv.customerName)) {
+    if (daysOverdue > 0) {
       overdue.push({
         id: inv.id,
         customerName: inv.customerName || inv.customerId || '—',
