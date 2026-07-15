@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import type { QuotationRow, QuotationStatus } from '@/lib/types';
 import { formatEuro, formatNumber, formatPercent, formatProduct } from '@/lib/format';
 import PriceInput from './PriceInput';
+import QuotationCorrection from './QuotationCorrection';
 
 export const STATUS_STYLE: Record<QuotationStatus, string> = {
   accepted: 'bg-emerald-50 text-emerald-700 ring-emerald-200',
@@ -182,6 +183,8 @@ export default function QuotationModal({
               </span>
             )}
           </div>
+
+          <QuotationCorrection q={q} />
         </div>
       </div>
     </div>

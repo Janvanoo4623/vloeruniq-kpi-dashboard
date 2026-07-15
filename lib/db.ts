@@ -6,6 +6,7 @@ import type { PriceRow, CostRow } from './pricing';
 import type {
   InvoiceRow,
   QuotationLine,
+  QuotationOverride,
   QuotationRow,
   RunTimeRow,
   Snapshot,
@@ -249,6 +250,74 @@ export async function addExclusion(id: string, reason: string | null): Promise<v
 export async function removeExclusion(id: string): Promise<void> {
   const { error } = await supabase().from('excluded_quotations').delete().eq('id', id);
   if (error) throw new Error(`db.removeExclusion: ${error.message}`);
+}
+
+// ── Per-quotation overrides (special price / no-labour) ─────────────────
+/** All overrides keyed by quotation id. line_code '' carries the offerte-level flag. */
+export async function getOverrides(): Promise<Record<string, QuotationOverride>> {
+  const { data, error } = await supabase()
+    .from('quotation_overrides')
+    .select('quotation_id, line_code, purchase_per_m2, no_labor, note');
+  if (error) {
+    // Table not created yet (migration pending): degrade gracefully so the
+    // dashboard keeps working with no corrections applied.
+    if (error.code === '42P01' || /does not exist/i.test(error.message)) return {};
+    throw new Error(`db.getOverrides: ${error.message}`);
+  }
+  const out: Record<string, QuotationOverride> = {};
+  for (const r of data ?? []) {
+    const qid = r.quotation_id as string;
+    const ov = (out[qid] ??= { noLabor: false, prices: {} });
+    const code = (r.line_code as string) ?? '';
+    if (code === '') {
+      ov.noLabor = Boolean(r.no_labor);
+      if (r.note) ov.note = r.note as string;
+    } else if (r.purchase_per_m2 != null) {
+      ov.prices[code.toLowerCase()] = num(r.purchase_per_m2);
+    }
+  }
+  return out;
+}
+
+/** Set (or clear, when price is null) a per-line special purchase price. */
+export async function setOverridePrice(
+  quotationId: string,
+  lineCode: string,
+  price: number | null,
+): Promise<void> {
+  const code = lineCode.trim();
+  if (!code) throw new Error('setOverridePrice: line code required');
+  if (price == null) {
+    const { error } = await supabase()
+      .from('quotation_overrides')
+      .delete()
+      .eq('quotation_id', quotationId)
+      .eq('line_code', code);
+    if (error) throw new Error(`db.setOverridePrice(clear): ${error.message}`);
+    return;
+  }
+  const { error } = await supabase()
+    .from('quotation_overrides')
+    .upsert(
+      { quotation_id: quotationId, line_code: code, purchase_per_m2: price, updated_at: new Date().toISOString() },
+      { onConflict: 'quotation_id,line_code' },
+    );
+  if (error) throw new Error(`db.setOverridePrice: ${error.message}`);
+}
+
+/** Set the offerte-level "los verkocht — geen legservice" flag (line_code ''). */
+export async function setOverrideNoLabor(
+  quotationId: string,
+  noLabor: boolean,
+  note?: string | null,
+): Promise<void> {
+  const { error } = await supabase()
+    .from('quotation_overrides')
+    .upsert(
+      { quotation_id: quotationId, line_code: '', no_labor: noLabor, note: note ?? null, updated_at: new Date().toISOString() },
+      { onConflict: 'quotation_id,line_code' },
+    );
+  if (error) throw new Error(`db.setOverrideNoLabor: ${error.message}`);
 }
 
 // ── Read all quotations / deals (for date-range aggregation) ────────────

@@ -109,14 +109,12 @@ export function parseQuotation(
       if (product) product = canonicalProduct(product);
       if (product && !products.includes(product)) products.push(product);
 
+      const glued = desc.includes('lijmen');
+      const gluedPerM2 = glued ? costs.gluedPerM2 : 0;
       let lineMargin: number | null = null;
       if (matchedPrice !== null) {
-        let materialCostPerM2 = matchedPrice;
-        if (desc.includes('lijmen')) {
-          // Glued PVC: purchase + primer + glue + leveling.
-          materialCostPerM2 += costs.gluedPerM2;
-        }
-        // Click PVC: material is just the purchase price.
+        // Glued PVC: purchase + primer + glue + leveling. Click PVC: purchase only.
+        const materialCostPerM2 = matchedPrice + gluedPerM2;
         const lineCost = materialCostPerM2 * quantity + costs.alwaysPerM2 * quantity;
         totalCost += materialCostPerM2 * quantity;
         m2WithMatch += quantity;
@@ -131,6 +129,10 @@ export function parseQuotation(
           m2: quantity,
           margin: lineMargin,
           desc: descTrimmed,
+          // Cost components for instant per-quotation override recompute.
+          purchasePerM2: matchedPrice ?? undefined,
+          gluedPerM2,
+          laborPerM2: costs.alwaysPerM2,
         });
       }
     }

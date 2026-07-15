@@ -38,6 +38,24 @@ export interface QuotationLine {
   m2: number;
   margin: number | null;
   desc?: string; // raw line description (for modal transparency; populated at sync time)
+  // Cost components (€/m²) resolved at sync time, so per-quotation corrections
+  // (special purchase price / no-labour) can be recomputed instantly at read
+  // time. Absent on rows synced before this was added — the override recompute
+  // falls back to the default constant rates. See lib/overrides.ts.
+  purchasePerM2?: number; // matched purchase price (absent = unpriced line)
+  gluedPerM2?: number; // primer+glue+leveling extra (0 if not glued)
+  laborPerM2?: number; // labour + custom per-m² costs applied to matched m²
+}
+
+/**
+ * A per-quotation manual correction (feedback 2026-07-13). Applied at read time.
+ * - prices: per-line-code special purchase price €/m² (only that quotation).
+ * - noLabor: floor sold loose, drop the labour cost for this quotation.
+ */
+export interface QuotationOverride {
+  noLabor: boolean;
+  prices: Record<string, number>; // line code (lowercased) -> purchase €/m²
+  note?: string;
 }
 
 /** One row of the Run Time table (per won deal). */

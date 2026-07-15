@@ -1,9 +1,10 @@
 // GET /api/data?from&to&compare — aggregate stored quotations/deals/invoices for
 // a date range, with optional period comparison. Session-gated by proxy.ts.
 import { NextResponse } from 'next/server';
-import { getAllQuotations, getAllDeals, getExclusions, getAllInvoices } from '@/lib/db';
+import { getAllQuotations, getAllDeals, getExclusions, getAllInvoices, getOverrides } from '@/lib/db';
 import { summarizeInvoices } from '@/lib/teamleader/invoices';
 import { snapshotForRange } from '@/lib/range';
+import { applyOverrides } from '@/lib/overrides';
 import type { InvoiceRow, InvoicingSummary } from '@/lib/types';
 
 export const runtime = 'nodejs';
@@ -37,12 +38,15 @@ export async function GET(request: Request) {
   const from = url.searchParams.get('from') || iso(Date.now() - 89 * DAY);
   const compare = url.searchParams.get('compare') || 'none'; // none | previous | year
 
-  const [quotations, deals, exclusions, invoices] = await Promise.all([
+  const [allQuotations, deals, exclusions, invoices, overrides] = await Promise.all([
     getAllQuotations(),
     getAllDeals(),
     getExclusions(),
     getAllInvoices(),
+    getOverrides(),
   ]);
+  // Apply per-quotation corrections at read time (instant + retroactive).
+  const quotations = applyOverrides(allQuotations, overrides);
   const generatedAt = new Date().toISOString();
 
   const snapshot = snapshotForRange(

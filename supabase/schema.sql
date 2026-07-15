@@ -112,6 +112,24 @@ alter table invoices add column if not exists due_on date;         -- vervaldatu
 alter table invoices add column if not exists customer_name text;  -- factuur-tenaamstelling
 alter table invoices add column if not exists paid_at date;        -- betaaldatum (voor betaaltermijn/DSO)
 
+-- Per-quotation manual corrections (feedback Jan 2026-07-13):
+--  * a per-line special purchase price (€/m²) for a one-off deal, e.g. the
+--    voetbalkantine 800 m² special buy — applies ONLY to that quotation;
+--  * an offerte-level "los verkocht — geen legservice" flag that drops the
+--    labour cost (€17/m²) for a floor sold without installation.
+-- Applied at read time (instant + retroactive), only to quotations that have a
+-- row here; all other quotations keep their synced margins unchanged.
+-- line_code = '' denotes the offerte-level row that carries no_labor / note.
+create table if not exists quotation_overrides (
+  quotation_id text not null,
+  line_code text not null default '',   -- '' = offerte-niveau; anders per vloerregel (P-nr/naam)
+  purchase_per_m2 numeric,              -- afwijkende inkoopprijs €/m² (per regel)
+  no_labor boolean not null default false, -- los verkocht: geen legservice (offerte-niveau)
+  note text,
+  updated_at timestamptz default now(),
+  primary key (quotation_id, line_code)
+);
+
 -- Cached computed snapshot (single row) for fast dashboard reads.
 create table if not exists snapshot_cache (
   id int primary key default 1,

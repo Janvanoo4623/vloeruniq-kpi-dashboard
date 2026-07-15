@@ -52,11 +52,19 @@ A line item is included in floor revenue/m² if:
 
 ```
 description does NOT contain "trap"          # exclude stair renovation (traprenovatie)
+AND description does NOT match /snij|kitt/i   # exclude finishing labour lines (snijden/
+                                              #   kitten langs wand) billed in m² but not floor
 AND ( description matches /P\d{3}/i           # has a P-number
       OR description starts with one of:      # ^(pvc|visgraat|stroken|tegels|hongaarse|
          pvc, visgraat, stroken, tegels,      #   weense|klik|vt wonen)
          hongaarse, weense, klik, vt wonen )
 ```
+
+> The `snij|kitt` exclusion (`FINISHING_RE` in `matching.ts`) was added after
+> feedback (2026-07-13): offerte 1003 billed 254 m² = 159 m² vloer (P410) + 95 m²
+> "snijden en kitten langs wand". The finishing line started with a floor type and
+> so was wrongly counted as extra floor, inflating m² and diluting price/m². Extend
+> `FINISHING_RE` as new finishing-line phrasings surface.
 
 For each matched line item:
 - `totalM2 += quantity`
@@ -109,6 +117,25 @@ prijsPerM2 = omzetVloer / totalM2
 `include: lead.customer`, building `dealId → contact "first last"` or `company name`.
 
 ---
+
+### Per-quotation manual corrections (overrides)
+
+Feedback (2026-07-13) added two one-off, per-quotation corrections, stored in
+`quotation_overrides` and applied at **read time** (`lib/overrides.ts`) so they
+take effect **instantly and retroactively** — no re-sync, works on any stored
+quotation regardless of age:
+
+- **Special purchase price per floor line** (`prices[code] = €/m²`): overrides the
+  matched purchase price for that one quotation only (e.g. the voetbalkantine
+  800 m² special buy). Set per line code in the QuotationModal.
+- **`no_labor` (los verkocht — geen legservice)**: drops the labour €/m² for a
+  floor sold without installation.
+
+Only quotations that have an override row are recomputed; every other quotation
+keeps its synced margins untouched. Margins recompute from the per-line cost
+components stored at sync time (`purchasePerM2` / `gluedPerM2` / `laborPerM2`);
+rows synced before those existed fall back to the default constant rates + a
+glued check on the line description (approximate until re-synced, exact after).
 
 ## Run time (`doorlooptijd`)
 
