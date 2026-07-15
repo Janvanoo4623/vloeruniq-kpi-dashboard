@@ -17,7 +17,7 @@ import {
 } from 'recharts';
 import { buildTimeSeries, type Granularity } from '@/lib/series';
 import type { Snapshot } from '@/lib/types';
-import { formatEuro, formatPercent, formatDays } from '@/lib/format';
+import { formatEuro, formatPercent, formatDays, formatNumber } from '@/lib/format';
 import ChartCard from './ChartCard';
 import { ChartTooltip } from './charts/ChartTooltip';
 import { AXIS_TICK, CHART } from './charts/theme';
@@ -28,12 +28,24 @@ export default function TrendsView({ snapshot }: { snapshot: Snapshot }) {
   const [gran, setGran] = useState<Granularity>(snapshot.weeks.length > 16 ? 'month' : 'week');
   const data = useMemo(() => buildTimeSeries(snapshot, gran), [snapshot, gran]);
 
+  const t = snapshot.revenue.totals;
+  const rt = snapshot.runTime.totals;
+
   const xAxis = (
     <XAxis dataKey="label" tick={AXIS_TICK} axisLine={{ stroke: CHART.grid }} tickLine={false} minTickGap={16} />
   );
 
   return (
     <div>
+      {/* Samenvatting over de geselecteerde periode (o.b.v. geaccepteerde offertes) */}
+      <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+        <SummaryStat label="Omzet geaccepteerd" value={formatEuro(t.acceptedRevenue)} sub="ex. btw" />
+        <SummaryStat label="Totale marge" value={formatEuro(t.totalMargin)} sub="op vloeromzet" />
+        <SummaryStat label="Gem. marge" value={formatPercent(t.avgMarginPct)} sub="gewogen" />
+        <SummaryStat label="Gem. doorlooptijd" value={formatDays(rt.avgRunTimeDays)} sub={`${rt.dealsTracked} deals`} />
+        <SummaryStat label="M² verkocht" value={formatNumber(t.m2Sold)} sub={`${t.acceptedCount} offertes`} />
+      </div>
+
       <div className="mb-4 flex items-center justify-end gap-2">
         <span className="text-xs text-neutral-400">Weergave:</span>
         <div className="flex rounded-lg border border-neutral-200 bg-white p-0.5 text-xs">
@@ -52,7 +64,7 @@ export default function TrendsView({ snapshot }: { snapshot: Snapshot }) {
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <ChartCard title="Omzetverloop" subtitle="Geaccepteerd vs. open (ex. btw)">
+        <ChartCard title="Omzetverloop" subtitle="Geaccepteerde vs. open offertes (ex. btw) — niet gefactureerd">
           <ResponsiveContainer width="100%" height={280}>
             <LineChart data={data} margin={{ top: 4, right: 8, left: 4, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke={CHART.grid} vertical={false} />
@@ -84,7 +96,7 @@ export default function TrendsView({ snapshot }: { snapshot: Snapshot }) {
           </ResponsiveContainer>
         </ChartCard>
 
-        <ChartCard title="Marge-verloop" subtitle="Marge in € (bars) en % (lijn)">
+        <ChartCard title="Marge-verloop" subtitle="Marge o.b.v. geaccepteerde offertes — € (bars) en % (lijn)">
           <ResponsiveContainer width="100%" height={280}>
             <ComposedChart data={data} margin={{ top: 4, right: 8, left: 4, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke={CHART.grid} vertical={false} />
@@ -114,6 +126,16 @@ export default function TrendsView({ snapshot }: { snapshot: Snapshot }) {
           </ResponsiveContainer>
         </ChartCard>
       </div>
+    </div>
+  );
+}
+
+function SummaryStat({ label, value, sub }: { label: string; value: string; sub?: string }) {
+  return (
+    <div className="rounded-xl border border-neutral-200 bg-white px-3 py-2.5 shadow-sm">
+      <div className="text-xs text-neutral-400">{label}</div>
+      <div className="mt-0.5 text-lg font-semibold tabular-nums text-neutral-900">{value}</div>
+      {sub && <div className="text-[11px] text-neutral-400">{sub}</div>}
     </div>
   );
 }

@@ -19,7 +19,7 @@ function redisEnv(): { url: string; token: string } | null {
   return url && token ? { url, token } : null;
 }
 
-function useRedis(): boolean {
+function usingRedis(): boolean {
   return redisEnv() !== null;
 }
 
@@ -67,15 +67,15 @@ async function fileSet<T>(key: Key, value: T): Promise<void> {
 
 // ── Unified accessors ───────────────────────────────────────────────────
 async function get<T>(key: Key): Promise<T | null> {
-  return useRedis() ? redisGet<T>(key) : fileGet<T>(key);
+  return usingRedis() ? redisGet<T>(key) : fileGet<T>(key);
 }
 
 async function set<T>(key: Key, value: T): Promise<void> {
-  return useRedis() ? redisSet<T>(key, value) : fileSet<T>(key, value);
+  return usingRedis() ? redisSet<T>(key, value) : fileSet<T>(key, value);
 }
 
 export const store = {
-  backend: () => (useRedis() ? 'upstash' : 'file'),
+  backend: () => (usingRedis() ? 'upstash' : 'file'),
 
   getToken: () => get<TokenState>('token'),
   setToken: (t: TokenState) => set('token', t),

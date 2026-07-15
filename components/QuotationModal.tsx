@@ -138,6 +138,11 @@ export default function QuotationModal({
                           <span className="rounded bg-neutral-100 px-1.5 py-0.5 font-medium text-neutral-700">
                             {formatProduct(l.code)}
                           </span>
+                          {l.desc && (
+                            <span className="mt-0.5 block max-w-[16rem] truncate text-[11px] text-neutral-400" title={l.desc}>
+                              {l.desc}
+                            </span>
+                          )}
                         </td>
                         <td className="px-3 py-1.5 text-right tabular-nums text-neutral-600">
                           {formatNumber(l.m2)}

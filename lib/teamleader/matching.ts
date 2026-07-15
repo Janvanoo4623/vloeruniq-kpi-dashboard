@@ -20,6 +20,12 @@ export interface Costs {
 
 // Description starts with a floor-product type.
 const FLOOR_TYPE_RE = /^(pvc|visgraat|stroken|tegels|hongaarse|weense|klik|vt wonen)/i;
+// Finishing / labour lines that are billed in m² but are NOT actual floor
+// surface (e.g. "snijden en kitten langs wand"). These otherwise slip through
+// FLOOR_TYPE_RE (they start with the floor type) and inflate the floor m²,
+// diluting price/m² and coverage. See feedback 2026-07-13 (offerte 1003:
+// 254 m² = 159 m² vloer + 95 m² snijden/kitten). Extend as new cases surface.
+const FINISHING_RE = /snij|kitt/i;
 // Description contains a P-number anywhere.
 const P_NUMBER_TEST = /P\d{3}/i;
 // Extract the first P-number (uppercase) for price lookup.
@@ -68,6 +74,7 @@ export function parseQuotation(
       const descTrimmed = rawDesc.trim();
 
       if (desc.includes('trap')) continue; // exclude traprenovatie (stair renovation)
+      if (FINISHING_RE.test(desc)) continue; // snijden/kitten etc. — labour, not floor m²
 
       const isFloor = P_NUMBER_TEST.test(descTrimmed) || FLOOR_TYPE_RE.test(descTrimmed);
       if (!isFloor) continue;
@@ -118,7 +125,13 @@ export function parseQuotation(
       }
 
       if (product) {
-        lines.push({ code: product, revenue: lineRevenue, m2: quantity, margin: lineMargin });
+        lines.push({
+          code: product,
+          revenue: lineRevenue,
+          m2: quantity,
+          margin: lineMargin,
+          desc: descTrimmed,
+        });
       }
     }
   }

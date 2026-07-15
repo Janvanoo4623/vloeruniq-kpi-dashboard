@@ -37,6 +37,7 @@ export interface QuotationLine {
   revenue: number;
   m2: number;
   margin: number | null;
+  desc?: string; // raw line description (for modal transparency; populated at sync time)
 }
 
 /** One row of the Run Time table (per won deal). */

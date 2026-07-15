@@ -149,6 +149,9 @@ export default function Dashboard({
           <p className="mt-0.5 text-sm text-neutral-500">
             {range.from} t/m {range.to} · Teamleader
           </p>
+          <p className="mt-0.5 text-xs text-neutral-400">
+            Alle bedragen zijn ex. btw — behalve cashflow (openstaand / betaalgedrag), dat toont incl. btw.
+          </p>
         </div>
         <div className="flex items-center gap-3">
           <div className="hidden text-right sm:block">
