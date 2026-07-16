@@ -20,12 +20,15 @@ export interface Costs {
 
 // Description starts with a floor-product type.
 const FLOOR_TYPE_RE = /^(pvc|visgraat|stroken|tegels|hongaarse|weense|klik|vt wonen)/i;
-// Finishing / labour lines that are billed in m² but are NOT actual floor
-// surface (e.g. "snijden en kitten langs wand"). These otherwise slip through
-// FLOOR_TYPE_RE (they start with the floor type) and inflate the floor m²,
-// diluting price/m² and coverage. See feedback 2026-07-13 (offerte 1003:
-// 254 m² = 159 m² vloer + 95 m² snijden/kitten). Extend as new cases surface.
-const FINISHING_RE = /snij|kitt/i;
+// Finishing / labour lines billed in m² but that are NOT floor surface, e.g.
+// "PVC vloer snijden en kitten langs wand". These start with a floor type and so
+// slip through FLOOR_TYPE_RE, inflating floor m² (offerte 1003: 254 m² = 159 m²
+// vloer P410 + 95 m² snijden/kitten). Identified by "kitten/kitwerk" (a
+// wall-finishing action that never appears in a real floor line — floor lines
+// say leggen/lijmen/egaliseren/snijverlies). We ONLY drop such a line when it has
+// no P-number, so a priced floor line is never excluded even if it mentions kit.
+// NB: do NOT match "snij" — every floor line carries "incl. X% snijverlies".
+const FINISHING_RE = /kitt/i;
 // Description contains a P-number anywhere.
 const P_NUMBER_TEST = /P\d{3}/i;
 // Extract the first P-number (uppercase) for price lookup.
@@ -74,7 +77,8 @@ export function parseQuotation(
       const descTrimmed = rawDesc.trim();
 
       if (desc.includes('trap')) continue; // exclude traprenovatie (stair renovation)
-      if (FINISHING_RE.test(desc)) continue; // snijden/kitten etc. — labour, not floor m²
+      // "kitten langs wand" finishing line — but never drop a priced floor line.
+      if (FINISHING_RE.test(desc) && !P_NUMBER_TEST.test(descTrimmed)) continue;
 
       const isFloor = P_NUMBER_TEST.test(descTrimmed) || FLOOR_TYPE_RE.test(descTrimmed);
       if (!isFloor) continue;

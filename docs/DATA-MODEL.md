@@ -52,19 +52,22 @@ A line item is included in floor revenue/m² if:
 
 ```
 description does NOT contain "trap"          # exclude stair renovation (traprenovatie)
-AND description does NOT match /snij|kitt/i   # exclude finishing labour lines (snijden/
-                                              #   kitten langs wand) billed in m² but not floor
+AND NOT ( description matches /kitt/i         # exclude "kitten langs wand" finishing lines,
+          AND description has NO P-number )   #   but never a priced floor line
 AND ( description matches /P\d{3}/i           # has a P-number
       OR description starts with one of:      # ^(pvc|visgraat|stroken|tegels|hongaarse|
          pvc, visgraat, stroken, tegels,      #   weense|klik|vt wonen)
          hongaarse, weense, klik, vt wonen )
 ```
 
-> The `snij|kitt` exclusion (`FINISHING_RE` in `matching.ts`) was added after
-> feedback (2026-07-13): offerte 1003 billed 254 m² = 159 m² vloer (P410) + 95 m²
-> "snijden en kitten langs wand". The finishing line started with a floor type and
-> so was wrongly counted as extra floor, inflating m² and diluting price/m². Extend
-> `FINISHING_RE` as new finishing-line phrasings surface.
+> The finishing-line exclusion (`FINISHING_RE = /kitt/i` in `matching.ts`) was added
+> after feedback (2026-07-13): offerte 1003 billed 254 m² = 159 m² vloer
+> ("PVC Stroken P410 … incl. 6% snijverlies … lijmen en leggen") + 95 m²
+> ("PVC vloer snijden en kitten langs wand"). The finishing line starts with a floor
+> type and so was wrongly counted as extra floor. **Match `kitten` only — never
+> `snij`:** every real floor line carries "incl. X% snijverlies", so a `/snij/`
+> match zeroed all floor (fixed 2026-07-15). The P-number guard guarantees a priced
+> floor line is never dropped even if its text mentions kit.
 
 For each matched line item:
 - `totalM2 += quantity`
