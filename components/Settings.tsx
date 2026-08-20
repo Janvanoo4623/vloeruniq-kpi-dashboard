@@ -5,6 +5,8 @@ import Link from 'next/link';
 import type { CurrentPrice, CurrentCost, Exclusion } from '@/lib/db';
 import type { KpiSettings } from '@/lib/kpi-settings';
 import KpiSettingsTab from './KpiSettingsTab';
+import DataQualityTab from './DataQualityTab';
+import type { QualityReport } from '@/lib/data-quality';
 import { formatProduct } from '@/lib/format';
 
 const TABS = [
@@ -12,6 +14,7 @@ const TABS = [
   { key: 'kosten' as const, label: 'Kosten' },
   { key: 'uitsluitingen' as const, label: 'Uitsluitingen' },
   { key: 'definities' as const, label: 'KPI-definities' },
+  { key: 'kwaliteit' as const, label: 'Datakwaliteit' },
 ];
 type TabKey = (typeof TABS)[number]['key'];
 
@@ -28,6 +31,7 @@ interface State {
   costs: CurrentCost[];
   exclusions: Exclusion[];
   kpi: KpiSettings;
+  quality: QualityReport;
 }
 
 export default function Settings({ initial }: { initial: State }) {
@@ -52,6 +56,7 @@ export default function Settings({ initial }: { initial: State }) {
           costs: data.costs,
           exclusions: data.exclusions,
           kpi: data.kpi ?? state.kpi,
+          quality: state.quality,
         });
         setMessage('Opgeslagen. Geldt vanaf vandaag voor nieuwe offertes (zichtbaar na de volgende sync).');
         return true;
@@ -116,6 +121,11 @@ export default function Settings({ initial }: { initial: State }) {
         {tab === 'definities' && (
           <Card>
             <KpiSettingsTab initial={state.kpi} />
+          </Card>
+        )}
+        {tab === 'kwaliteit' && (
+          <Card>
+            <DataQualityTab report={state.quality} />
           </Card>
         )}
       </div>

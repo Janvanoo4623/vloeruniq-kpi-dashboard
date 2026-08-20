@@ -9,6 +9,7 @@ import { buildCustomerLookup, fetchRunTime } from './deals';
 import { fetchQuotations } from './quotations';
 import { fetchInvoices, summarizeInvoices } from './invoices';
 import { buildSnapshot } from './aggregate';
+import { computeQuality, mergeHistory, toSnapshot, type QualitySnapshot } from '../data-quality';
 
 /** Run the full pipeline and return the computed snapshot (persists raw rows). */
 export async function runSync(): Promise<{ snapshot: Snapshot; pushed: number }> {
@@ -86,6 +87,7 @@ export async function syncAndStore(
   try {
     const { snapshot, pushed } = await runSync();
     await db.setSnapshot(snapshot);
+    await recordQuality();
 
     const meta: SyncMeta = {
       status: 'ok',
@@ -112,5 +114,33 @@ export async function syncAndStore(
       error: message,
     });
     throw err;
+  }
+}
+
+/**
+ * Meet de datakwaliteit en bewaar hem. Hier en niet in de UI: dan ontstaat de
+ * reeks vanzelf en hoeft niemand eraan te denken. Faalt dit, dan mag de sync er
+ * niet op stuklopen — het is een meting, geen onderdeel van de pijplijn.
+ */
+async function recordQuality(): Promise<void> {
+  try {
+    const today = new Date().toISOString().split('T')[0];
+    const [quotations, deals, invoices, priceRows, prices, overrides] = await Promise.all([
+      db.getAllQuotations(),
+      db.getAllDeals(),
+      db.getAllInvoices(),
+      db.getPriceRows(),
+      db.getCurrentPrices(),
+      db.getOverrides(),
+    ]);
+    const { applyOverrides } = await import('../overrides');
+    const resolved = applyOverrides(quotations, overrides);
+    const pricedCodes = new Set(prices.map((p) => p.code.toLowerCase()));
+    const report = computeQuality(resolved, deals, invoices, priceRows, pricedCodes, today);
+
+    const history = await db.getAppSetting<QualitySnapshot[]>('quality_history', []);
+    await db.setAppSetting('quality_history', mergeHistory(history, toSnapshot(report, today)));
+  } catch (err) {
+    console.warn('[sync] datakwaliteit niet vastgelegd:', err instanceof Error ? err.message : err);
   }
 }
