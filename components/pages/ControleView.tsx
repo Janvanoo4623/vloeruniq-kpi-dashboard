@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { ArrowRight, Check, ChevronDown, Tag } from 'lucide-react';
+import { ArrowRight, ChevronDown, Tag } from 'lucide-react';
 import type { ReviewItem } from '@/lib/review';
 import type { MissingPrice, UnmatchedQuotation } from '@/lib/missing-prices';
 import { formatEuro, formatNumber, formatProduct } from '@/lib/format';
@@ -264,11 +264,21 @@ function ReviewGroup({
       bodyClassName="p-0"
     >
       {!dicht && (
-        <ul className="divide-y divide-hair">
-          {items.map((item) => (
-            <ReviewRow key={item.id} item={item} />
-          ))}
-        </ul>
+        <>
+          <div className="flex items-center gap-x-4 border-b border-hair px-5 py-2 text-[10.5px] font-semibold uppercase tracking-wide text-ink-faint">
+            <span className="flex-1">Klant</span>
+            <span className="shrink-0">m²</span>
+            <span className="w-[74px] shrink-0 text-right">Prijs/m²</span>
+            <span className="w-[74px] shrink-0 text-right">Arbeid</span>
+            {/* Even breed als de twee knoppen, zodat de koppen erboven uitlijnen. */}
+            <span className="w-[196px] shrink-0" aria-hidden />
+          </div>
+          <ul className="divide-y divide-hair">
+            {items.map((item) => (
+              <ReviewRow key={item.id} item={item} />
+            ))}
+          </ul>
+        </>
       )}
     </Panel>
   );
@@ -278,6 +288,7 @@ function ReviewGroup({
 
 function ReviewRow({ item }: { item: ReviewItem }) {
   const [busy, setBusy] = useState<'loose' | 'ok' | 'undo' | null>(null);
+  const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const afgehandeld = item.resolved || item.reviewed;
 
@@ -304,73 +315,43 @@ function ReviewRow({ item }: { item: ReviewItem }) {
     }
   }
 
+  // Eén regel per offerte: klant, prijs, bedrag, twee knoppen. Alles wat je niet
+  // nodig hebt om te beslissen (status, datum, volledige omschrijving) zit onder
+  // "details" — beschikbaar als je twijfelt, weg als je dat niet doet.
+  const m2 = item.lines.reduce((s, l) => s + l.m2, 0);
+  const prijzen = item.lines.map((l) => l.pricePerM2).filter((p): p is number => p != null && p > 0);
+  const prijs = prijzen.length > 0 ? Math.min(...prijzen) : null;
+
   return (
-    <li className={cn('px-5 py-3.5', afgehandeld && 'bg-sunk/30')}>
-      <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-[13.5px] font-semibold text-ink">
-              {item.customerName || item.name || 'Offerte'}
-            </span>
-            <span
-              className={cn(
-                'rounded-full px-2 py-0.5 text-[10.5px] font-semibold ring-1 ring-inset',
-                STATUS_STYLE[item.status],
-              )}
-            >
-              {STATUS_LABEL[item.status]}
-            </span>
-            <span className="text-[11.5px] text-ink-faint">{item.date}</span>
-            {item.resolved && (
-              <Badge tone="accent">
-                <Check size={10} strokeWidth={3} /> los verkocht
-              </Badge>
-            )}
-            {item.reviewed && !item.resolved && (
-              <Badge tone="good">
-                <Check size={10} strokeWidth={3} /> klopt zo
-              </Badge>
-            )}
-          </div>
+    <li className={cn('px-5 py-2.5', afgehandeld && 'bg-sunk/30')}>
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+        <button
+          onClick={() => setOpen((v) => !v)}
+          className="flex min-w-0 flex-1 items-center gap-2.5 text-left"
+        >
+          <ChevronDown
+            size={13}
+            strokeWidth={2.2}
+            className={cn('shrink-0 text-ink-faint transition', open && 'rotate-180')}
+          />
+          <span className="min-w-0 flex-1 truncate text-[13.5px] font-semibold text-ink">
+            {item.customerName || item.name || 'Offerte'}
+          </span>
+          {item.resolved && <Badge tone="accent">los verkocht</Badge>}
+          {item.reviewed && !item.resolved && <Badge tone="good">klopt zo</Badge>}
+        </button>
 
-          <ul className="mt-1.5 space-y-1">
-            {item.lines.map((l, i) => (
-              <li
-                key={i}
-                className="flex flex-wrap items-baseline gap-x-2 text-[12.5px] leading-snug"
-              >
-                <span className="text-ink-soft">{l.desc || formatProduct(l.code)}</span>
-                <span className="whitespace-nowrap tabular-nums text-ink-faint">
-                  {formatNumber(l.m2)} m²
-                </span>
-                <span
-                  className={cn(
-                    'whitespace-nowrap rounded px-1 py-0.5 text-[11px] font-semibold tabular-nums',
-                    l.pricePerM2 != null && l.pricePerM2 > 0 && l.pricePerM2 <= 35
-                      ? 'bg-warn-soft text-warn'
-                      : 'bg-sunk text-ink-mute',
-                  )}
-                >
-                  {formatEuro(l.pricePerM2, true)}/m²
-                </span>
-                {l.installMode === 'glued' && (
-                  <span className="whitespace-nowrap rounded bg-accent-soft px-1 py-0.5 text-[11px] font-medium text-accent">
-                    gelijmd
-                  </span>
-                )}
-              </li>
-            ))}
-          </ul>
-        </div>
+        <span className="shrink-0 text-[12.5px] tabular-nums text-ink-mute">
+          {formatNumber(m2)} m²
+        </span>
+        <span className="w-[74px] shrink-0 text-right text-[12.5px] tabular-nums text-ink-soft">
+          {prijs == null ? '—' : `${formatEuro(prijs, true)}/m²`}
+        </span>
+        <span className="w-[74px] shrink-0 text-right text-[13.5px] font-bold tabular-nums text-ink">
+          {formatEuro(item.laborAtStake)}
+        </span>
 
-        <div className="flex shrink-0 items-center gap-3">
-          <div className="text-right">
-            <p className="text-[10px] uppercase tracking-wide text-ink-faint">Arbeid</p>
-            <p className="text-[15px] font-bold leading-tight tabular-nums text-ink">
-              {formatEuro(item.laborAtStake)}
-            </p>
-          </div>
-
+        <div className="flex shrink-0 items-center gap-2">
           {afgehandeld ? (
             <Button
               variant="ghost"
@@ -413,7 +394,30 @@ function ReviewRow({ item }: { item: ReviewItem }) {
         </div>
       </div>
 
-      {error && <p className="mt-2 text-[12px] text-crit">{error}</p>}
+      {open && (
+        <dl className="ml-[23px] mt-2 space-y-1 border-l border-hair pl-3 text-[12px]">
+          <div className="flex gap-2">
+            <dt className="w-16 shrink-0 text-ink-faint">Status</dt>
+            <dd className="text-ink-soft">
+              {STATUS_LABEL[item.status]} · {item.date}
+            </dd>
+          </div>
+          {item.lines.map((l, i) => (
+            <div key={i} className="flex gap-2">
+              <dt className="w-16 shrink-0 text-ink-faint">{i === 0 ? 'Regels' : ''}</dt>
+              <dd className="min-w-0 text-ink-soft">
+                {l.desc || formatProduct(l.code)}
+                <span className="ml-2 whitespace-nowrap text-ink-faint">
+                  {formatNumber(l.m2)} m² · {formatEuro(l.pricePerM2, true)}/m²
+                  {l.installMode === 'glued' && ' · gelijmd'}
+                </span>
+              </dd>
+            </div>
+          ))}
+        </dl>
+      )}
+
+      {error && <p className="ml-[23px] mt-2 text-[12px] text-crit">{error}</p>}
     </li>
   );
 }
