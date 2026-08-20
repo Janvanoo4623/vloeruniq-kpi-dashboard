@@ -9,7 +9,16 @@ export function cn(...parts: (string | false | null | undefined)[]): string {
 // ── Kaart ────────────────────────────────────────────────────────────────
 export function Card({ className, children }: { className?: string; children: ReactNode }) {
   return (
-    <div className={cn('rounded-2xl border border-line bg-surface shadow-sm', className)}>
+    <div
+      className={cn(
+        'rounded-2xl border border-line bg-surface',
+        // Twee lagen schaduw: een haarscherpe contactlijn plus een brede, zachte
+        // slagschaduw. Eén enkele blur ziet er op een warme ondergrond altijd
+        // grijzig uit; deze combinatie geeft de kaart gewicht zonder vuil te worden.
+        'shadow-[0_1px_2px_rgba(28,25,23,0.04),0_10px_30px_-18px_rgba(28,25,23,0.32)]',
+        className,
+      )}
+    >
       {children}
     </div>
   );
@@ -27,7 +36,15 @@ export function CardHeader({
   className?: string;
 }) {
   return (
-    <div className={cn('flex items-start justify-between gap-4 border-b border-hair px-5 py-4', className)}>
+    <div
+      className={cn(
+        'flex items-start justify-between gap-4 border-b border-hair px-5 py-4',
+        // Nauwelijks zichtbaar verloop onder de kop, zodat de kop optisch bij de
+        // kaart hoort in plaats van er als een aparte balk bovenop te liggen.
+        'bg-gradient-to-b from-sunk/50 to-transparent',
+        className,
+      )}
+    >
       <div className="min-w-0">
         <h3 className="text-[13px] font-semibold tracking-tight text-ink">{title}</h3>
         {subtitle && <p className="mt-0.5 text-xs text-ink-mute">{subtitle}</p>}

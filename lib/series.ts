@@ -9,6 +9,8 @@ export interface WeeklyPoint {
   acceptedCount: number;
   openCount: number;
   refusedCount: number;
+  expiredCount: number;
+  expiredRevenue: number;
   conversionPct: number | null;
   margin: number;
   marginPct: number | null;
@@ -24,7 +26,9 @@ export function weeklySeries(snapshot: Snapshot): WeeklyPoint[] {
     const rt = snapshot.runTime.byWeek[week];
     const acceptedCount = r?.acceptedCount ?? 0;
     const refusedCount = r?.refusedCount ?? 0;
-    const decided = acceptedCount + refusedCount;
+    // Verlopen telt als verloren — zie aggregate.ts.
+    const expiredCount = r?.expiredCount ?? 0;
+    const decided = acceptedCount + refusedCount + expiredCount;
     const conversionPct = decided > 0 ? Math.round((acceptedCount / decided) * 1000) / 10 : null;
     const marginPct =
       r && r.acceptedMarginRev > 0
@@ -38,6 +42,8 @@ export function weeklySeries(snapshot: Snapshot): WeeklyPoint[] {
       acceptedCount,
       openCount: r?.openCount ?? 0,
       refusedCount,
+      expiredCount,
+      expiredRevenue: r?.expiredRevenue ?? 0,
       conversionPct,
       margin: r?.acceptedMargin ?? 0,
       marginPct,
@@ -58,6 +64,8 @@ export interface TimePoint {
   openRevenue: number;
   acceptedCount: number;
   refusedCount: number;
+  expiredCount: number;
+  expiredRevenue: number;
   margin: number;
   marginRev: number;
   marginPct: number | null;
@@ -69,10 +77,10 @@ export interface TimePoint {
   cumulativeAccepted: number;
 }
 
+// Elke afgeronde offerte (geaccepteerd, geweigerd, verlopen) hoort thuis op de
+// datum waarop dat gebeurde; alleen een nog open offerte valt op zijn aanmaakdatum.
 function relevantDate(q: QuotationRow): string {
-  return (q.status === 'accepted' || q.status === 'refused') && q.dateAccepted
-    ? q.dateAccepted
-    : q.dateCreated;
+  return q.status !== 'open' && q.dateAccepted ? q.dateAccepted : q.dateCreated;
 }
 
 const monthKey = (d: string) => d.substring(0, 7);
@@ -86,6 +94,8 @@ function emptyPoint(key: string): TimePoint {
     openRevenue: 0,
     acceptedCount: 0,
     refusedCount: 0,
+    expiredCount: 0,
+    expiredRevenue: 0,
     margin: 0,
     marginRev: 0,
     marginPct: null,
@@ -135,6 +145,9 @@ export function buildTimeSeries(snapshot: Snapshot, granularity: Granularity): T
       p.openRevenue += q.revenueExVat;
     } else if (q.status === 'refused') {
       p.refusedCount += 1;
+    } else if (q.status === 'expired') {
+      p.expiredCount += 1;
+      p.expiredRevenue += q.revenueExVat;
     }
   }
 
@@ -153,9 +166,10 @@ export function buildTimeSeries(snapshot: Snapshot, granularity: Granularity): T
   return keys.map((key) => {
     const p = buckets.get(key)!;
     cumulative += p.acceptedRevenue;
-    const decided = p.acceptedCount + p.refusedCount;
+    const decided = p.acceptedCount + p.refusedCount + p.expiredCount;
     return {
       ...p,
+      expiredRevenue: round2(p.expiredRevenue),
       label: granularity === 'month' ? monthLabel(key) : key.split('-W').map((s, i) => (i ? `W${s}` : ''))[1] ?? key,
       acceptedRevenue: round2(p.acceptedRevenue),
       openRevenue: round2(p.openRevenue),

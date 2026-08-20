@@ -83,9 +83,14 @@ const GLUED_RE = /lijm/i;
 // "ex" is listed separately from "excl": one offerte reads "Ex legservice" and a
 // pattern built on "excl" alone silently charged it €17/m². Requiring leg(gen|
 // service) right after keeps it safe — "ex. btw" can never match.
+//
+// "leggen" wordt ook als "legge" geschreven ("Incl. egaliseren, lijmen en legge").
+// Vandaar de optionele slot-n. Dit is de derde typefout op rij die een regel deed
+// missen — na "onvervloer" en "Ex legservice" — dus de patronen zijn bewust ruim
+// op spelling en streng op betekenis, niet andersom.
 const NO_LABOR_RE =
-  /\b(?:excl\.?|exclusief|ex\.?|zonder)\s*(?:het\s+)?leg(?:gen|service)?\b|\balleen\s+(?:leveren|levering)\b/i;
-const HAS_LABOR_RE = /\bleg(?:gen|service)\b|\bgelegd\b|\bmont(?:age|eren)\b/i;
+  /\b(?:excl\.?|exclusief|ex\.?|zonder)\s*(?:het\s+)?leg(?:gen?|service)?\b|\balleen\s+(?:leveren|levering)\b/i;
+const HAS_LABOR_RE = /\bleg(?:gen?|service)\b|\bgelegd\b|\bmont(?:age|eren)\b/i;
 
 export function parseQuotation(
   summary: TLQuotationSummary,

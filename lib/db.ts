@@ -331,7 +331,7 @@ function rowToQuotation(r: Row): QuotationRow {
   const status = r.status as QuotationRow['status'];
   const dateCreated = (r.date_created as string) ?? '';
   const dateAccepted = (r.date_accepted as string) ?? '';
-  const relevant = (status === 'accepted' || status === 'refused') && dateAccepted ? dateAccepted : dateCreated;
+  const relevant = status !== 'open' && dateAccepted ? dateAccepted : dateCreated;
   const { month, quarter, year } = deriveDateParts(relevant);
   const lines = (r.lines as QuotationLine[]) ?? [];
   const totalM2 = num(r.total_m2);

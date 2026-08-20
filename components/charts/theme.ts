@@ -14,6 +14,7 @@ export const CHART = {
   accepted: '#0e6b63', // accent — binnengehaald
   open: '#b4762a', // oak — nog open
   refused: '#a93b2c', // crit — geweigerd
+  expired: '#a8a29e', // ink-faint — verlopen: verloren, maar niemand zei nee
 
   margin: '#2f7a4e', // good — marge in euro's
   marginPct: '#a8761b', // warn — marge in procenten

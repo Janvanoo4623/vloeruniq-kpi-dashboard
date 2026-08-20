@@ -10,6 +10,8 @@ import {
   TrendingUp,
   Users,
   type LucideIcon,
+  AlertTriangle,
+  SlidersHorizontal,
 } from 'lucide-react';
 
 export interface NavItem {
@@ -35,6 +37,13 @@ export const NAV: NavGroup[] = [
         title: 'Overzicht',
         subtitle: 'De cijfers die er vandaag toe doen',
         Icon: LayoutDashboard,
+      },
+      {
+        href: '/controleren',
+        label: 'Controleren',
+        title: 'Controleren',
+        subtitle: 'Wat de app niet zelf kan bepalen — en dus aan jou vraagt',
+        Icon: AlertTriangle,
       },
     ],
   },
@@ -93,6 +102,13 @@ export const NAV: NavGroup[] = [
   {
     label: 'Beheer',
     items: [
+      {
+        href: '/uitzonderingen',
+        label: 'Uitzonderingen',
+        title: 'Uitzonderingen',
+        subtitle: 'Handmatige correcties en uitgesloten offertes, met hun effect op de marge',
+        Icon: SlidersHorizontal,
+      },
       {
         href: '/instellingen',
         label: 'Instellingen',
