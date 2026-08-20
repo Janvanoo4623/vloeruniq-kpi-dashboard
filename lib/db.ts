@@ -396,16 +396,32 @@ export async function setAppSetting(key: string, value: unknown): Promise<void> 
  * dan bleef de regel staan en werd de lijst nooit korter. Daardoor was onduidelijk
  * wanneer je klaar was — en een werklijst die niet leegloopt is geen werklijst.
  */
-export async function getReviewedIds(): Promise<Set<string>> {
-  const v = await getAppSetting<{ ids?: string[] }>('review_ok', {});
+export type ReviewScope = 'labor' | 'unmatched';
+
+/**
+ * Twee losse lijsten, want het zijn twee verschillende uitspraken: "de arbeid
+ * klopt zo" zegt iets anders dan "ik weet dat er geen vloerregel herkend wordt
+ * en dat is akkoord". Een offerte kan in beide lijsten voorkomen.
+ */
+const REVIEW_KEY: Record<ReviewScope, string> = {
+  labor: 'review_ok',
+  unmatched: 'unmatched_ok',
+};
+
+export async function getReviewedIds(scope: ReviewScope = 'labor'): Promise<Set<string>> {
+  const v = await getAppSetting<{ ids?: string[] }>(REVIEW_KEY[scope], {});
   return new Set(v.ids ?? []);
 }
 
-export async function setReviewed(id: string, reviewed: boolean): Promise<void> {
-  const ids = await getReviewedIds();
+export async function setReviewed(
+  id: string,
+  reviewed: boolean,
+  scope: ReviewScope = 'labor',
+): Promise<void> {
+  const ids = await getReviewedIds(scope);
   if (reviewed) ids.add(id);
   else ids.delete(id);
-  await setAppSetting('review_ok', { ids: [...ids] });
+  await setAppSetting(REVIEW_KEY[scope], { ids: [...ids] });
 }
 
 // ── Per-quotation overrides (special price / no-labour) ─────────────────

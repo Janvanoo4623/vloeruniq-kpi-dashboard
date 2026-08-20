@@ -2,7 +2,15 @@
 // a per-line special purchase price and an offerte-level "no legservice" flag.
 // Applied at read time (instant + retroactive). Session-gated by proxy.ts.
 import { NextResponse } from 'next/server';
-import { getOverrides, setOverridePrice, setOverrideNoLabor, setReviewed } from '@/lib/db';
+import {
+  getOverrides,
+  setOverridePrice,
+  setOverrideNoLabor,
+  setReviewed,
+  addExclusion,
+  removeExclusion,
+  type ReviewScope,
+} from '@/lib/db';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -39,7 +47,16 @@ export async function POST(request: Request) {
         break;
       }
       case 'reviewed': {
-        await setReviewed(quotationId, Boolean(body.reviewed));
+        const scope = (body.scope === 'unmatched' ? 'unmatched' : 'labor') as ReviewScope;
+        await setReviewed(quotationId, Boolean(body.reviewed), scope);
+        break;
+      }
+      case 'exclude': {
+        // Volledig uit alle cijfers halen. Bewust hier en niet alleen in
+        // Instellingen: je ziet op Controleren pas dát een offerte niet te
+        // meten is, en dan wil je 'm daar ook kunnen afhandelen.
+        if (body.excluded === false) await removeExclusion(quotationId);
+        else await addExclusion(quotationId, (body.reason as string) || 'Uitgesloten via Controleren');
         break;
       }
       default:

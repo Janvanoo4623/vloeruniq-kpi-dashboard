@@ -12,20 +12,21 @@ export const dynamic = 'force-dynamic';
  * hele offertehistorie.
  */
 export default async function ControlerenPage() {
-  const [quotations, prices, overrides, reviewed] = await Promise.all([
+  const [quotations, prices, overrides, gezienArbeid, gezienGeenVloer] = await Promise.all([
     getAllQuotations(),
     getCurrentPrices(),
     getOverrides(),
-    getReviewedIds(),
+    getReviewedIds('labor'),
+    getReviewedIds('unmatched'),
   ]);
   const resolved = applyOverrides(quotations, overrides);
   const pricedCodes = new Set(prices.map((p) => p.code.toLowerCase()));
 
   return (
     <ControleView
-      review={computeReviewList(resolved, overrides, reviewed)}
+      review={computeReviewList(resolved, overrides, gezienArbeid)}
       missing={computeMissingPrices(resolved, pricedCodes)}
-      unmatched={computeUnmatchedQuotations(resolved)}
+      unmatched={computeUnmatchedQuotations(resolved, gezienGeenVloer)}
     />
   );
 }

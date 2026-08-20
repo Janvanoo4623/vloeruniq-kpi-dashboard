@@ -15,7 +15,35 @@ export interface MissingPrice {
    * een eigen product is of een schrijfwijze van iets dat al bestaat.
    */
   derived: boolean;
+  /**
+   * De naam is een categorie, geen product ("PVC Stroken"). Eén inkoopprijs
+   * daarop zetten levert een fóút getal op in plaats van een ontbrekend, want
+   * er zitten tientallen verschillende vloeren onder. Zulke regels los je per
+   * offerte op met het potloodje, niet met een prijs in de prijslijst.
+   */
+  tooGeneric: boolean;
 }
+
+/**
+ * Namen die alleen een vloertype noemen zonder iets onderscheidends. Bewust een
+ * korte, expliciete lijst en geen slimme heuristiek: "PVC Stroken Alba" moet je
+ * wél kunnen prijzen, "PVC Stroken" niet.
+ */
+const GENERIEK = new Set([
+  'pvc',
+  'pvc stroken',
+  'pvc visgraat',
+  'pvc tegels',
+  'klik pvc',
+  'pvc klik',
+  'visgraat',
+  'stroken',
+  'tegels',
+  'hongaarse punt',
+  'weense punt',
+]);
+
+const isGeneriek = (code: string) => GENERIEK.has(code.trim().toLowerCase());
 
 /** Een offerte met omzet waarin we geen enkele vloerregel herkennen. */
 export interface UnmatchedQuotation {
@@ -26,6 +54,8 @@ export interface UnmatchedQuotation {
   date: string;
   revenueExVat: number;
   totalM2: number;
+  /** Al bekeken en akkoord bevonden. */
+  reviewed: boolean;
 }
 
 /**
@@ -50,6 +80,7 @@ export function computeMissingPrices(
           m2: 0,
           revenue: 0,
           derived: Boolean(l.derivedCode),
+          tooGeneric: isGeneriek(l.code),
           _ids: new Set(),
         };
         byCode.set(l.code, mp);
@@ -70,6 +101,7 @@ export function computeMissingPrices(
       m2: Math.round(mp.m2 * 10) / 10,
       revenue: Math.round(mp.revenue),
       derived: mp.derived,
+      tooGeneric: mp.tooGeneric,
     }))
     .sort((a, b) => b.revenue - a.revenue);
 }
@@ -85,7 +117,10 @@ export function computeMissingPrices(
  * zou een ruimere regel meesleuren. Liever zichtbaar onbekend dan stilzwijgend
  * verkeerd — dat is precies de les van de matchingfouten die we vandaag vonden.
  */
-export function computeUnmatchedQuotations(quotations: QuotationRow[]): UnmatchedQuotation[] {
+export function computeUnmatchedQuotations(
+  quotations: QuotationRow[],
+  reviewedIds: Set<string> = new Set(),
+): UnmatchedQuotation[] {
   return quotations
     .filter((q) => (q.lines ?? []).length === 0 && q.revenueExVat > 0)
     .map((q) => ({
@@ -96,6 +131,8 @@ export function computeUnmatchedQuotations(quotations: QuotationRow[]): Unmatche
       date: q.dateAccepted || q.dateCreated,
       revenueExVat: q.revenueExVat,
       totalM2: q.totalM2,
+      reviewed: reviewedIds.has(q.id),
     }))
-    .sort((a, b) => b.revenueExVat - a.revenueExVat);
+    // Onafgehandeld eerst, daarbinnen grootste bedrag bovenaan.
+    .sort((a, b) => (a.reviewed === b.reviewed ? b.revenueExVat - a.revenueExVat : a.reviewed ? 1 : -1));
 }
