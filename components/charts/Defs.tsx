@@ -32,7 +32,9 @@ const BAR_GRADIENTS: Stop[] = [
 const AREA_GRADIENTS: Stop[] = [
   { id: 'aAccepted', color: CHART.accepted, from: 0.26, to: 0 },
   { id: 'aOpen', color: CHART.open, from: 0.24, to: 0 },
-  { id: 'aMargin', color: CHART.margin, from: 0.26, to: 0 },
+  // Marge% loopt op de rechteras; het vlak eronder mag de staven (linkeras)
+  // niet overstemmen. Bewust lichter dan de andere vlakken.
+  { id: 'aMargin', color: CHART.marginPct, from: 0.12, to: 0 },
   { id: 'aRunTime', color: CHART.runTime, from: 0.22, to: 0 },
 ];
 
