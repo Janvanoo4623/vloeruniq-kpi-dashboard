@@ -32,6 +32,20 @@ export interface Exclusion {
   createdAt: string;
 }
 
+/**
+ * Bestaat de tabel (nog) niet? Postgres zegt 42P01 "does not exist", maar
+ * PostgREST antwoordt met PGRST205 en "Could not find the table ... in the
+ * schema cache". Allebei betekenen: migratie nog niet gedraaid.
+ */
+function isMissingTable(error: { code?: string; message?: string } | null): boolean {
+  if (!error) return false;
+  return (
+    error.code === '42P01' ||
+    error.code === 'PGRST205' ||
+    /does not exist|could not find the table/i.test(error.message ?? '')
+  );
+}
+
 const num = (v: unknown): number => (v == null ? 0 : Number(v));
 const numOrNull = (v: unknown): number | null => (v == null ? null : Number(v));
 
@@ -256,6 +270,39 @@ export async function removeExclusion(id: string): Promise<void> {
   if (error) throw new Error(`db.removeExclusion: ${error.message}`);
 }
 
+// ── App-instellingen (KPI-definities) ───────────────────────────────────
+/**
+ * Vrije sleutel/waarde-tabel voor instellingen die geen prijs of kostenpost zijn.
+ * Ontbreekt de tabel nog (migratie niet gedraaid), dan vallen we terug op de
+ * standaardwaarden in plaats van de hele pagina te laten vallen.
+ */
+export async function getAppSetting<T>(key: string, fallback: T): Promise<T> {
+  const { data, error } = await supabase()
+    .from('app_settings')
+    .select('value')
+    .eq('key', key)
+    .maybeSingle();
+  if (error) {
+    if (isMissingTable(error)) return fallback;
+    throw new Error(`db.getAppSetting(${key}): ${error.message}`);
+  }
+  return (data?.value as T) ?? fallback;
+}
+
+export async function setAppSetting(key: string, value: unknown): Promise<void> {
+  const { error } = await supabase()
+    .from('app_settings')
+    .upsert({ key, value, updated_at: new Date().toISOString() });
+  if (error) {
+    if (isMissingTable(error)) {
+      throw new Error(
+        'De tabel app_settings bestaat nog niet. Draai de migratie uit supabase/schema.sql in de Supabase SQL editor.',
+      );
+    }
+    throw new Error(`db.setAppSetting(${key}): ${error.message}`);
+  }
+}
+
 // ── Per-quotation overrides (special price / no-labour) ─────────────────
 /** All overrides keyed by quotation id. line_code '' carries the offerte-level flag. */
 export async function getOverrides(): Promise<Record<string, QuotationOverride>> {
@@ -265,7 +312,7 @@ export async function getOverrides(): Promise<Record<string, QuotationOverride>>
   if (error) {
     // Table not created yet (migration pending): degrade gracefully so the
     // dashboard keeps working with no corrections applied.
-    if (error.code === '42P01' || /does not exist/i.test(error.message)) return {};
+    if (isMissingTable(error)) return {};
     throw new Error(`db.getOverrides: ${error.message}`);
   }
   const out: Record<string, QuotationOverride> = {};
@@ -424,6 +471,7 @@ export async function markDeletedAtSource(liveIds: Set<string>): Promise<{
 }> {
   const probe = await supabase().from('quotations').select('deleted_at_source').limit(1);
   if (probe.error) {
+    // Kolom ontbreekt nog — overslaan in plaats van de backfill laten falen.
     // Migratie nog niet gedraaid — overslaan in plaats van de backfill laten falen.
     return {
       marked: 0,

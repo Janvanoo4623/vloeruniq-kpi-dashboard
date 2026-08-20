@@ -10,18 +10,22 @@ import {
   addCost,
   addExclusion,
   removeExclusion,
+  getAppSetting,
+  setAppSetting,
 } from '@/lib/db';
+import { DEFAULT_KPI_SETTINGS, parseKpiSettings } from '@/lib/kpi-settings';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 async function currentState() {
-  const [prices, costs, exclusions] = await Promise.all([
+  const [prices, costs, exclusions, kpiRaw] = await Promise.all([
     getCurrentPrices(),
     getCurrentCosts(),
     listExclusions(),
+    getAppSetting('kpi', DEFAULT_KPI_SETTINGS),
   ]);
-  return { prices, costs, exclusions };
+  return { prices, costs, exclusions, kpi: parseKpiSettings(kpiRaw) };
 }
 
 export async function GET() {
@@ -53,6 +57,12 @@ export async function POST(request: Request) {
         const value = Number(body.value);
         if (!key || !Number.isFinite(value) || value < 0) return bad('Ongeldige waarde.');
         await addCost(key, value);
+        break;
+      }
+      case 'kpi': {
+        // Bewust door parseKpiSettings heen: onbekende of ongeldige waarden
+        // vallen terug op de standaard in plaats van in de database te belanden.
+        await setAppSetting('kpi', parseKpiSettings(body.settings));
         break;
       }
       case 'exclusion-add': {

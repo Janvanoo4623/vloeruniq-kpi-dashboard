@@ -12,6 +12,8 @@ import {
   type LucideIcon,
   AlertTriangle,
   SlidersHorizontal,
+  CalendarRange,
+  MapPin,
 } from 'lucide-react';
 
 export interface NavItem {
@@ -44,6 +46,13 @@ export const NAV: NavGroup[] = [
         title: 'Controleren',
         subtitle: 'Wat de app niet zelf kan bepalen — en dus aan jou vraagt',
         Icon: AlertTriangle,
+      },
+      {
+        href: '/planning',
+        label: 'Planning',
+        title: 'Planning',
+        subtitle: 'Wat er is ingepland en wat er nog uitgevoerd moet worden',
+        Icon: CalendarRange,
       },
     ],
   },
@@ -89,6 +98,13 @@ export const NAV: NavGroup[] = [
         title: 'Leadbronnen',
         subtitle: 'Waar de omzet vandaan komt, en wat elke bron waard is',
         Icon: Users,
+      },
+      {
+        href: '/regio',
+        label: 'Regio',
+        title: 'Regio',
+        subtitle: 'Waar je makkelijk wint en waar je goed verdient',
+        Icon: MapPin,
       },
       {
         href: '/trends',

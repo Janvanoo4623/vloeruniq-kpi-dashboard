@@ -3,12 +3,15 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import type { CurrentPrice, CurrentCost, Exclusion } from '@/lib/db';
+import type { KpiSettings } from '@/lib/kpi-settings';
+import KpiSettingsTab from './KpiSettingsTab';
 import { formatProduct } from '@/lib/format';
 
 const TABS = [
   { key: 'prijzen' as const, label: 'Prijzen' },
   { key: 'kosten' as const, label: 'Kosten' },
   { key: 'uitsluitingen' as const, label: 'Uitsluitingen' },
+  { key: 'definities' as const, label: 'KPI-definities' },
 ];
 type TabKey = (typeof TABS)[number]['key'];
 
@@ -24,6 +27,7 @@ interface State {
   prices: CurrentPrice[];
   costs: CurrentCost[];
   exclusions: Exclusion[];
+  kpi: KpiSettings;
 }
 
 export default function Settings({ initial }: { initial: State }) {
@@ -43,7 +47,12 @@ export default function Settings({ initial }: { initial: State }) {
       });
       const data = await res.json();
       if (res.ok && data.ok) {
-        setState({ prices: data.prices, costs: data.costs, exclusions: data.exclusions });
+        setState({
+          prices: data.prices,
+          costs: data.costs,
+          exclusions: data.exclusions,
+          kpi: data.kpi ?? state.kpi,
+        });
         setMessage('Opgeslagen. Geldt vanaf vandaag voor nieuwe offertes (zichtbaar na de volgende sync).');
         return true;
       }
@@ -103,6 +112,11 @@ export default function Settings({ initial }: { initial: State }) {
         {tab === 'kosten' && <CostsTab costs={state.costs} post={post} busy={busy} />}
         {tab === 'uitsluitingen' && (
           <ExclusionsTab exclusions={state.exclusions} post={post} busy={busy} />
+        )}
+        {tab === 'definities' && (
+          <Card>
+            <KpiSettingsTab initial={state.kpi} />
+          </Card>
         )}
       </div>
     </div>

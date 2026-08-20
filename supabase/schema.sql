@@ -142,3 +142,13 @@ create table if not exists snapshot_cache (
   updated_at timestamptz default now(),
   constraint snapshot_cache_singleton check (id = 1)
 );
+
+
+-- Vrije sleutel/waarde-tabel voor KPI-definities (o.a. "wat telt als verloren?").
+-- Deze horen niet bij prices/costs: het zijn geen bedragen maar keuzes over hoe
+-- een cijfer wordt uitgerekend. Zie lib/kpi-settings.ts.
+create table if not exists app_settings (
+  key text primary key,
+  value jsonb not null,
+  updated_at timestamptz default now()
+);
