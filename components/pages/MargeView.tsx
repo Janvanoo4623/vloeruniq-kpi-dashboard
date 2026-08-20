@@ -9,16 +9,19 @@ import ProductsTable from '@/components/ProductsTable';
 import AttentionTable from '@/components/AttentionTable';
 import EmptyState from '@/components/pages/EmptyState';
 import InstallMixPanel from '@/components/pages/InstallMixPanel';
-import type { InstallMixPoint, InstallModeStat } from '@/lib/insights';
+import type { InstallMixPoint, InstallModeStat, ProductSpread } from '@/lib/insights';
+import ProductSpreadPanel from '@/components/pages/ProductSpreadPanel';
 import { SectionLabel } from '@/components/ui';
 
 /** Alles over marge op één plek: de curve, per product, en waar het misgaat. */
 export default function MargeView({
   installTotals,
   installByQuarter,
+  spread,
 }: {
   installTotals: InstallModeStat[];
   installByQuarter: InstallMixPoint[];
+  spread: ProductSpread[];
 }) {
   const { snap, series, pricedCodes } = useDashboard();
   const totals = snap?.revenue.totals;
@@ -49,6 +52,8 @@ export default function MargeView({
       <ChartCard title="Per vloerproduct" subtitle="Omzet, m² en marge per product">
         <ProductsTable rows={snap.topProducts} />
       </ChartCard>
+
+      <ProductSpreadPanel products={spread} />
 
       <ChartCard
         title="Aandachtspunten"

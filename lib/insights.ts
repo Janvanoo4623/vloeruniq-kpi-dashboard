@@ -484,3 +484,97 @@ export function leadSourceTrend(
 
   return { points, sources, totals };
 }
+
+// ── 7. Marge-spreiding per product ───────────────────────────────────────
+
+export interface ProductSpread {
+  code: string;
+  /** Aantal geaccepteerde offertes waarin dit product voorkomt. */
+  quotes: number;
+  m2: number;
+  revenue: number;
+  /** Mediane marge per m², in euro. */
+  medianMarginPerM2: number;
+  minMarginPerM2: number;
+  maxMarginPerM2: number;
+  medianPricePerM2: number;
+  medianMarginPct: number;
+  /** De inkoopprijs waarop dit alles rust. */
+  purchasePerM2: number | null;
+  /** Hoe ver de slechtste offerte onder de mediaan zit, in euro per m². */
+  downside: number;
+}
+
+/**
+ * Marge per m² per product, als spreiding in plaats van als gemiddelde.
+ *
+ * Een gemiddelde verbergt hier precies het interessante: een product met een
+ * nette gemiddelde marge kan bestaan uit een paar goede offertes en een paar
+ * waarin flink is weggegeven. De afstand tussen de slechtste en de mediaan is
+ * wat je kunt terugpakken, en dat is een ander gesprek dan "dit product loopt
+ * slecht".
+ *
+ * Alleen producten met minstens `minQuotes` offertes: onder de drie is een
+ * mediaan een toevalstreffer.
+ */
+export function productSpread(
+  quotations: QuotationRow[],
+  minQuotes = 3,
+  /**
+   * Minimale m² per regel. Een marge per m² die over één vierkante meter wordt
+   * uitgerekend is geen prijspunt maar een artefact: er staat een offerteregel
+   * met aantal 1 en EUR 421,60 marge, wat neerkomt op EUR 421,60/m². Zulke regels
+   * verpesten niet alleen hun eigen product maar de schaal van de hele grafiek.
+   */
+  minM2 = 5,
+): ProductSpread[] {
+  const per = new Map<
+    string,
+    { marges: number[]; prijzen: number[]; pcts: number[]; m2: number; revenue: number; inkoop: number | null; offertes: Set<string> }
+  >();
+
+  for (const q of quotations) {
+    if (q.status !== 'accepted') continue;
+    for (const l of q.lines ?? []) {
+      if (l.margin == null || l.m2 < minM2) continue;
+      const e =
+        per.get(l.code) ??
+        { marges: [], prijzen: [], pcts: [], m2: 0, revenue: 0, inkoop: null, offertes: new Set<string>() };
+      e.marges.push(l.margin / l.m2);
+      e.prijzen.push(l.revenue / l.m2);
+      if (l.revenue > 0) e.pcts.push((l.margin / l.revenue) * 100);
+      e.m2 += l.m2;
+      e.revenue += l.revenue;
+      if (e.inkoop == null && l.purchasePerM2 != null) e.inkoop = l.purchasePerM2;
+      e.offertes.add(q.id);
+      per.set(l.code, e);
+    }
+  }
+
+  const mediaan = (xs: number[]) => {
+    const s = [...xs].sort((a, b) => a - b);
+    const m = Math.floor(s.length / 2);
+    return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
+  };
+
+  return [...per.entries()]
+    .filter(([, e]) => e.offertes.size >= minQuotes)
+    .map(([code, e]) => {
+      const med = mediaan(e.marges);
+      const min = Math.min(...e.marges);
+      return {
+        code,
+        quotes: e.offertes.size,
+        m2: round1(e.m2),
+        revenue: Math.round(e.revenue),
+        medianMarginPerM2: round2(med),
+        minMarginPerM2: round2(min),
+        maxMarginPerM2: round2(Math.max(...e.marges)),
+        medianPricePerM2: round2(mediaan(e.prijzen)),
+        medianMarginPct: e.pcts.length > 0 ? round1(mediaan(e.pcts)) : 0,
+        purchasePerM2: e.inkoop,
+        downside: round2(med - min),
+      };
+    })
+    .sort((a, b) => a.medianMarginPerM2 - b.medianMarginPerM2);
+}
