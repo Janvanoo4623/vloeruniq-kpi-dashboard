@@ -55,7 +55,13 @@ const P_NUMBER_EXTRACT = /P\d{3}/;
 // leggen"), so an "ondervloer" rule would MISS it — while hitting the 6 klik-PVC
 // lines that say "met geïntegreerde 10db ondervloer", where the underlay sits in
 // the plank and must NOT be charged. Wrong in both directions. "zelfklev" occurs
-// nowhere else in the data. (Verified against 103 real line descriptions.)
+// nowhere else in the data. (Verified against all 315 real line descriptions.)
+//
+// Deliberately NOT matched: "plakondervloer". It is a synonym for a self-adhesive
+// underlay, but its only occurrence is a parenthetical alternative on a line whose
+// primary offer is glued ("Incl. egaliseren, lijmen en leggen (Of incl.
+// plakondervloer en leggen ipv egaliseren)") — matching it would flip that line to
+// the wrong mode. Revisit if it ever appears as a line's actual offer.
 const SELF_ADHESIVE_RE = /zelfklev/i;
 const GLUED_RE = /lijm/i;
 
@@ -64,16 +70,22 @@ const GLUED_RE = /lijm/i;
 // tested before the word "leggen" itself: "excl. leggen klik pvc" contains
 // "leggen", so a plain includes() reads it as installed — exactly backwards.
 //
-// Verified against the 103 real line descriptions in production:
-//   94x installation named       median €51/m²  (installed pricing)
-//    4x explicitly excluded      median €28/m²  (supply-only pricing)
-//    5x silent on the matter     4 price as supply-only, 1 does not
+// Derived from every distinct "leggen/leveren" phrasing in the 315 stored line
+// descriptions — all 28 of them, not a guess at what the text might say:
+//   included  "Incl. egaliseren, lijmen en leggen" and 14 further Incl.-variants,
+//             plus "10% extra voor het schuin leggen" and "incl. montage"
+//   excluded  "Alleen leveren(vloer)", "excl./exclusief leggen",
+//             "Ex/Exclusief legservice"   <- note the bare "Ex", no "cl"
+//   unknown   the line says nothing either way
 // The silent ones keep their labour but set laborRule 'unknown', so they surface
 // for review instead of being guessed either way. Guessing from a pattern that
 // was never checked against real text is what zeroed all floor m² once before.
+// "ex" is listed separately from "excl": one offerte reads "Ex legservice" and a
+// pattern built on "excl" alone silently charged it €17/m². Requiring leg(gen|
+// service) right after keeps it safe — "ex. btw" can never match.
 const NO_LABOR_RE =
-  /\b(?:excl\.?|exclusief|zonder)\s*(?:het\s+)?leg(?:gen|service)?\b|\balleen\s+(?:leveren|levering)\b/i;
-const HAS_LABOR_RE = /\bleg(?:gen|service)\b|\bgelegd\b/i;
+  /\b(?:excl\.?|exclusief|ex\.?|zonder)\s*(?:het\s+)?leg(?:gen|service)?\b|\balleen\s+(?:leveren|levering)\b/i;
+const HAS_LABOR_RE = /\bleg(?:gen|service)\b|\bgelegd\b|\bmont(?:age|eren)\b/i;
 
 export function parseQuotation(
   summary: TLQuotationSummary,

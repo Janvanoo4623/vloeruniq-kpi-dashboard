@@ -109,20 +109,28 @@ installation carries none. The exclusion is tested **before** the word "leggen"
 itself, because `"excl. leggen klik pvc"` contains "leggen":
 
 ```
-laborRule = "excluded" if  /\b(excl\.?|exclusief|zonder)\s*(het\s+)?leg(gen|service)?\b
+laborRule = "excluded" if  /\b(excl\.?|exclusief|ex\.?|zonder)\s*(het\s+)?leg(gen|service)?\b
                            |\balleen\s+(leveren|levering)\b/i
-            "included" elif /\bleg(gen|service)\b|\bgelegd\b/i
+            "included" elif /\bleg(gen|service)\b|\bgelegd\b|\bmont(age|eren)\b/i
             "unknown"  else
 laborPerM2 = 0 if laborRule == "excluded" else LABOR_COST_PER_M2
 laborCost += laborPerM2 * quantity
 ```
 
-Measured on the 103 stored line descriptions: **94 included, 4 excluded, 5 silent**.
-Median €/m² confirms the language — €51 installed vs €28 supply-only. The silent five
-keep their labour but set `laborRule: 'unknown'`, which raises `needsReview` on the
-quotation so it surfaces for a human instead of being guessed. Four of the five price
-as supply-only; the fifth (€48,76/m²) does not — which is exactly why the rule flags
-rather than assumes.
+Derived from **all 28 distinct "leggen/leveren" phrasings** in the 315 stored line
+descriptions — not from a guess at what the text might say. Result: **279 included,
+11 excluded, 25 silent**. Median €/m² confirms the language: ~€51 installed vs ~€28
+supply-only.
+
+> Note the bare **"Ex legservice"** (no "cl"). A pattern built on `excl` alone read it
+> as installed and quietly charged €17/m² over 51 m². It was found by diffing margins
+> before and after the first backfill and chasing the one change the rules did not
+> explain — which is why that diff is part of the procedure, not an optional check.
+
+The silent ones keep their labour but set `laborRule: 'unknown'`, which raises
+`needsReview` on the quotation so it surfaces for a human instead of being guessed.
+Most price as supply-only; at least one does not (€48,76/m²) — which is exactly why
+the rule flags rather than assumes.
 
 ### Per-quotation margin
 
