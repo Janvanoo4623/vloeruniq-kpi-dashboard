@@ -26,25 +26,21 @@ export default function UitzonderingenView({ data }: { data: ExceptionsOverview 
             label="Gecorrigeerde offertes"
             value={String(corrections.length)}
             sub={`${priceCount}× prijs · ${noLaborCount}× los verkocht`}
-            accent="accent"
           />
           <KpiCard
             label="Effect op de marge"
             value={formatEuro(totalEffect)}
             sub="verschil t.o.v. zonder correcties"
-            accent={totalEffect >= 0 ? 'good' : 'crit'}
           />
           <KpiCard
             label="Uitgesloten offertes"
             value={String(exclusions.length)}
             sub="tellen nergens in mee"
-            accent={exclusions.length > 0 ? 'warn' : 'neutral'}
           />
           <KpiCard
             label="Totaal ingrepen"
             value={String(corrections.length + exclusions.length)}
             sub="hoe minder, hoe beter de bron klopt"
-            accent="neutral"
             higherIsBetter={false}
           />
         </div>

@@ -35,12 +35,11 @@ export default function PijplijnView({
       <section>
         <SectionLabel>Open offertes — huidige stand</SectionLabel>
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          <KpiCard label="Open waarde" value={formatEuro(pipeline.openValue)} sub={`${pipeline.openCount} offertes`} accent="warn" />
+          <KpiCard label="Open waarde" value={formatEuro(pipeline.openValue)} sub={`${pipeline.openCount} offertes`} />
           <KpiCard
             label="Verwachte omzet"
             value={pipeline.expectedValue == null ? '—' : formatEuro(pipeline.expectedValue)}
             sub="open waarde × winkans"
-            accent="accent"
           />
           <KpiCard
             label="Winkans"
@@ -52,14 +51,13 @@ export default function PijplijnView({
                 ? `${pipeline.maturedAccepted} van ${pipeline.maturedTotal} · ${definition}`
                 : 'te weinig historie'
             }
-            accent="good"
           />
           <KpiCard
             label="Langer dan 60 dagen open"
             value={formatEuro(pipeline.ageTiers.find((t) => t.label.includes('60'))?.value ?? 0)}
             sub="hoe ouder, hoe kleiner de kans"
-            accent="crit"
             higherIsBetter={false}
+            signal={(pipeline.ageTiers.find((t) => t.label.includes('60'))?.count ?? 0) > 0 ? 'warn' : undefined}
           />
         </div>
       </section>

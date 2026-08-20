@@ -42,7 +42,6 @@ export default function OverzichtPage() {
             label="Omzet geaccepteerd"
             value={formatEuro(totals.acceptedRevenue)}
             sub={`${totals.acceptedCount} offertes`}
-            accent="accent"
             deltaPct={show ? deltaPct(totals.acceptedRevenue, cmp?.acceptedRevenue) : null}
             deltaLabel={deltaLabel}
           />
@@ -50,7 +49,6 @@ export default function OverzichtPage() {
             label="Totale marge"
             value={formatEuro(totals.totalMargin)}
             sub={`${formatPercent(totals.avgMarginPct)} gemiddeld`}
-            accent="good"
             deltaPct={show ? deltaPct(totals.totalMargin, cmp?.totalMargin) : null}
             deltaLabel={deltaLabel}
           />
@@ -58,7 +56,6 @@ export default function OverzichtPage() {
             label="Marge / m²"
             value={formatEuro(marginPerM2, true)}
             sub="per verkochte m²"
-            accent="good"
             deltaPct={show ? deltaPct(marginPerM2 ?? 0, prevMarginPerM2) : null}
             deltaLabel={deltaLabel}
           />
@@ -66,7 +63,6 @@ export default function OverzichtPage() {
             label="M² verkocht"
             value={formatNumber(totals.m2Sold)}
             sub={`${formatEuro(totals.avgRevenuePerDeal)} gem. per deal`}
-            accent="oak"
             deltaPct={show ? deltaPct(totals.m2Sold, cmp?.m2Sold) : null}
             deltaLabel={deltaLabel}
           />
@@ -74,7 +70,6 @@ export default function OverzichtPage() {
             label="Omzet open"
             value={formatEuro(totals.openRevenue)}
             sub={`${totals.openCount} offertes in de pijplijn`}
-            accent="warn"
             deltaPct={show ? deltaPct(totals.openRevenue, cmp?.openRevenue) : null}
             deltaLabel={deltaLabel}
           />
@@ -82,7 +77,6 @@ export default function OverzichtPage() {
             label="Gem. doorlooptijd"
             value={formatDays(snap.runTime.totals.avgRunTimeDays)}
             sub={`${formatNumber(snap.runTime.totals.dealsTracked)} deals gevolgd`}
-            accent="neutral"
             higherIsBetter={false}
             deltaPct={
               show ? deltaPct(snap.runTime.totals.avgRunTimeDays, comparison?.runTime.avgRunTimeDays) : null
@@ -110,13 +104,13 @@ export default function OverzichtPage() {
             label="Openstaand"
             value={formatEuro(aging.totalOutstanding)}
             sub={`${aging.overdue.length} facturen over de vervaldatum · incl. btw`}
-            accent={aging.overdue.length > 0 ? 'crit' : 'neutral'}
+            // Alleen rood als er daadwerkelijk iets over de vervaldatum staat.
+            signal={aging.overdue.length > 0 ? 'crit' : undefined}
           />
           <KpiCard
             label="Gefactureerd"
             value={formatEuro(snap.invoicing.invoicedExcl)}
             sub={`${snap.invoicing.invoiceCount} facturen`}
-            accent="neutral"
           />
           <KpiCard
             label="Betaald"
@@ -126,7 +120,6 @@ export default function OverzichtPage() {
                 ? Math.round((snap.invoicing.paidExcl / snap.invoicing.invoicedExcl) * 1000) / 10
                 : null,
             )} van gefactureerd`}
-            accent="good"
           />
           <KpiCard
             label="Verwacht uit pijplijn"
@@ -136,7 +129,6 @@ export default function OverzichtPage() {
                 ? 'te weinig historie voor een winkans'
                 : `${formatEuro(pipeline.openValue)} open × ${formatPercent(pipeline.winRate)} winkans`
             }
-            accent="warn"
           />
         </div>
       </section>

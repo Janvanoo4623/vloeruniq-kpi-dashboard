@@ -33,10 +33,10 @@ export default function MargeView({
       <section>
         <SectionLabel>Per verkochte m²</SectionLabel>
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          <KpiCard label="Totale marge" value={formatEuro(totals.totalMargin)} sub={`${formatPercent(totals.avgMarginPct)} gemiddeld`} accent="good" />
-          <KpiCard label="Omzet / m²" value={formatEuro(revPerM2, true)} sub="geaccepteerd" accent="accent" />
-          <KpiCard label="Kostprijs / m²" value={formatEuro(kostPerM2, true)} sub="inkoop + ondervloer + arbeid" accent="oak" higherIsBetter={false} />
-          <KpiCard label="Marge / m²" value={formatEuro(marginPerM2, true)} sub={`over ${formatNumber(totals.m2Sold)} m²`} accent="good" />
+          <KpiCard label="Totale marge" value={formatEuro(totals.totalMargin)} sub={`${formatPercent(totals.avgMarginPct)} gemiddeld`} />
+          <KpiCard label="Omzet / m²" value={formatEuro(revPerM2, true)} sub="geaccepteerd" />
+          <KpiCard label="Kostprijs / m²" value={formatEuro(kostPerM2, true)} sub="inkoop + ondervloer + arbeid" higherIsBetter={false} />
+          <KpiCard label="Marge / m²" value={formatEuro(marginPerM2, true)} sub={`over ${formatNumber(totals.m2Sold)} m²`} />
         </div>
       </section>
 

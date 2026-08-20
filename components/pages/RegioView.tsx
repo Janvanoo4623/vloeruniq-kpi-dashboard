@@ -67,26 +67,22 @@ export default function RegioView({
             label="Plaatsen"
             value={String(regions.length)}
             sub={`${rated.length} met minimaal ${minSample} offertes`}
-            accent="neutral"
           />
           <KpiCard
             label="Beste winkans"
             value={best ? formatPercent(best.winRate) : '—'}
             sub={best ? `${best.name} · ${best.won} van ${best.quotes}` : undefined}
-            accent="good"
           />
           <KpiCard
             label="Laagste winkans"
             value={worst ? formatPercent(worst.winRate) : '—'}
             sub={worst ? `${worst.name} · ${worst.won} van ${worst.quotes}` : undefined}
-            accent="crit"
             higherIsBetter={false}
           />
           <KpiCard
             label="Beste marge"
             value={bestMargin ? formatPercent(bestMargin.marginPct) : '—'}
             sub={bestMargin ? bestMargin.name : undefined}
-            accent="accent"
           />
         </div>
       </section>

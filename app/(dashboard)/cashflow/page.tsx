@@ -23,27 +23,24 @@ export default function CashflowPage() {
             label="Openstaand"
             value={formatEuro(aging.totalOutstanding)}
             sub={`${payments.outstandingCount} onbetaalde facturen`}
-            accent={aging.overdue.length > 0 ? 'crit' : 'neutral'}
           />
           <KpiCard
             label="Over de vervaldatum"
             value={formatEuro(aging.overdue.reduce((s, o) => s + o.amount, 0))}
             sub={`${aging.overdue.length} facturen`}
-            accent={aging.overdue.length > 0 ? 'crit' : 'good'}
             higherIsBetter={false}
+            signal={aging.overdue.length > 0 ? 'crit' : 'good'}
           />
           <KpiCard
             label="Gem. betaaltermijn"
             value={formatDays(payments.avgDaysToPay)}
             sub={payments.sampleCount > 0 ? `over ${payments.sampleCount} betaalde facturen` : 'nog geen betaaldata'}
-            accent="accent"
             higherIsBetter={false}
           />
           <KpiCard
             label="Op tijd betaald"
             value={formatPercent(payments.onTimePct)}
             sub="op of vóór de vervaldatum"
-            accent="good"
           />
         </div>
       </section>

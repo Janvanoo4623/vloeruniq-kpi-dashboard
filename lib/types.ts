@@ -20,7 +20,8 @@ export interface QuotationRow {
   postalCode: string;
   status: QuotationStatus;
   dateCreated: string; // YYYY-MM-DD
-  dateAccepted: string; // YYYY-MM-DD or '' (also used for refused date)
+  /** Beslisdatum: geaccepteerd, geweigerd óf verlopen. Leeg zolang nog open. */
+  dateAccepted: string; // YYYY-MM-DD or ''
   month: string; // YYYY-MM
   quarter: string; // e.g. "Q2 2026"
   year: string;

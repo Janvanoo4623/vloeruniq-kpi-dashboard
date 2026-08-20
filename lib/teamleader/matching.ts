@@ -133,7 +133,14 @@ export function parseQuotation(
   const isDecidedLost = status === 'refused' || status === 'expired';
   const createdAt = dateOnly(summary.created_at);
   const updatedAt = dateOnly(summary.updated_at);
-  const dateAccepted = isAccepted ? updatedAt : '';
+  // De datum waarop de offerte uit de running ging: geaccepteerd, geweigerd of
+  // verlopen. Voor alle drie is dat updated_at.
+  //
+  // Dit MOET voor alle drie gevuld zijn, want de sync filtert ze ook alle drie op
+  // updated_at. Vulden we hem alleen voor 'geaccepteerd', dan viel een verlopen
+  // offerte terug op zijn aanmaakdatum en belandde een offerte uit januari 2025
+  // die in juni 2026 verliep in week 2025-W1 — binnen een venster van 90 dagen.
+  const dateAccepted = isAccepted || isDecidedLost ? updatedAt : '';
 
   // Relevant date drives month/quarter/year (lost quotes use their updated date).
   let relevantDate = createdAt;

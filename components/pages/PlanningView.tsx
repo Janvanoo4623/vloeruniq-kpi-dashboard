@@ -55,25 +55,22 @@ export default function PlanningView({
             label="Orderportefeuille"
             value={formatEuro(backlogRevenue)}
             sub={`${backlogJobs} klussen met een datum in de toekomst`}
-            accent="accent"
           />
           <KpiCard
             label="Nog te leggen"
             value={`${formatNumber(backlogM2)} m²`}
             sub="over alle ingeplande klussen"
-            accent="oak"
           />
           <KpiCard
             label="Eerstvolgende maand"
             value={future[0] ? `${formatNumber(future[0].m2)} m²` : '—'}
             sub={future[0] ? `${future[0].jobs} klussen in ${monthLabel(future[0].month)}` : undefined}
-            accent="neutral"
           />
           <KpiCard
             label="Gebaseerd op"
             value={String(sample)}
             sub="deals met een uitvoerdatum"
-            accent={sample < 100 ? 'warn' : 'neutral'}
+            signal={sample < 100 ? 'warn' : undefined}
           />
         </div>
       </section>

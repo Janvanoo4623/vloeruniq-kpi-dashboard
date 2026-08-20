@@ -5,11 +5,14 @@ import { buildSnapshot } from './teamleader/aggregate';
 import type { AggLine } from './teamleader/quotations';
 import type { InvoicingSummary, QuotationRow, RunTimeRow, Snapshot } from './types';
 
-/** Date that buckets a quotation (accepted/refused date, else created). */
+/**
+ * De datum waarop een offerte in een periode valt: de beslisdatum als hij er is,
+ * anders de aanmaakdatum. Deze regel staat identiek in aggregate.ts en series.ts —
+ * lopen filteren en bucketen uiteen, dan verschijnen er weken in de grafiek die
+ * buiten de gekozen periode liggen.
+ */
 function relevantDate(q: QuotationRow): string {
-  return (q.status === 'accepted' || q.status === 'refused') && q.dateAccepted
-    ? q.dateAccepted
-    : q.dateCreated;
+  return q.status !== 'open' && q.dateAccepted ? q.dateAccepted : q.dateCreated;
 }
 
 export function snapshotForRange(
