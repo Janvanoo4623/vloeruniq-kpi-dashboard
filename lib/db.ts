@@ -303,6 +303,24 @@ export async function setAppSetting(key: string, value: unknown): Promise<void> 
   }
 }
 
+/**
+ * Offertes die een mens heeft nagekeken en akkoord bevonden ("klopt zo"). Zonder
+ * dit kon je op Controleren alleen bevestigen dat iets FOUT was; klopte het wel,
+ * dan bleef de regel staan en werd de lijst nooit korter. Daardoor was onduidelijk
+ * wanneer je klaar was — en een werklijst die niet leegloopt is geen werklijst.
+ */
+export async function getReviewedIds(): Promise<Set<string>> {
+  const v = await getAppSetting<{ ids?: string[] }>('review_ok', {});
+  return new Set(v.ids ?? []);
+}
+
+export async function setReviewed(id: string, reviewed: boolean): Promise<void> {
+  const ids = await getReviewedIds();
+  if (reviewed) ids.add(id);
+  else ids.delete(id);
+  await setAppSetting('review_ok', { ids: [...ids] });
+}
+
 // ── Per-quotation overrides (special price / no-labour) ─────────────────
 /** All overrides keyed by quotation id. line_code '' carries the offerte-level flag. */
 export async function getOverrides(): Promise<Record<string, QuotationOverride>> {

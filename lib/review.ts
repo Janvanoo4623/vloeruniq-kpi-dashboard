@@ -27,8 +27,12 @@ export interface ReviewItem {
   lines: ReviewLine[];
   /** Arbeid die op het spel staat als dit tóch een losse verkoop blijkt. */
   laborAtStake: number;
-  /** Al afgehandeld: er ligt een correctie op deze offerte. */
+  /** Afgehandeld doordat 'los verkocht' is aangezet — de cijfers zijn aangepast. */
   resolved: boolean;
+  /** Afgehandeld doordat een mens 'klopt zo' aanvinkte — cijfers ongewijzigd. */
+  reviewed: boolean;
+  /** Wat we op grond van de gemeten kenmerken vermoeden. */
+  hint: 'likely-loose' | 'likely-installed' | null;
 }
 
 const round2 = (v: number) => Math.round(v * 100) / 100;
@@ -64,6 +68,7 @@ export function supplyOnlyHint(l: ReviewLine): 'likely-loose' | 'likely-installe
 export function computeReviewList(
   quotations: QuotationRow[],
   overrides: Record<string, QuotationOverride> = {},
+  reviewedIds: Set<string> = new Set(),
 ): ReviewItem[] {
   const items: ReviewItem[] = [];
 
@@ -96,11 +101,25 @@ export function computeReviewList(
       // Een aangevinkte "los verkocht" is een uitspraak over precies deze vraag;
       // een losse prijscorrectie zegt er niets over en telt dus niet als antwoord.
       resolved: Boolean(ov?.noLabor),
+      reviewed: reviewedIds.has(q.id),
+      hint: strongestHint(lines),
     });
   }
 
+  // Onafgehandeld eerst, en daarbinnen wat er waarschijnlijk fout is bovenaan:
+  // dat is de volgorde waarin je de lijst wilt aflopen.
+  const rang = (i: ReviewItem) =>
+    i.resolved || i.reviewed ? 2 : i.hint === 'likely-loose' ? 0 : 1;
   return items.sort((a, b) => {
-    if (a.resolved !== b.resolved) return a.resolved ? 1 : -1;
-    return b.laborAtStake - a.laborAtStake;
+    const r = rang(a) - rang(b);
+    return r !== 0 ? r : b.laborAtStake - a.laborAtStake;
   });
+}
+
+/** Het sterkste signaal van alle regels; 'gelijmd' weegt zwaarder dan een prijs. */
+function strongestHint(lines: ReviewLine[]): 'likely-loose' | 'likely-installed' | null {
+  const hints = lines.map(supplyOnlyHint);
+  if (hints.includes('likely-installed')) return 'likely-installed';
+  if (hints.includes('likely-loose')) return 'likely-loose';
+  return null;
 }

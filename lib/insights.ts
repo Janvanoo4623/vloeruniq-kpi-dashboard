@@ -399,3 +399,88 @@ export function planningOverview(
     sample,
   };
 }
+
+// ── 6. Leadbron-verloop over tijd ────────────────────────────────────────
+
+export interface LeadSourcePoint {
+  month: string; // YYYY-MM
+  /** Omzet per bron; alleen de bronnen uit `topSources` plus "Overig". */
+  [source: string]: number | string;
+}
+
+export interface LeadSourceTrend {
+  points: LeadSourcePoint[];
+  /** De bronnen die groot genoeg zijn om apart te tonen, grootste eerst. */
+  sources: string[];
+  /** Aandeel per bron over de hele periode, voor de samenvatting eronder. */
+  totals: { name: string; revenue: number; share: number }[];
+}
+
+/**
+ * Hoe verhouden de leadbronnen zich over tijd? Alleen geaccepteerde offertes —
+ * een verlopen offerte zegt niets over wat een bron oplevert.
+ *
+ * Kleine bronnen worden samengevoegd tot "Overig": zes lijnen zijn te volgen,
+ * twintig niet, en een bron met twee offertes in twee jaar levert alleen ruis.
+ */
+export function leadSourceTrend(
+  quotations: QuotationRow[],
+  deals: RunTimeRow[],
+  maxSources = 5,
+): LeadSourceTrend {
+  // De leadbron staat op de deal, niet op de offerte; koppelen gaat via dealId.
+  // Een deal kan meerdere bronnen hebben ("Google, Netwerk"); we nemen de eerste,
+  // want anders telt dezelfde omzet dubbel in de grafiek.
+  const bronPerDeal: Record<string, string> = {};
+  for (const d of deals) {
+    if (!d.dealId || !d.leadSource) continue;
+    bronPerDeal[d.dealId] = d.leadSource.split(',')[0].trim();
+  }
+  const perSource = new Map<string, number>();
+  const perMonth = new Map<string, Map<string, number>>();
+
+  for (const q of quotations) {
+    if (q.status !== 'accepted') continue;
+    const datum = q.dateAccepted || q.dateCreated;
+    if (!datum) continue;
+    const bron = bronPerDeal[q.dealId] || 'Onbekend';
+    perSource.set(bron, (perSource.get(bron) ?? 0) + q.revenueExVat);
+    const maand = datum.substring(0, 7);
+    const m = perMonth.get(maand) ?? new Map<string, number>();
+    m.set(bron, (m.get(bron) ?? 0) + q.revenueExVat);
+    perMonth.set(maand, m);
+  }
+
+  const gesorteerd = [...perSource.entries()].sort((a, b) => b[1] - a[1]);
+  const groot = gesorteerd.slice(0, maxSources).map(([naam]) => naam);
+  const heeftOverig = gesorteerd.length > maxSources;
+  const sources = heeftOverig ? [...groot, 'Overig'] : groot;
+
+  const points: LeadSourcePoint[] = [...perMonth.entries()]
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([month, m]) => {
+      const punt: LeadSourcePoint = { month };
+      for (const bron of groot) punt[bron] = Math.round(m.get(bron) ?? 0);
+      if (heeftOverig) {
+        let overig = 0;
+        for (const [naam, waarde] of m) if (!groot.includes(naam)) overig += waarde;
+        punt.Overig = Math.round(overig);
+      }
+      return punt;
+    });
+
+  const totaal = gesorteerd.reduce((s, [, v]) => s + v, 0);
+  const totals = sources.map((naam) => {
+    const revenue =
+      naam === 'Overig'
+        ? gesorteerd.slice(maxSources).reduce((s, [, v]) => s + v, 0)
+        : (perSource.get(naam) ?? 0);
+    return {
+      name: naam,
+      revenue: Math.round(revenue),
+      share: totaal > 0 ? round1((revenue / totaal) * 100) : 0,
+    };
+  });
+
+  return { points, sources, totals };
+}

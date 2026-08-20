@@ -2,7 +2,7 @@
 // a per-line special purchase price and an offerte-level "no legservice" flag.
 // Applied at read time (instant + retroactive). Session-gated by proxy.ts.
 import { NextResponse } from 'next/server';
-import { getOverrides, setOverridePrice, setOverrideNoLabor } from '@/lib/db';
+import { getOverrides, setOverridePrice, setOverrideNoLabor, setReviewed } from '@/lib/db';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -36,6 +36,10 @@ export async function POST(request: Request) {
       case 'no-labor': {
         const noLabor = Boolean(body.noLabor);
         await setOverrideNoLabor(quotationId, noLabor, (body.note as string) ?? null);
+        break;
+      }
+      case 'reviewed': {
+        await setReviewed(quotationId, Boolean(body.reviewed));
         break;
       }
       default:

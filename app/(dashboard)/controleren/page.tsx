@@ -1,4 +1,4 @@
-import { getAllQuotations, getCurrentPrices, getOverrides } from '@/lib/db';
+import { getAllQuotations, getCurrentPrices, getOverrides, getReviewedIds } from '@/lib/db';
 import { applyOverrides } from '@/lib/overrides';
 import { computeReviewList } from '@/lib/review';
 import { computeMissingPrices, computeUnmatchedQuotations } from '@/lib/missing-prices';
@@ -12,17 +12,18 @@ export const dynamic = 'force-dynamic';
  * hele offertehistorie.
  */
 export default async function ControlerenPage() {
-  const [quotations, prices, overrides] = await Promise.all([
+  const [quotations, prices, overrides, reviewed] = await Promise.all([
     getAllQuotations(),
     getCurrentPrices(),
     getOverrides(),
+    getReviewedIds(),
   ]);
   const resolved = applyOverrides(quotations, overrides);
   const pricedCodes = new Set(prices.map((p) => p.code.toLowerCase()));
 
   return (
     <ControleView
-      review={computeReviewList(resolved, overrides)}
+      review={computeReviewList(resolved, overrides, reviewed)}
       missing={computeMissingPrices(resolved, pricedCodes)}
       unmatched={computeUnmatchedQuotations(resolved)}
     />
