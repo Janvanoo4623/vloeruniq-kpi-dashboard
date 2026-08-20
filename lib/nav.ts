@@ -14,6 +14,7 @@ import {
   SlidersHorizontal,
   CalendarRange,
   MapPin,
+  Users2,
 } from 'lucide-react';
 
 export interface NavItem {
@@ -98,6 +99,13 @@ export const NAV: NavGroup[] = [
         title: 'Leadbronnen',
         subtitle: 'Waar de omzet vandaan komt, en wat elke bron waard is',
         Icon: Users,
+      },
+      {
+        href: '/klanten',
+        label: 'Klanten',
+        title: 'Klanten',
+        subtitle: 'Wie je klanten zijn, hoe afhankelijk je van een paar bent, en wie je laat wachten',
+        Icon: Users2,
       },
       {
         href: '/regio',
