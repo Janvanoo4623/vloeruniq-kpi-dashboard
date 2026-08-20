@@ -6,6 +6,7 @@ import type { PipelineStats } from '@/lib/pipeline';
 import type { PaymentStats } from '@/lib/payments';
 import { weeklySeries, type WeeklyPoint } from '@/lib/series';
 import { presetRange, type RangeState } from '@/components/DateRangePicker';
+import { DEFAULT_PRESET } from '@/lib/default-range';
 
 export interface Aging {
   buckets: AgingBucket[];
@@ -49,8 +50,10 @@ export function useDashboard(): DashboardData {
 }
 
 const initialRange = (): RangeState => {
-  const r = presetRange('90');
-  return { preset: '90', from: r.from, to: r.to, compare: 'none' };
+  // Zelfde bron als de server-render in app/(dashboard)/layout.tsx, anders zegt
+  // de kop iets anders dan de grafiek eronder toont.
+  const r = presetRange(DEFAULT_PRESET);
+  return { preset: DEFAULT_PRESET, from: r.from, to: r.to, compare: 'none' };
 };
 
 /**
