@@ -2,8 +2,10 @@
 
 import type { LeadSourceStat } from '@/lib/types';
 import { formatEuro, formatPercent, formatDays } from '@/lib/format';
+import { Pagination, usePaged } from './ui/Pagination';
 
 export default function LeadSourceTable({ data }: { data: LeadSourceStat[] }) {
+  const gepagineerd = usePaged(data);
   if (data.length === 0) {
     return <div className="flex h-24 items-center justify-center text-sm text-ink-faint">Geen data</div>;
   }
@@ -21,7 +23,7 @@ export default function LeadSourceTable({ data }: { data: LeadSourceStat[] }) {
           </tr>
         </thead>
         <tbody className="divide-y divide-hair">
-          {data.map((s) => (
+          {gepagineerd.visible.map((s) => (
             <tr key={s.name} className="hover:bg-sunk">
               <td className="px-3 py-2 text-ink">{s.name}</td>
               <td className="px-3 py-2 text-right tabular-nums text-ink">{formatEuro(s.revenue)}</td>
@@ -33,6 +35,7 @@ export default function LeadSourceTable({ data }: { data: LeadSourceStat[] }) {
           ))}
         </tbody>
       </table>
+      <Pagination {...gepagineerd.props} />
     </div>
   );
 }

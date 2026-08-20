@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import type { QuotationRow, QuotationStatus } from '@/lib/types';
+import { Pagination, usePaged } from './ui/Pagination';
 import { formatEuro, formatNumber, formatPercent, formatProduct } from '@/lib/format';
 import QuotationModal, { STATUS_STYLE, STATUS_LABEL, marginColor } from './QuotationModal';
 
@@ -62,6 +63,8 @@ export default function QuotationsTable({
     });
     return sorted;
   }, [rows, statusFilter, query, sortKey, asc]);
+
+  const gepagineerd = usePaged(filtered);
 
   function toggleSort(key: SortKey) {
     if (sortKey === key) setAsc((v) => !v);
@@ -126,7 +129,7 @@ export default function QuotationsTable({
             </tr>
           </thead>
           <tbody className="divide-y divide-hair">
-            {filtered.map((q) => (
+            {gepagineerd.visible.map((q) => (
               <tr
                 key={q.id}
                 onClick={() => setSelectedId(q.id)}
@@ -184,6 +187,11 @@ export default function QuotationsTable({
             )}
           </tbody>
         </table>
+      </div>
+
+      {/* Buiten de overflow-container, anders scrollt de paginering mee. */}
+      <div className="-mx-5 -mb-5">
+        <Pagination {...gepagineerd.props} />
       </div>
 
       {selected && (

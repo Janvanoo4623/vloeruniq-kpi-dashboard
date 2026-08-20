@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import type { ProductStat } from '@/lib/types';
+import { Pagination, usePaged } from './ui/Pagination';
 import { formatEuro, formatNumber, formatPercent, formatProduct } from '@/lib/format';
 
 type SortKey = 'revenue' | 'm2' | 'margin' | 'marginPct' | 'count';
@@ -25,6 +26,7 @@ export default function ProductsTable({ rows }: { rows: ProductStat[] }) {
   }, [rows, query, sortKey, asc]);
 
   const maxRevenue = Math.max(1, ...rows.map((r) => r.revenue));
+  const gepagineerd = usePaged(filtered);
 
   function toggleSort(key: SortKey) {
     if (sortKey === key) setAsc((v) => !v);
@@ -70,7 +72,7 @@ export default function ProductsTable({ rows }: { rows: ProductStat[] }) {
             </tr>
           </thead>
           <tbody className="divide-y divide-hair">
-            {filtered.map((p) => (
+            {gepagineerd.visible.map((p) => (
               <tr key={p.code} className="hover:bg-sunk">
                 <td className="px-3 py-2">
                   <div className="flex items-center gap-2">
@@ -110,6 +112,7 @@ export default function ProductsTable({ rows }: { rows: ProductStat[] }) {
           </tbody>
         </table>
       </div>
+      <Pagination {...gepagineerd.props} />
     </div>
   );
 }

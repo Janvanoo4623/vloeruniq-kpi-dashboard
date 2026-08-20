@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 import {
   Area,
   AreaChart,
@@ -21,10 +20,10 @@ import { ChartDefs, grad } from '@/components/charts/Defs';
 import { ChartTooltip } from '@/components/charts/ChartTooltip';
 import { ChartLegend } from '@/components/charts/ChartLegend';
 import { Empty, Panel, SectionLabel, cn } from '@/components/ui';
-import { Pagination } from '@/components/ui/Pagination';
+import { Pagination, usePaged } from '@/components/ui/Pagination';
 import KpiCard from '@/components/KpiCard';
 
-const PER_PAGE = 20;
+
 
 /**
  * Wie zijn je klanten, hoe afhankelijk ben je van een paar, en wie laat je
@@ -40,8 +39,9 @@ export default function KlantenView({
   payments: PaymentDistribution;
   unquoted: UnquotedInvoicing;
 }) {
-  const [page, setPage] = useState(0);
   const { customers, totalRevenue, customersForHalf, top10Share, repeatCustomers } = concentration;
+  // Hook vóór de early return, anders wisselt de hook-volgorde per render.
+  const gepagineerd = usePaged(customers);
 
   if (customers.length === 0) {
     return (
@@ -50,9 +50,6 @@ export default function KlantenView({
       </Panel>
     );
   }
-
-  const pageCount = Math.ceil(customers.length / PER_PAGE);
-  const zichtbaar = customers.slice(page * PER_PAGE, (page + 1) * PER_PAGE);
 
   // Pareto: elke klant een punt, x = hoeveelste klant, y = cumulatief aandeel.
   const pareto = customers.slice(0, 120).map((c, i) => ({
@@ -168,11 +165,11 @@ export default function KlantenView({
               </tr>
             </thead>
             <tbody>
-              {zichtbaar.map((c, i) => (
+              {gepagineerd.visible.map((c, i) => (
                 <tr key={c.id} className="border-b border-hair last:border-0 hover:bg-sunk/60">
                   <td className="px-5 py-2.5">
                     <span className="mr-2 text-[11px] tabular-nums text-ink-faint">
-                      {page * PER_PAGE + i + 1}
+                      {gepagineerd.props.page * gepagineerd.props.perPage + i + 1}
                     </span>
                     <span className="font-medium text-ink">{c.name}</span>
                   </td>
@@ -197,13 +194,7 @@ export default function KlantenView({
             </tbody>
           </table>
         </div>
-        <Pagination
-          page={page}
-          pageCount={pageCount}
-          total={customers.length}
-          perPage={PER_PAGE}
-          onChange={setPage}
-        />
+        <Pagination {...gepagineerd.props} />
       </Panel>
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">

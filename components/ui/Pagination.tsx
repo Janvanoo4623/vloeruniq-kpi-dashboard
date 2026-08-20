@@ -1,7 +1,40 @@
 'use client';
 
+import { useMemo, useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from './index';
+
+/** Standaard aantal rijen per pagina. Tien past op één blik zonder scrollen. */
+export const PER_PAGE = 10;
+
+/**
+ * Paginering voor een lijst. Geeft het zichtbare deel terug plus de props voor
+ * <Pagination>. Reset naar pagina 1 zodra de lijst korter wordt dan waar je
+ * stond — anders sta je na een filter of een afgehandelde regel op een lege
+ * pagina te kijken.
+ */
+export function usePaged<T>(items: T[], perPage: number = PER_PAGE) {
+  const [page, setPage] = useState(0);
+  const pageCount = Math.max(1, Math.ceil(items.length / perPage));
+  const veilig = Math.min(page, pageCount - 1);
+
+  const visible = useMemo(
+    () => items.slice(veilig * perPage, (veilig + 1) * perPage),
+    [items, veilig, perPage],
+  );
+
+  return {
+    visible,
+    props: {
+      page: veilig,
+      pageCount,
+      total: items.length,
+      perPage,
+      onChange: setPage,
+    },
+    reset: () => setPage(0),
+  };
+}
 
 /**
  * Paginering onder een tabel. Toont bewust ook het bereik ("21–40 van 126"):

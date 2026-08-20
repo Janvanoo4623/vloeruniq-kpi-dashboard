@@ -8,6 +8,7 @@ import { formatEuro, formatNumber, formatProduct } from '@/lib/format';
 import { STATUS_LABEL } from '@/components/QuotationModal';
 import PriceInput from '@/components/PriceInput';
 import { Badge, Button, Card, Empty, cn } from '@/components/ui';
+import { Pagination, usePaged } from '@/components/ui/Pagination';
 
 type TabKey = 'los' | 'correct' | 'prijs' | 'geenvloer' | 'klaar';
 
@@ -139,6 +140,7 @@ export default function ControleView({
 // ── Bakje: offertes waarvan de legstatus onduidelijk is ──────────────────
 
 function Bakje({ uitleg, leeg, items }: { uitleg: string; leeg: string; items: ReviewItem[] }) {
+  const gepagineerd = usePaged(items);
   return (
     <Card>
       <p className="border-b border-hair px-5 py-3 text-[12.5px] leading-relaxed text-ink-mute">
@@ -156,10 +158,11 @@ function Bakje({ uitleg, leeg, items }: { uitleg: string; leeg: string; items: R
             <span className="w-[196px] shrink-0" aria-hidden />
           </div>
           <ul className="divide-y divide-hair">
-            {items.map((item) => (
+            {gepagineerd.visible.map((item) => (
               <ReviewRow key={item.id} item={item} />
             ))}
           </ul>
+          <Pagination {...gepagineerd.props} />
         </>
       )}
     </Card>
@@ -305,6 +308,7 @@ function ReviewRow({ item }: { item: ReviewItem }) {
 
 function PrijzenBakje({ missing }: { missing: MissingPrice[] }) {
   const [opgeslagen, setOpgeslagen] = useState<Set<string>>(new Set());
+  const gepagineerd = usePaged(missing);
 
   return (
     <Card>
@@ -329,7 +333,7 @@ function PrijzenBakje({ missing }: { missing: MissingPrice[] }) {
               </tr>
             </thead>
             <tbody>
-              {missing.map((m) => (
+              {gepagineerd.visible.map((m) => (
                 <tr
                   key={m.code}
                   className={cn(
@@ -379,6 +383,7 @@ function PrijzenBakje({ missing }: { missing: MissingPrice[] }) {
               ))}
             </tbody>
           </table>
+          <Pagination {...gepagineerd.props} />
         </div>
       )}
     </Card>
@@ -388,6 +393,7 @@ function PrijzenBakje({ missing }: { missing: MissingPrice[] }) {
 // ── Bakje: offertes zonder herkende vloer ────────────────────────────────
 
 function GeenVloerBakje({ items }: { items: UnmatchedQuotation[] }) {
+  const gepagineerd = usePaged(items);
   return (
     <Card>
       <p className="border-b border-hair px-5 py-3 text-[12.5px] leading-relaxed text-ink-mute">
@@ -409,15 +415,11 @@ function GeenVloerBakje({ items }: { items: UnmatchedQuotation[] }) {
             <span className="w-[188px] shrink-0" aria-hidden />
           </div>
           <ul className="divide-y divide-hair">
-            {items.slice(0, 40).map((u) => (
+            {gepagineerd.visible.map((u) => (
               <UnmatchedRow key={u.id} item={u} />
             ))}
           </ul>
-          {items.length > 40 && (
-            <p className="border-t border-hair px-5 py-2.5 text-[11.5px] text-ink-faint">
-              40 van {items.length} getoond, grootste omzet eerst.
-            </p>
-          )}
+          <Pagination {...gepagineerd.props} />
         </>
       )}
     </Card>

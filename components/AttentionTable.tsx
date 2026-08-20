@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import type { QuotationRow } from '@/lib/types';
 import { formatEuro, formatNumber, formatPercent } from '@/lib/format';
+import { Pagination, usePaged } from './ui/Pagination';
 import QuotationModal from './QuotationModal';
 
 function rowDate(q: QuotationRow): string {
@@ -29,8 +30,7 @@ export default function AttentionTable({
     () =>
       rows
         .filter((q) => q.status === 'accepted' && q.margin !== null)
-        .sort((a, b) => (a.marginPct ?? 0) - (b.marginPct ?? 0))
-        .slice(0, 15),
+        .sort((a, b) => (a.marginPct ?? 0) - (b.marginPct ?? 0)),
     [rows],
   );
 
@@ -38,10 +38,12 @@ export default function AttentionTable({
     () =>
       rows
         .filter((q) => q.matchCoverage !== null && q.matchCoverage < 100)
-        .sort((a, b) => (a.matchCoverage ?? 0) - (b.matchCoverage ?? 0))
-        .slice(0, 15),
+        .sort((a, b) => (a.matchCoverage ?? 0) - (b.matchCoverage ?? 0)),
     [rows],
   );
+
+  const margePag = usePaged(lowMargin);
+  const dekkingPag = usePaged(lowCoverage);
 
   return (
     <div className="space-y-4">
@@ -61,7 +63,7 @@ export default function AttentionTable({
               </tr>
             </thead>
             <tbody className="divide-y divide-hair">
-              {lowMargin.map((q) => {
+              {margePag.visible.map((q) => {
                 const neg = (q.margin ?? 0) < 0;
                 return (
                   <tr
@@ -91,6 +93,7 @@ export default function AttentionTable({
             </tbody>
           </table>
         </div>
+        <Pagination {...margePag.props} />
       </div>
 
       <div>
@@ -107,7 +110,7 @@ export default function AttentionTable({
               </tr>
             </thead>
             <tbody className="divide-y divide-hair">
-              {lowCoverage.map((q) => (
+              {dekkingPag.visible.map((q) => (
                 <tr
                   key={q.id}
                   onClick={() => setSelectedId(q.id)}
@@ -129,6 +132,7 @@ export default function AttentionTable({
             </tbody>
           </table>
         </div>
+        <Pagination {...dekkingPag.props} />
       </div>
       </div>
 

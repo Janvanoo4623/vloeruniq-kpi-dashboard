@@ -1,12 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { RegionInsight } from '@/lib/insights';
 import type { MarketShareOverview } from '@/lib/market-share';
 import MarktaandeelPanel from './MarktaandeelPanel';
 import { formatEuro, formatNumber, formatPercent } from '@/lib/format';
 import { Empty, Panel, SectionLabel, cn } from '@/components/ui';
-import { Pagination } from '@/components/ui/Pagination';
+import { Pagination, usePaged } from '@/components/ui/Pagination';
 import KpiCard from '@/components/KpiCard';
 
 type SortKey = 'revenue' | 'winRate' | 'marginPct' | 'quotes';
@@ -29,8 +29,17 @@ export default function RegioView({
   marketShare: MarketShareOverview;
 }) {
   const [sort, setSort] = useState<SortKey>('revenue');
-  const [page, setPage] = useState(0);
-  const PER_PAGE = 20;
+  // Hooks vóór elke early return: React eist dezelfde volgorde bij elke render.
+  const sorted = useMemo(
+    () =>
+      [...regions].sort((a, b) => {
+        const av = a[sort] ?? -1;
+        const bv = b[sort] ?? -1;
+        return (bv as number) - (av as number);
+      }),
+    [regions, sort],
+  );
+  const gepagineerd = usePaged(sorted);
 
   if (regions.length === 0) {
     return (
@@ -41,13 +50,6 @@ export default function RegioView({
   }
 
   const rated = regions.filter((r) => r.winRate != null);
-  const sorted = [...regions].sort((a, b) => {
-    const av = a[sort] ?? -1;
-    const bv = b[sort] ?? -1;
-    return (bv as number) - (av as number);
-  });
-  const pageCount = Math.ceil(sorted.length / PER_PAGE);
-  const zichtbaar = sorted.slice(page * PER_PAGE, (page + 1) * PER_PAGE);
 
   const totalRevenue = regions.reduce((s, r) => s + r.revenue, 0);
   const best = [...rated].sort((a, b) => (b.winRate ?? 0) - (a.winRate ?? 0))[0];
@@ -106,7 +108,7 @@ export default function RegioView({
                 key={k}
                 onClick={() => {
                   setSort(k);
-                  setPage(0);
+                  gepagineerd.reset();
                 }}
                 className={cn(
                   'rounded-md px-2 py-1 font-medium transition',
@@ -133,7 +135,7 @@ export default function RegioView({
               </tr>
             </thead>
             <tbody>
-              {zichtbaar.map((r) => (
+              {gepagineerd.visible.map((r) => (
                 <tr key={r.name} className="border-b border-hair last:border-0 hover:bg-sunk/60">
                   <td className="px-5 py-2.5 font-medium text-ink">{r.name}</td>
                   <td className="px-5 py-2.5">
@@ -170,13 +172,7 @@ export default function RegioView({
             </tbody>
           </table>
         </div>
-        <Pagination
-          page={page}
-          pageCount={pageCount}
-          total={sorted.length}
-          perPage={PER_PAGE}
-          onChange={setPage}
-        />
+        <Pagination {...gepagineerd.props} />
         <p className="border-t border-hair px-5 py-3 text-[11.5px] text-ink-faint">
           Totaal {formatEuro(totalRevenue)} over {regions.length} plaatsen. Schrijfwijzen zijn
           samengevoegd — &ldquo;ALMELO&rdquo; en &ldquo;almelo&rdquo; tellen als één plaats.
