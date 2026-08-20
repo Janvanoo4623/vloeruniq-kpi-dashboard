@@ -52,7 +52,7 @@ export default function MargeView({
 
       <ChartCard
         title="Aandachtspunten"
-        subtitle="Laagste marges en offertes met onvolledige prijsdekking"
+        subtitle="Waar je te weinig verdient, en waar de prijsdekking onvolledig is — ontbrekende inkoopprijzen staan op Controleren"
       >
         <AttentionTable rows={snap.quotations} pricedCodes={pricedCodes} />
       </ChartCard>

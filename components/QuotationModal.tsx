@@ -53,11 +53,18 @@ export default function QuotationModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-ink/45 p-4 backdrop-blur-[2px]"
       onClick={onClose}
     >
       <div
-        className="flex max-h-[85vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-white shadow-xl"
+        className={[
+          // Ruimer dan de oude max-w-2xl: er staan acht kerncijfers, een
+          // regeltabel en een correctieblok in, en die stonden geknepen.
+          'flex w-full max-w-4xl flex-col overflow-hidden rounded-2xl bg-surface',
+          'max-h-[90vh] border border-line',
+          'shadow-[0_24px_64px_-16px_rgba(28,25,23,0.45)]',
+          'animate-rise-in',
+        ].join(' ')}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
