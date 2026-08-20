@@ -355,6 +355,9 @@ function rowToQuotation(r: Row): QuotationRow {
     marginPct: numOrNull(r.margin_pct),
     matchCoverage: numOrNull(r.match_coverage),
     verified: Boolean(r.verified),
+    // Derived from the stored lines rather than a column — the lines JSONB is the
+    // single source of truth for what each line's text did (and didn't) say.
+    needsReview: lines.some((l) => l.laborRule === 'unknown'),
     products: [...new Set(lines.map((l) => l.code))],
     lines,
   };

@@ -81,22 +81,53 @@ For each matched floor line, find a purchase price:
 2. **Else name match**: first name entry (longest-first) whose text is a substring of the
    lowercased description.
 
-If a price is found, compute material cost per m²:
+If a price is found, compute material cost per m². The **install mode** decides the
+underlay surcharge — a line gets exactly one of the three, never two:
+
 ```
-materialCostPerM2 = matchedPrice
-if description contains "lijmen":          # glued PVC
-    materialCostPerM2 += PRIMER + GLUE + LEVELING   # 0.75 + 1.36 + 2.99
-# else (klik / click PVC): material is just the purchase price
+installMode = "selfadhesive" if description matches /zelfklev/i    # 5.92
+              "glued"        elif description matches /lijm/i      # 0.75 + 1.36 + 2.99
+              "click"        else                                  # 0 — underlay is in the plank
+
+materialCostPerM2 = matchedPrice + underlaySurcharge(installMode)
 totalCost   += materialCostPerM2 * quantity
 m2WithMatch += quantity
 hasMatch     = true
 ```
 
+> **Match `zelfklev`, never `ondervloer`** (added 2026-08-20). The only self-adhesive
+> line in production spells it wrong — "Incl. zelfklevende **onvervloer**, en leggen" —
+> so an `ondervloer` rule misses it, while hitting the six klik-PVC lines that read
+> "met geïntegreerde 10db ondervloer", where the underlay is part of the plank and must
+> **not** be charged. Wrong in both directions. `zelfklev` occurs nowhere else in the
+> 103 real line descriptions. Same discipline as the `/snij/` lesson above.
+
+### Labour (legservice)
+
+Labour is **per line**, not a flat rate over all matched m² — a floor sold without
+installation carries none. The exclusion is tested **before** the word "leggen"
+itself, because `"excl. leggen klik pvc"` contains "leggen":
+
+```
+laborRule = "excluded" if  /\b(excl\.?|exclusief|zonder)\s*(het\s+)?leg(gen|service)?\b
+                           |\balleen\s+(leveren|levering)\b/i
+            "included" elif /\bleg(gen|service)\b|\bgelegd\b/i
+            "unknown"  else
+laborPerM2 = 0 if laborRule == "excluded" else LABOR_COST_PER_M2
+laborCost += laborPerM2 * quantity
+```
+
+Measured on the 103 stored line descriptions: **94 included, 4 excluded, 5 silent**.
+Median €/m² confirms the language — €51 installed vs €28 supply-only. The silent five
+keep their labour but set `laborRule: 'unknown'`, which raises `needsReview` on the
+quotation so it surfaces for a human instead of being guessed. Four of the five price
+as supply-only; the fifth (€48,76/m²) does not — which is exactly why the rule flags
+rather than assumes.
+
 ### Per-quotation margin
 
 ```
 if hasMatch and m2WithMatch > 0:
-    laborCost  = LABOR_COST_PER_M2 * m2WithMatch
     finalCost  = totalCost + laborCost
     cost       = round2(finalCost)
     margin     = round2(omzetVloer - finalCost)         # margin is on FLOOR revenue only
@@ -136,7 +167,7 @@ quotation regardless of age:
 
 Only quotations that have an override row are recomputed; every other quotation
 keeps its synced margins untouched. Margins recompute from the per-line cost
-components stored at sync time (`purchasePerM2` / `gluedPerM2` / `laborPerM2`);
+components stored at sync time (`purchasePerM2` / `underlayPerM2` / `laborPerM2`);
 rows synced before those existed fall back to the default constant rates + a
 glued check on the line description (approximate until re-synced, exact after).
 

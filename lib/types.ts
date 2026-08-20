@@ -27,9 +27,24 @@ export interface QuotationRow {
   marginPct: number | null;
   matchCoverage: number | null; // % of m² that matched a price
   verified: boolean; // 100% coverage and margin present
+  needsReview?: boolean; // >=1 floor line whose text doesn't say if leggen is included
   products: string[]; // matched floor products (P-numbers / names), distinct, in order
   lines?: QuotationLine[]; // per-product line stats (populated at sync time, stored in DB)
 }
+
+/**
+ * How the floor is fixed to the sub-floor — drives the underlay surcharge.
+ * A line carries at most one: glued (primer+lijm+egaline), self-adhesive
+ * (zelfklevende ondervloer), or click (underlay is part of the plank, €0).
+ */
+export type InstallMode = 'glued' | 'selfadhesive' | 'click';
+
+/**
+ * Whether the line includes installation (legservice), derived from its text.
+ * `unknown` = the description says nothing either way; labour is still charged
+ * but the quotation is flagged for review rather than silently guessed.
+ */
+export type LaborRule = 'included' | 'excluded' | 'unknown';
 
 /** One matched floor line's stats (for top-products aggregation + DB storage). */
 export interface QuotationLine {
@@ -43,8 +58,11 @@ export interface QuotationLine {
   // time. Absent on rows synced before this was added — the override recompute
   // falls back to the default constant rates. See lib/overrides.ts.
   purchasePerM2?: number; // matched purchase price (absent = unpriced line)
-  gluedPerM2?: number; // primer+glue+leveling extra (0 if not glued)
-  laborPerM2?: number; // labour + custom per-m² costs applied to matched m²
+  underlayPerM2?: number; // glued or self-adhesive surcharge (0 for click)
+  gluedPerM2?: number; // legacy name for underlayPerM2 (rows synced before 2026-08)
+  laborPerM2?: number; // labour + custom per-m² costs (0 when installation is excluded)
+  installMode?: InstallMode;
+  laborRule?: LaborRule;
 }
 
 /**

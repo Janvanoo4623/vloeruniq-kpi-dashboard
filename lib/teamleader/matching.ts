@@ -5,17 +5,27 @@
 import { dateOnly, deriveDateParts, round } from './dates';
 import { canonicalProduct } from '../format';
 import type { PriceConfig } from './price-map';
-import type { CustomerInfo, QuotationLine, QuotationRow, QuotationStatus } from '../types';
+import type {
+  CustomerInfo,
+  InstallMode,
+  LaborRule,
+  QuotationLine,
+  QuotationRow,
+  QuotationStatus,
+} from '../types';
 import type { TLQuotationSummary, TLQuotationDetail } from './tl-types';
 
 /**
  * Cost inputs (€/m²) resolved for a quotation's date (date-effective).
- * - alwaysPerM2: applied to every matched floor m² (labor + any custom extra costs).
- * - gluedPerM2: applied only to glued PVC (primer + glue + leveling).
+ * - alwaysPerM2: labour + any custom extra costs, applied per installed m².
+ * - gluedPerM2: primer + glue + leveling, only for glued PVC.
+ * - selfAdhesivePerM2: zelfklevende ondervloer, only for self-adhesive PVC.
+ * The two underlay rates are mutually exclusive — see INSTALL MODE below.
  */
 export interface Costs {
   alwaysPerM2: number;
   gluedPerM2: number;
+  selfAdhesivePerM2: number;
 }
 
 // Description starts with a floor-product type.
@@ -33,6 +43,37 @@ const FINISHING_RE = /kitt/i;
 const P_NUMBER_TEST = /P\d{3}/i;
 // Extract the first P-number (uppercase) for price lookup.
 const P_NUMBER_EXTRACT = /P\d{3}/;
+
+// ── INSTALL MODE ────────────────────────────────────────────────────────────
+// A floor line carries at most ONE underlay/adhesive surcharge:
+//   glued        primer + lijm + egaline      (€5,10/m² at the current rates)
+//   selfadhesive zelfklevende ondervloer      (€5,92/m²)
+//   click        nothing — the underlay is built into the plank
+//
+// Match "zelfklev", NOT "ondervloer". The only self-adhesive line in the whole
+// production set spells the word wrong ("Incl. zelfklevende onvervloer, en
+// leggen"), so an "ondervloer" rule would MISS it — while hitting the 6 klik-PVC
+// lines that say "met geïntegreerde 10db ondervloer", where the underlay sits in
+// the plank and must NOT be charged. Wrong in both directions. "zelfklev" occurs
+// nowhere else in the data. (Verified against 103 real line descriptions.)
+const SELF_ADHESIVE_RE = /zelfklev/i;
+const GLUED_RE = /lijm/i;
+
+// ── LEGSERVICE (labour) ─────────────────────────────────────────────────────
+// A floor sold without installation carries no labour. The exclusion MUST be
+// tested before the word "leggen" itself: "excl. leggen klik pvc" contains
+// "leggen", so a plain includes() reads it as installed — exactly backwards.
+//
+// Verified against the 103 real line descriptions in production:
+//   94x installation named       median €51/m²  (installed pricing)
+//    4x explicitly excluded      median €28/m²  (supply-only pricing)
+//    5x silent on the matter     4 price as supply-only, 1 does not
+// The silent ones keep their labour but set laborRule 'unknown', so they surface
+// for review instead of being guessed either way. Guessing from a pattern that
+// was never checked against real text is what zeroed all floor m² once before.
+const NO_LABOR_RE =
+  /\b(?:excl\.?|exclusief|zonder)\s*(?:het\s+)?leg(?:gen|service)?\b|\balleen\s+(?:leveren|levering)\b/i;
+const HAS_LABOR_RE = /\bleg(?:gen|service)\b|\bgelegd\b/i;
 
 export function parseQuotation(
   summary: TLQuotationSummary,
@@ -64,9 +105,11 @@ export function parseQuotation(
 
   let totalM2 = 0;
   let omzetVloer = 0;
-  let totalCost = 0;
+  let totalCost = 0; // material only (purchase + underlay)
+  let laborCost = 0; // accumulated per line — labour is no longer uniform
   let m2WithMatch = 0;
   let hasMatch = false;
+  let needsReview = false;
   const products: string[] = []; // matched floor products (P-numbers / names), distinct
   const lines: QuotationLine[] = []; // per-product line stats for top-products aggregation
 
@@ -113,17 +156,37 @@ export function parseQuotation(
       if (product) product = canonicalProduct(product);
       if (product && !products.includes(product)) products.push(product);
 
-      const glued = desc.includes('lijmen');
-      const gluedPerM2 = glued ? costs.gluedPerM2 : 0;
+      // Install mode → underlay surcharge. Self-adhesive is checked first so a
+      // line that mentions both can never be charged twice.
+      const installMode: InstallMode = SELF_ADHESIVE_RE.test(desc)
+        ? 'selfadhesive'
+        : GLUED_RE.test(desc)
+          ? 'glued'
+          : 'click';
+      const underlayPerM2 =
+        installMode === 'selfadhesive'
+          ? costs.selfAdhesivePerM2
+          : installMode === 'glued'
+            ? costs.gluedPerM2
+            : 0;
+
+      // Legservice → labour. Exclusion is tested before the word "leggen" itself.
+      const laborRule: LaborRule = NO_LABOR_RE.test(desc)
+        ? 'excluded'
+        : HAS_LABOR_RE.test(desc)
+          ? 'included'
+          : 'unknown';
+      const laborPerM2 = laborRule === 'excluded' ? 0 : costs.alwaysPerM2;
+      if (laborRule === 'unknown') needsReview = true;
+
       let lineMargin: number | null = null;
       if (matchedPrice !== null) {
-        // Glued PVC: purchase + primer + glue + leveling. Click PVC: purchase only.
-        const materialCostPerM2 = matchedPrice + gluedPerM2;
-        const lineCost = materialCostPerM2 * quantity + costs.alwaysPerM2 * quantity;
+        const materialCostPerM2 = matchedPrice + underlayPerM2;
         totalCost += materialCostPerM2 * quantity;
+        laborCost += laborPerM2 * quantity;
         m2WithMatch += quantity;
         hasMatch = true;
-        lineMargin = lineRevenue - lineCost;
+        lineMargin = lineRevenue - (materialCostPerM2 + laborPerM2) * quantity;
       }
 
       if (product) {
@@ -135,8 +198,10 @@ export function parseQuotation(
           desc: descTrimmed,
           // Cost components for instant per-quotation override recompute.
           purchasePerM2: matchedPrice ?? undefined,
-          gluedPerM2,
-          laborPerM2: costs.alwaysPerM2,
+          underlayPerM2,
+          laborPerM2,
+          installMode,
+          laborRule,
         });
       }
     }
@@ -149,7 +214,6 @@ export function parseQuotation(
   let verified = false;
 
   if (hasMatch && m2WithMatch > 0) {
-    const laborCost = costs.alwaysPerM2 * m2WithMatch;
     const finalCost = totalCost + laborCost;
     cost = round(finalCost);
     // Margin is measured against floor revenue only.
@@ -186,6 +250,7 @@ export function parseQuotation(
     marginPct,
     matchCoverage,
     verified,
+    needsReview,
     products,
     lines,
   };

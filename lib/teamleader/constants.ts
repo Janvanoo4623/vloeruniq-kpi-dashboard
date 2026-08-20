@@ -16,6 +16,7 @@ export const LABOR_COST_PER_M2 = 17;
 export const PRIMER_COST_PER_M2 = 0.75; // primer for glued PVC
 export const GLUE_COST_PER_M2 = 1.36; // Uzin KS2000 glue
 export const LEVELING_COST_PER_M2 = 2.99; // Egaline C Cotap leveling cement
+export const SELF_ADHESIVE_COST_PER_M2 = 5.92; // zelfklevende ondervloer (i.p.v. lijmen)
 
 /** Teamleader list pagination size. */
 export const PAGE_SIZE = 20;

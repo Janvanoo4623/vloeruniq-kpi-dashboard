@@ -10,6 +10,7 @@ import {
   PRIMER_COST_PER_M2,
   GLUE_COST_PER_M2,
   LEVELING_COST_PER_M2,
+  SELF_ADHESIVE_COST_PER_M2,
 } from './constants';
 import { priceConfigForDate, resolveCost, type PriceRow, type CostRow } from '../pricing';
 import type { CustomerInfo, QuotationRow, QuotationStatus } from '../types';
@@ -87,16 +88,22 @@ export async function fetchQuotations(
 
   const today = new Date().toISOString().split('T')[0];
 
-  // Cost keys applied only to glued PVC; everything else (labor + custom extras)
-  // applies to every matched floor m².
+  // Three cost buckets. 'primer'/'glue'/'leveling' apply only to glued PVC and
+  // 'selfadhesive' only to self-adhesive PVC — the two are mutually exclusive per
+  // line (see matching.ts). Everything else (labor + custom extras) applies to
+  // every installed m².
   const GLUED_KEYS = new Set(['primer', 'glue', 'leveling']);
+  const SELF_ADHESIVE_KEY = 'selfadhesive';
   const FALLBACK: Record<string, number> = {
     labor: LABOR_COST_PER_M2,
     primer: PRIMER_COST_PER_M2,
     glue: GLUE_COST_PER_M2,
     leveling: LEVELING_COST_PER_M2,
+    selfadhesive: SELF_ADHESIVE_COST_PER_M2,
   };
-  const costKeys = [...new Set(costRows.map((r) => r.key))];
+  // Union with the built-ins, so a rate still applies at its constant default
+  // when cost_settings has no row for it yet (e.g. a newly added key).
+  const costKeys = [...new Set([...Object.keys(FALLBACK), ...costRows.map((r) => r.key)])];
 
   const results = await mapLimit(summaries, FETCH_CONCURRENCY, async (q) => {
     try {
@@ -106,13 +113,19 @@ export async function fetchQuotations(
 
       let alwaysPerM2 = 0;
       let gluedPerM2 = 0;
+      let selfAdhesivePerM2 = 0;
       for (const key of costKeys) {
         const v = resolveCost(costRows, key, date, FALLBACK[key] ?? 0);
-        if (GLUED_KEYS.has(key)) gluedPerM2 += v;
+        if (key === SELF_ADHESIVE_KEY) selfAdhesivePerM2 = v;
+        else if (GLUED_KEYS.has(key)) gluedPerM2 += v;
         else alwaysPerM2 += v;
       }
 
-      return parseQuotation(q, detail, customerLookup, priceConfig, { alwaysPerM2, gluedPerM2 });
+      return parseQuotation(q, detail, customerLookup, priceConfig, {
+        alwaysPerM2,
+        gluedPerM2,
+        selfAdhesivePerM2,
+      });
     } catch {
       // Mirror the script: skip quotations whose detail fetch fails.
       return null;

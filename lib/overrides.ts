@@ -6,7 +6,7 @@
 // Only quotations that HAVE an override are recomputed; every other quotation is
 // returned untouched (its synced margins are preserved byte-for-byte). Margins
 // are recomputed from the per-line cost components stored at sync time
-// (purchasePerM2/gluedPerM2/laborPerM2). Rows synced before those existed fall
+// (purchasePerM2/underlayPerM2/laborPerM2). Rows synced before those existed fall
 // back to the default constant rates + a glued check on the line description —
 // approximate until the quotation is re-synced, exact after. See DATA-MODEL.md.
 import {
@@ -14,6 +14,7 @@ import {
   PRIMER_COST_PER_M2,
   GLUE_COST_PER_M2,
   LEVELING_COST_PER_M2,
+  SELF_ADHESIVE_COST_PER_M2,
 } from './teamleader/constants';
 import { buildSnapshot } from './teamleader/aggregate';
 import type { AggLine } from './teamleader/quotations';
@@ -22,17 +23,27 @@ import type { QuotationLine, QuotationOverride, QuotationRow, Snapshot } from '.
 const round2 = (v: number) => Math.round(v * 100) / 100;
 const round1 = (v: number) => Math.round(v * 10) / 10;
 const DEFAULT_GLUED = PRIMER_COST_PER_M2 + GLUE_COST_PER_M2 + LEVELING_COST_PER_M2;
+const DEFAULT_SELF_ADHESIVE = SELF_ADHESIVE_COST_PER_M2;
 
-/** Resolve a line's cost components, falling back to constants for old rows. */
-function components(l: QuotationLine): { purchase: number | null; glued: number; labor: number } {
-  const glued = l.gluedPerM2 ?? (l.desc?.toLowerCase().includes('lijmen') ? DEFAULT_GLUED : 0);
+/**
+ * Resolve a line's cost components, falling back for rows synced before the
+ * component fields existed. `underlayPerM2` superseded `gluedPerM2` when the
+ * self-adhesive mode was added; both are read so old rows keep working until the
+ * next backfill. The text fallback mirrors matching.ts (zelfklevend before lijm).
+ */
+function components(l: QuotationLine): { purchase: number | null; underlay: number; labor: number } {
+  const d = l.desc?.toLowerCase() ?? '';
+  const underlay =
+    l.underlayPerM2 ??
+    l.gluedPerM2 ??
+    (/zelfklev/.test(d) ? DEFAULT_SELF_ADHESIVE : /lijm/.test(d) ? DEFAULT_GLUED : 0);
   const labor = l.laborPerM2 ?? LABOR_COST_PER_M2;
   // Base purchase: stored component, else derive from the frozen margin if priced.
   let purchase: number | null = l.purchasePerM2 ?? null;
   if (purchase == null && l.margin != null && l.m2 > 0) {
-    purchase = (l.revenue - l.margin) / l.m2 - glued - labor;
+    purchase = (l.revenue - l.margin) / l.m2 - underlay - labor;
   }
-  return { purchase, glued, labor };
+  return { purchase, underlay, labor };
 }
 
 /** Recompute one quotation under an override. `omzetVloer` (floor revenue) is unchanged. */
@@ -48,7 +59,7 @@ function recompute(q: QuotationRow, ov: QuotationOverride): QuotationRow {
     const override = ov.prices[l.code.toLowerCase()];
     const purchase = override != null ? override : c.purchase;
     if (purchase == null) return { ...l, margin: null }; // still unpriced
-    const matPerM2 = purchase + c.glued;
+    const matPerM2 = purchase + c.underlay;
     const labor = ov.noLabor ? 0 : c.labor;
     material += matPerM2 * l.m2;
     laborTotal += labor * l.m2;

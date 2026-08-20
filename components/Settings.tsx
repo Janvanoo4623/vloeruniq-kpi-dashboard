@@ -17,6 +17,7 @@ const COST_LABELS: Record<string, string> = {
   primer: 'Primer',
   glue: 'Lijm',
   leveling: 'Egaline',
+  selfadhesive: 'Zelfklevend',
 };
 
 interface State {
@@ -228,8 +229,9 @@ function PricesTab({ prices, post, busy }: { prices: CurrentPrice[]; post: Post;
 }
 
 // ── Kosten ───────────────────────────────────────────────────────────────
-const BUILTIN_COSTS = ['labor', 'primer', 'glue', 'leveling'];
+const BUILTIN_COSTS = ['labor', 'primer', 'glue', 'leveling', 'selfadhesive'];
 const GLUED_COSTS = new Set(['primer', 'glue', 'leveling']);
+const SELF_ADHESIVE_COSTS = new Set(['selfadhesive']);
 
 function costLabel(key: string): string {
   return COST_LABELS[key] ?? key.charAt(0).toUpperCase() + key.slice(1);
@@ -248,7 +250,10 @@ function CostsTab({ costs, post, busy }: { costs: CurrentCost[]; post: Post; bus
     <Card>
       <p className="mb-3 text-sm text-neutral-500">
         Kosten per m². <strong>Arbeid</strong> en <strong>extra kosten</strong> gelden voor élke
-        gematchte vloer; <strong>primer/lijm/egaline</strong> alleen bij gelijmd PVC.
+        gelegde vloer — behalve waar de offerte het leggen uitsluit.
+        <strong>Primer/lijm/egaline</strong> gelden alleen bij gelijmd PVC en{' '}
+        <strong>zelfklevend</strong> alleen bij een zelfklevende ondervloer; die twee sluiten
+        elkaar uit, een vloer krijgt er nooit allebei.
       </p>
 
       <div className="space-y-2">
@@ -257,7 +262,11 @@ function CostsTab({ costs, post, busy }: { costs: CurrentCost[]; post: Post; bus
           const cur = c?.value ?? 0;
           const val = edits[key] ?? String(cur);
           const changed = Number(val) !== cur && val.trim() !== '';
-          const scope = GLUED_COSTS.has(key) ? 'gelijmd PVC' : 'per m²';
+          const scope = GLUED_COSTS.has(key)
+            ? 'gelijmd PVC'
+            : SELF_ADHESIVE_COSTS.has(key)
+              ? 'zelfklevend'
+              : 'per m²';
           return (
             <div key={key} className="flex items-center gap-3 rounded-lg border border-neutral-100 px-3 py-2">
               <span className="w-28 shrink-0 text-sm font-medium text-neutral-700">{costLabel(key)}</span>
