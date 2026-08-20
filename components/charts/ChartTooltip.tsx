@@ -23,8 +23,8 @@ export function ChartTooltip({
   if (!active || !payload?.length) return null;
 
   return (
-    <div className="rounded-lg border border-neutral-200 bg-white/95 px-3 py-2 text-xs shadow-lg backdrop-blur">
-      <div className="mb-1.5 font-medium text-neutral-700">
+    <div className="rounded-lg border border-line bg-white/95 px-3 py-2 text-xs shadow-lg backdrop-blur">
+      <div className="mb-1.5 font-medium text-ink-soft">
         {labelFormat && label != null ? labelFormat(label) : label}
       </div>
       {payload.map((p, i) => (
@@ -33,8 +33,8 @@ export function ChartTooltip({
             className="inline-block h-2 w-2 shrink-0 rounded-full"
             style={{ background: p.color }}
           />
-          <span className="text-neutral-500">{p.name}</span>
-          <span className="ml-auto pl-4 font-medium text-neutral-900">
+          <span className="text-ink-mute">{p.name}</span>
+          <span className="ml-auto pl-4 font-medium text-ink">
             {p.value != null && format ? format(p.value, String(p.dataKey)) : p.value}
           </span>
         </div>

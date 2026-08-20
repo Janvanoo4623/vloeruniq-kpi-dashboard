@@ -45,15 +45,15 @@ function LoginForm() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-neutral-100 p-6 text-neutral-900">
+    <main className="flex min-h-screen items-center justify-center bg-sunk p-6 text-ink">
       <form
         onSubmit={onSubmit}
-        className="w-full max-w-sm rounded-2xl border border-neutral-200 bg-white p-8 shadow-sm"
+        className="w-full max-w-sm rounded-2xl border border-line bg-white p-8 shadow-sm"
       >
         <h1 className="text-xl font-semibold">Vloeruniq Dashboard</h1>
-        <p className="mt-1 text-sm text-neutral-500">Voer het wachtwoord in om verder te gaan.</p>
+        <p className="mt-1 text-sm text-ink-mute">Voer het wachtwoord in om verder te gaan.</p>
 
-        <label htmlFor="password" className="mt-6 block text-sm font-medium text-neutral-700">
+        <label htmlFor="password" className="mt-6 block text-sm font-medium text-ink-soft">
           Wachtwoord
         </label>
         <input
@@ -62,15 +62,15 @@ function LoginForm() {
           autoFocus
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          className="mt-2 w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm outline-none focus:border-emerald-500"
+          className="mt-2 w-full rounded-lg border border-line bg-white px-3 py-2 text-sm outline-none focus:border-accent"
         />
 
-        {error && <p className="mt-3 text-sm text-rose-600">{error}</p>}
+        {error && <p className="mt-3 text-sm text-crit">{error}</p>}
 
         <button
           type="submit"
           disabled={loading || !password}
-          className="mt-6 w-full rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-500 disabled:opacity-50"
+          className="mt-6 w-full rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white transition hover:bg-accent/90 disabled:opacity-50"
         >
           {loading ? 'Bezig…' : 'Inloggen'}
         </button>

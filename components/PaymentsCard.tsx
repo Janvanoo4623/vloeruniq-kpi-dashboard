@@ -31,7 +31,7 @@ export default function PaymentsCard({ payments }: { payments: PaymentStats }) {
       </div>
 
       {noData && (
-        <p className="mt-3 text-xs text-amber-700">
+        <p className="mt-3 text-xs text-warn">
           Nog geen betaaldata beschikbaar. Voeg de <code>paid_at</code>-kolom toe (zie
           schema.sql) en draai een synchronisatie om de betaaltermijn te vullen.
         </p>
@@ -52,16 +52,16 @@ function Stat({
   accent?: boolean;
 }) {
   return (
-    <div className={`rounded-lg px-3 py-2 ${accent ? 'bg-emerald-50' : 'bg-neutral-50'}`}>
-      <div className="text-xs text-neutral-400">{label}</div>
+    <div className={`rounded-lg px-3 py-2 ${accent ? 'bg-good-soft' : 'bg-sunk'}`}>
+      <div className="text-xs text-ink-faint">{label}</div>
       <div
         className={`mt-0.5 text-lg font-semibold tabular-nums ${
-          accent ? 'text-emerald-700' : 'text-neutral-800'
+          accent ? 'text-good' : 'text-ink'
         }`}
       >
         {value}
       </div>
-      <div className="text-xs text-neutral-400">{sub}</div>
+      <div className="text-xs text-ink-faint">{sub}</div>
     </div>
   );
 }

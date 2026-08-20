@@ -46,12 +46,12 @@ export default function PriceInput({
   }
 
   if (state === 'saved') {
-    return <span className="text-xs font-medium text-emerald-600">✓ prijs opgeslagen</span>;
+    return <span className="text-xs font-medium text-good">✓ prijs opgeslagen</span>;
   }
 
   return (
     <span className="inline-flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-      <span className="text-neutral-400">€</span>
+      <span className="text-ink-faint">€</span>
       <input
         value={val}
         onChange={(e) => {
@@ -62,15 +62,15 @@ export default function PriceInput({
         inputMode="decimal"
         placeholder="/m²"
         aria-label={`Inkoopprijs voor ${code}`}
-        className={`w-16 rounded-md border bg-white px-1.5 py-0.5 text-xs outline-none focus:border-emerald-500 ${
-          state === 'error' ? 'border-rose-400' : 'border-neutral-300'
+        className={`w-16 rounded-md border bg-white px-1.5 py-0.5 text-xs outline-none focus:border-accent ${
+          state === 'error' ? 'border-crit/40' : 'border-line'
         }`}
       />
       <button
         type="button"
         onClick={save}
         disabled={state === 'saving' || val.trim() === ''}
-        className="rounded-md bg-neutral-900 px-2 py-0.5 text-xs font-medium text-white transition hover:bg-neutral-700 disabled:opacity-40"
+        className="rounded-md bg-ink px-2 py-0.5 text-xs font-medium text-white transition hover:bg-ink/85 disabled:opacity-40"
       >
         {state === 'saving' ? '…' : 'Opslaan'}
       </button>

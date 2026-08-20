@@ -78,15 +78,15 @@ export default function QuotationsTable({
   return (
     <div>
       <div className="mb-3 flex flex-wrap items-center gap-2">
-        <div className="flex rounded-lg border border-neutral-200 p-0.5 text-xs">
+        <div className="flex rounded-lg border border-line p-0.5 text-xs">
           {(['all', 'accepted', 'open'] as const).map((s) => (
             <button
               key={s}
               onClick={() => setStatusFilter(s)}
               className={`rounded-md px-2.5 py-1 transition ${
                 statusFilter === s
-                  ? 'bg-neutral-900 text-white'
-                  : 'text-neutral-500 hover:text-neutral-900'
+                  ? 'bg-ink text-white'
+                  : 'text-ink-mute hover:text-ink'
               }`}
             >
               {s === 'all' ? 'Alle' : STATUS_LABEL[s]}
@@ -97,15 +97,15 @@ export default function QuotationsTable({
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Zoek klant of offerte…"
-          className="ml-auto w-56 rounded-lg border border-neutral-200 bg-white px-3 py-1.5 text-xs outline-none focus:border-emerald-500"
+          className="ml-auto w-56 rounded-lg border border-line bg-white px-3 py-1.5 text-xs outline-none focus:border-accent"
         />
-        <span className="text-xs text-neutral-400">{filtered.length} offertes</span>
+        <span className="text-xs text-ink-faint">{filtered.length} offertes</span>
       </div>
 
-      <div className="h-[460px] overflow-auto rounded-xl border border-neutral-200">
+      <div className="h-[460px] overflow-auto rounded-xl border border-line">
         <table className="w-full border-collapse text-sm">
-          <thead className="sticky top-0 z-10 bg-neutral-50 text-xs text-neutral-500">
-            <tr className="border-b border-neutral-200">
+          <thead className="sticky top-0 z-10 bg-sunk text-xs text-ink-mute">
+            <tr className="border-b border-line">
               <Th onClick={() => toggleSort('date')}>Datum{arrow('date')}</Th>
               <Th onClick={() => toggleSort('customer')}>Klant{arrow('customer')}</Th>
               <Th>Vloer</Th>
@@ -125,21 +125,21 @@ export default function QuotationsTable({
               <Th className="text-center">Dekking</Th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-neutral-100">
+          <tbody className="divide-y divide-hair">
             {filtered.map((q) => (
               <tr
                 key={q.id}
                 onClick={() => setSelectedId(q.id)}
-                className="cursor-pointer hover:bg-neutral-50"
+                className="cursor-pointer hover:bg-sunk"
               >
-                <td className="whitespace-nowrap px-3 py-2 text-neutral-500 tabular-nums">
+                <td className="whitespace-nowrap px-3 py-2 text-ink-mute tabular-nums">
                   {rowDate(q)}
                 </td>
                 <td className="px-3 py-2">
-                  <div className="max-w-[220px] truncate text-neutral-800">
+                  <div className="max-w-[220px] truncate text-ink">
                     {q.customerName || '—'}
                   </div>
-                  <div className="max-w-[220px] truncate text-xs text-neutral-400">{q.name}</div>
+                  <div className="max-w-[220px] truncate text-xs text-ink-faint">{q.name}</div>
                 </td>
                 <td className="px-3 py-2">
                   <ProductBadges products={q.products ?? []} />
@@ -151,10 +151,10 @@ export default function QuotationsTable({
                     {STATUS_LABEL[q.status]}
                   </span>
                 </td>
-                <td className="px-3 py-2 text-right tabular-nums text-neutral-800">
+                <td className="px-3 py-2 text-right tabular-nums text-ink">
                   {formatEuro(q.revenueExVat, true)}
                 </td>
-                <td className="px-3 py-2 text-right tabular-nums text-neutral-500">
+                <td className="px-3 py-2 text-right tabular-nums text-ink-mute">
                   {formatNumber(q.totalM2)}
                 </td>
                 <td className="px-3 py-2 text-right tabular-nums">
@@ -165,10 +165,10 @@ export default function QuotationsTable({
                 </td>
                 <td className="px-3 py-2 text-center">
                   {q.matchCoverage == null ? (
-                    <span className="text-neutral-300">—</span>
+                    <span className="text-ink-faint">—</span>
                   ) : (
-                    <span className="inline-flex items-center gap-1 text-xs text-neutral-500 tabular-nums">
-                      {q.verified && <span className="text-emerald-600">✓</span>}
+                    <span className="inline-flex items-center gap-1 text-xs text-ink-mute tabular-nums">
+                      {q.verified && <span className="text-good">✓</span>}
                       {formatPercent(q.matchCoverage)}
                     </span>
                   )}
@@ -177,7 +177,7 @@ export default function QuotationsTable({
             ))}
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={9} className="px-3 py-8 text-center text-sm text-neutral-400">
+                <td colSpan={9} className="px-3 py-8 text-center text-sm text-ink-faint">
                   Geen offertes gevonden.
                 </td>
               </tr>
@@ -206,7 +206,7 @@ function Th({
     <th
       onClick={onClick}
       className={`px-3 py-2 text-left font-medium ${
-        onClick ? 'cursor-pointer select-none hover:text-neutral-900' : ''
+        onClick ? 'cursor-pointer select-none hover:text-ink' : ''
       } ${className}`}
     >
       {children}
@@ -215,7 +215,7 @@ function Th({
 }
 
 function ProductBadges({ products }: { products: string[] }) {
-  if (products.length === 0) return <span className="text-neutral-300">—</span>;
+  if (products.length === 0) return <span className="text-ink-faint">—</span>;
   const shown = products.slice(0, 2);
   const rest = products.length - shown.length;
   return (
@@ -226,12 +226,12 @@ function ProductBadges({ products }: { products: string[] }) {
       {shown.map((p) => (
         <span
           key={p}
-          className="rounded bg-neutral-100 px-1.5 py-0.5 text-xs font-medium text-neutral-600"
+          className="rounded bg-sunk px-1.5 py-0.5 text-xs font-medium text-ink-soft"
         >
           {formatProduct(p)}
         </span>
       ))}
-      {rest > 0 && <span className="text-xs text-neutral-400">+{rest}</span>}
+      {rest > 0 && <span className="text-xs text-ink-faint">+{rest}</span>}
     </div>
   );
 }

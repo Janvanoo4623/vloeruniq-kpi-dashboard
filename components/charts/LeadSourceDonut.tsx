@@ -31,8 +31,8 @@ export default function LeadSourceDonut({ data }: { data: LeadSource[] }) {
           </PieChart>
         </ResponsiveContainer>
         <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-          <span className="text-xs text-neutral-400">Totaal</span>
-          <span className="text-lg font-semibold text-neutral-900">{formatEuro(total)}</span>
+          <span className="text-xs text-ink-faint">Totaal</span>
+          <span className="text-lg font-semibold text-ink">{formatEuro(total)}</span>
         </div>
       </div>
 
@@ -45,9 +45,9 @@ export default function LeadSourceDonut({ data }: { data: LeadSource[] }) {
                 className="inline-block h-2.5 w-2.5 shrink-0 rounded-full"
                 style={{ background: SOURCE_COLORS[i % SOURCE_COLORS.length] }}
               />
-              <span className="min-w-0 flex-1 truncate text-neutral-600">{d.name}</span>
-              <span className="shrink-0 tabular-nums text-neutral-400">{pct}%</span>
-              <span className="w-24 shrink-0 text-right tabular-nums font-medium text-neutral-900">
+              <span className="min-w-0 flex-1 truncate text-ink-soft">{d.name}</span>
+              <span className="shrink-0 tabular-nums text-ink-faint">{pct}%</span>
+              <span className="w-24 shrink-0 text-right tabular-nums font-medium text-ink">
                 {formatEuro(d.revenue)}
               </span>
             </li>

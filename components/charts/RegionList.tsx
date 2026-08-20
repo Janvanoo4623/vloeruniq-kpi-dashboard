@@ -9,7 +9,7 @@ export default function RegionList({ data }: { data: RegionStat[] }) {
 
   if (top.length === 0) {
     return (
-      <div className="flex h-[260px] items-center justify-center text-sm text-neutral-400">
+      <div className="flex h-[260px] items-center justify-center text-sm text-ink-faint">
         Geen data
       </div>
     );
@@ -20,15 +20,15 @@ export default function RegionList({ data }: { data: RegionStat[] }) {
       {top.map((d) => (
         <li key={d.name} className="text-sm">
           <div className="mb-1 flex items-center justify-between gap-2">
-            <span className="truncate text-neutral-700">{d.name}</span>
-            <span className="shrink-0 tabular-nums text-neutral-500">
+            <span className="truncate text-ink-soft">{d.name}</span>
+            <span className="shrink-0 tabular-nums text-ink-mute">
               {formatEuro(d.revenue)}
-              <span className="ml-2 text-neutral-400">{d.count}×</span>
+              <span className="ml-2 text-ink-faint">{d.count}×</span>
             </span>
           </div>
-          <div className="h-1.5 w-full overflow-hidden rounded-full bg-neutral-100">
+          <div className="h-1.5 w-full overflow-hidden rounded-full bg-sunk">
             <span
-              className="block h-full rounded-full bg-sky-500"
+              className="block h-full rounded-full bg-oak"
               style={{ width: `${(d.revenue / max) * 100}%` }}
             />
           </div>

@@ -91,8 +91,8 @@ export default function WeekOverviewTable({ snapshot }: { snapshot: Snapshot }) 
   // Frozen columns: KPI label (left-0) + Totaal (left-44). Same colours/sizing as the offer table.
   const labelCell = 'sticky left-0 z-20 w-44 min-w-44 bg-white px-3 py-2 text-left';
   const totalCell =
-    'sticky left-44 z-20 bg-white px-3 py-2 text-right tabular-nums font-medium text-neutral-800 border-r border-neutral-200';
-  const weekCell = 'whitespace-nowrap px-3 py-2 text-right tabular-nums text-neutral-500';
+    'sticky left-44 z-20 bg-white px-3 py-2 text-right tabular-nums font-medium text-ink border-r border-line';
+  const weekCell = 'whitespace-nowrap px-3 py-2 text-right tabular-nums text-ink-mute';
 
   return (
     <div>
@@ -101,20 +101,20 @@ export default function WeekOverviewTable({ snapshot }: { snapshot: Snapshot }) 
         {allWeeks.length > DEFAULT_WEEKS && (
           <button
             onClick={() => setShowAll((v) => !v)}
-            className="rounded-lg border border-neutral-200 bg-white px-3 py-1.5 text-xs text-neutral-500 transition hover:text-neutral-900"
+            className="rounded-lg border border-line bg-white px-3 py-1.5 text-xs text-ink-mute transition hover:text-ink"
           >
             {showAll ? `Laatste ${DEFAULT_WEEKS} weken` : `Alle ${allWeeks.length} weken`}
           </button>
         )}
-        <span className="text-xs text-neutral-400">{weeks.length} weken</span>
+        <span className="text-xs text-ink-faint">{weeks.length} weken</span>
       </div>
 
-      <div className="h-[460px] overflow-auto rounded-xl border border-neutral-200">
+      <div className="h-[460px] overflow-auto rounded-xl border border-line">
         <table className="w-full border-collapse text-sm">
-          <thead className="sticky top-0 z-30 bg-neutral-50 text-xs text-neutral-500">
-            <tr className="border-b border-neutral-200">
-              <th className={`${labelCell} z-40 bg-neutral-50 font-medium`}>KPI</th>
-              <th className="sticky left-44 z-40 border-r border-neutral-200 bg-neutral-50 px-3 py-2 text-right font-medium text-neutral-700">
+          <thead className="sticky top-0 z-30 bg-sunk text-xs text-ink-mute">
+            <tr className="border-b border-line">
+              <th className={`${labelCell} z-40 bg-sunk font-medium`}>KPI</th>
+              <th className="sticky left-44 z-40 border-r border-line bg-sunk px-3 py-2 text-right font-medium text-ink-soft">
                 Totaal
               </th>
               {weeks.map((w) => (
@@ -157,20 +157,20 @@ function SectionRows({
 }) {
   return (
     <>
-      <tr className="bg-neutral-50">
+      <tr className="bg-sunk">
         <td
           colSpan={weeks.length + 2}
-          className="sticky left-0 z-10 bg-neutral-50 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-neutral-400"
+          className="sticky left-0 z-10 bg-sunk px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-ink-faint"
         >
           {section.title}
         </td>
       </tr>
       {section.rows.map((row) => (
-        <tr key={row.label} className="group border-t border-neutral-100 hover:bg-neutral-50">
-          <td className={`${labelCell} font-medium text-neutral-800 group-hover:bg-neutral-50`}>
+        <tr key={row.label} className="group border-t border-hair hover:bg-sunk">
+          <td className={`${labelCell} font-medium text-ink group-hover:bg-sunk`}>
             {row.label}
           </td>
-          <td className={`${totalCell} group-hover:bg-neutral-50`}>{row.fmt(row.total)}</td>
+          <td className={`${totalCell} group-hover:bg-sunk`}>{row.fmt(row.total)}</td>
           {weeks.map((w) => (
             <td key={w} className={weekCell}>
               {row.fmt(row.cell(w))}

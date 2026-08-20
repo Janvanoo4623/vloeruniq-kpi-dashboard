@@ -1,30 +1,34 @@
 import type { ReactNode } from 'react';
+import { Panel } from './ui';
 
+/**
+ * Paneel met een grafiek of tabel erin. Dunne wrapper om <Panel> zodat de
+ * bestaande aanroepen (title/subtitle/action) blijven werken.
+ */
 export default function ChartCard({
   title,
   subtitle,
   action,
   children,
   className = '',
+  bodyClassName,
 }: {
   title: string;
   subtitle?: string;
   action?: ReactNode;
   children: ReactNode;
   className?: string;
+  bodyClassName?: string;
 }) {
   return (
-    <section
-      className={`rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm ${className}`}
+    <Panel
+      title={title}
+      subtitle={subtitle}
+      right={action}
+      className={className}
+      bodyClassName={bodyClassName}
     >
-      <div className="mb-4 flex items-start justify-between gap-3">
-        <div>
-          <h2 className="text-sm font-semibold text-neutral-800">{title}</h2>
-          {subtitle && <p className="mt-0.5 text-xs text-neutral-500">{subtitle}</p>}
-        </div>
-        {action}
-      </div>
       {children}
-    </section>
+    </Panel>
   );
 }

@@ -1,29 +1,39 @@
-// Shared chart colours + axis styling for the light dashboard.
+// Grafiekkleuren, afgeleid van de app-tokens in globals.css.
+//
+// De reeks is bewust géén regenboog: geaccepteerd is het petrol accent (de kleur
+// van "dit is binnen"), open is eiken (de kleur van m² en voorraad), en geweigerd
+// is het enige rood in de set. Marge en doorlooptijd krijgen eigen tinten die
+// niet met een status verward kunnen worden.
 
 export const CHART = {
-  grid: '#e5e7eb', // neutral-200
-  axis: '#9ca3af', // neutral-400
-  text: '#6b7280', // neutral-500
-  cursor: 'rgba(0,0,0,0.04)',
-  accepted: '#059669', // emerald-600
-  open: '#0284c7', // sky-600
-  refused: '#e11d48', // rose-600
-  margin: '#7c3aed', // violet-600
-  marginPct: '#d97706', // amber-600
-  runTime: '#0891b2', // cyan-600
-  deals: '#d4d4d8', // neutral-300
+  grid: '#e7e2da', // line
+  axis: '#a8a29e', // ink-faint
+  text: '#857f78', // ink-mute
+  cursor: 'rgba(28,25,23,0.04)',
+
+  accepted: '#0e6b63', // accent — binnengehaald
+  open: '#b4762a', // oak — nog open
+  refused: '#a93b2c', // crit — geweigerd
+
+  margin: '#2f7a4e', // good — marge in euro's
+  marginPct: '#a8761b', // warn — marge in procenten
+  runTime: '#0e6b63', // accent — doorlooptijd
+  deals: '#e7e2da', // line — achtergrondstaven
 } as const;
 
-// Donut palette for lead sources.
+/**
+ * Donut-palet voor leadbronnen. Begint bij de twee huisaccenten en waaiert dan
+ * uit in tinten die daar naast passen; rood blijft eruit, dat betekent iets.
+ */
 export const SOURCE_COLORS = [
-  '#059669', // emerald-600
-  '#0284c7', // sky-600
-  '#7c3aed', // violet-600
-  '#d97706', // amber-600
-  '#e11d48', // rose-600
-  '#0891b2', // cyan-600
-  '#2563eb', // blue-600
-  '#db2777', // pink-600
+  '#0e6b63', // petrol
+  '#b4762a', // eiken
+  '#2f7a4e', // groen
+  '#4a8f9c', // blauwgroen
+  '#8a6f4e', // taupe
+  '#5d7a5a', // olijf
+  '#a8761b', // amber
+  '#6b7f8e', // leisteen
 ];
 
-export const AXIS_TICK = { fill: CHART.text, fontSize: 12 } as const;
+export const AXIS_TICK = { fill: CHART.text, fontSize: 11.5 } as const;

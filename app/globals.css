@@ -1,15 +1,94 @@
 @import "tailwindcss";
 
-@theme inline {
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+/* ─────────────────────────────────────────────────────────────────────────
+   Vloeruniq design tokens.
+   Warm, licht okerachtige neutralen (de vloerenwereld) met één diep petrol
+   accent dat in géén enkel vloermonster voorkomt — zo kan een accentkleur
+   nooit verward worden met een productkleur. Eiken is het tweede accent, voor
+   m²- en volumedata. Groen/amber/rood blijven gereserveerd voor betekenis
+   (goed / let op / alarm) en worden nooit decoratief gebruikt.
+   ───────────────────────────────────────────────────────────────────────── */
+@theme {
+  --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
+
+  /* Neutralen — warm gebroken, niet blauwgrijs */
+  --color-ink: #1c1917;
+  --color-ink-soft: #57534e;
+  --color-ink-mute: #857f78;
+  --color-ink-faint: #a8a29e;
+  --color-shell: #eeebe6;
+  --color-canvas: #f7f5f2;
+  --color-surface: #ffffff;
+  --color-sunk: #f4f1ec;
+  --color-line: #e7e2da;
+  --color-hair: #f0ece5;
+
+  /* Accenten */
+  --color-accent: #0e6b63;
+  --color-accent-soft: #e2efed;
+  --color-accent-line: #b9d8d4;
+  --color-oak: #b4762a;
+  --color-oak-soft: #f8efe1;
+
+  /* Betekenis */
+  --color-good: #2f7a4e;
+  --color-good-soft: #e6f1ea;
+  --color-warn: #a8761b;
+  --color-warn-soft: #f8f0dd;
+  --color-crit: #a93b2c;
+  --color-crit-soft: #f9e9e5;
 }
 
+html,
 body {
-  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
-/* Recharts tooltip + cursor tweaks for the dark theme */
+/* Cijfers lijnen altijd uit in kolommen. */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+
+/* Eén breedte voor élke rechter-drawer in de app, zodat ze allemaal op
+   dezelfde plek en dezelfde maat inschuiven. Consistentie wint van variatie. */
+.drawer-panel {
+  width: 760px;
+  max-width: 94vw;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes rise-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes slide-in-right {
+  from { opacity: 0; transform: translateX(24px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.animate-fade-in { animation: fade-in 0.18s ease-out; }
+.animate-rise-in { animation: rise-in 0.2s ease-out; }
+.animate-slide-in-right { animation: slide-in-right 0.24s cubic-bezier(0.22, 1, 0.36, 1); }
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-in,
+  .animate-rise-in,
+  .animate-slide-in-right {
+    animation: none;
+  }
+}
+
+/* Recharts — de tooltip gebruikt onze eigen kaart, dus de standaardschil weg. */
 .recharts-default-tooltip {
-  border-radius: 0.5rem !important;
+  border-radius: 0.75rem !important;
+}
+.recharts-surface:focus,
+.recharts-wrapper:focus {
+  outline: none;
 }

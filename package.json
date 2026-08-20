@@ -18,6 +18,7 @@
   "dependencies": {
     "@supabase/supabase-js": "^2.110.2",
     "@upstash/redis": "^1.38.0",
+    "lucide-react": "^1.33.0",
     "next": "16.2.9",
     "react": "19.2.4",
     "react-dom": "19.2.4",

@@ -55,37 +55,37 @@ export default function AttentionTable({
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
       <div>
-        <h3 className="mb-2 text-sm font-semibold text-neutral-700">
-          Laagste marge <span className="font-normal text-neutral-400">(geaccepteerd)</span>
+        <h3 className="mb-2 text-sm font-semibold text-ink-soft">
+          Laagste marge <span className="font-normal text-ink-faint">(geaccepteerd)</span>
         </h3>
-        <div className="overflow-hidden rounded-xl border border-neutral-200">
+        <div className="overflow-hidden rounded-xl border border-line">
           <table className="w-full border-collapse text-sm">
-            <thead className="bg-neutral-50 text-xs text-neutral-500">
-              <tr className="border-b border-neutral-200">
+            <thead className="bg-sunk text-xs text-ink-mute">
+              <tr className="border-b border-line">
                 <th className="px-3 py-2 text-left font-medium">Klant</th>
                 <th className="px-3 py-2 text-right font-medium">Omzet</th>
                 <th className="px-3 py-2 text-right font-medium">Marge €</th>
                 <th className="px-3 py-2 text-right font-medium">Marge %</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-neutral-100">
+            <tbody className="divide-y divide-hair">
               {lowMargin.map((q) => {
                 const neg = (q.margin ?? 0) < 0;
                 return (
                   <tr
                     key={q.id}
                     onClick={() => setSelectedId(q.id)}
-                    className="cursor-pointer hover:bg-neutral-50"
+                    className="cursor-pointer hover:bg-sunk"
                   >
                     <td className="px-3 py-2">
-                      <div className="max-w-[180px] truncate text-neutral-800">{q.customerName || '—'}</div>
-                      <div className="text-xs text-neutral-400">{rowDate(q)}</div>
+                      <div className="max-w-[180px] truncate text-ink">{q.customerName || '—'}</div>
+                      <div className="text-xs text-ink-faint">{rowDate(q)}</div>
                     </td>
-                    <td className="px-3 py-2 text-right tabular-nums text-neutral-600">{formatEuro(q.revenueExVat)}</td>
-                    <td className={`px-3 py-2 text-right tabular-nums ${neg ? 'text-rose-600 font-medium' : 'text-neutral-700'}`}>
+                    <td className="px-3 py-2 text-right tabular-nums text-ink-soft">{formatEuro(q.revenueExVat)}</td>
+                    <td className={`px-3 py-2 text-right tabular-nums ${neg ? 'text-crit font-medium' : 'text-ink-soft'}`}>
                       {formatEuro(q.margin, true)}
                     </td>
-                    <td className={`px-3 py-2 text-right tabular-nums ${neg ? 'text-rose-600 font-medium' : 'text-neutral-700'}`}>
+                    <td className={`px-3 py-2 text-right tabular-nums ${neg ? 'text-crit font-medium' : 'text-ink-soft'}`}>
                       {formatPercent(q.marginPct)}
                     </td>
                   </tr>
@@ -93,7 +93,7 @@ export default function AttentionTable({
               })}
               {lowMargin.length === 0 && (
                 <tr>
-                  <td colSpan={4} className="px-3 py-6 text-center text-sm text-neutral-400">Geen data.</td>
+                  <td colSpan={4} className="px-3 py-6 text-center text-sm text-ink-faint">Geen data.</td>
                 </tr>
               )}
             </tbody>
@@ -102,36 +102,36 @@ export default function AttentionTable({
       </div>
 
       <div>
-        <h3 className="mb-2 text-sm font-semibold text-neutral-700">
-          Onvolledige dekking <span className="font-normal text-neutral-400">(niet alle m² geprijsd)</span>
+        <h3 className="mb-2 text-sm font-semibold text-ink-soft">
+          Onvolledige dekking <span className="font-normal text-ink-faint">(niet alle m² geprijsd)</span>
         </h3>
-        <div className="overflow-hidden rounded-xl border border-neutral-200">
+        <div className="overflow-hidden rounded-xl border border-line">
           <table className="w-full border-collapse text-sm">
-            <thead className="bg-neutral-50 text-xs text-neutral-500">
-              <tr className="border-b border-neutral-200">
+            <thead className="bg-sunk text-xs text-ink-mute">
+              <tr className="border-b border-line">
                 <th className="px-3 py-2 text-left font-medium">Klant</th>
                 <th className="px-3 py-2 text-right font-medium">M²</th>
                 <th className="px-3 py-2 text-right font-medium">Dekking</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-neutral-100">
+            <tbody className="divide-y divide-hair">
               {lowCoverage.map((q) => (
                 <tr
                   key={q.id}
                   onClick={() => setSelectedId(q.id)}
-                  className="cursor-pointer hover:bg-neutral-50"
+                  className="cursor-pointer hover:bg-sunk"
                 >
                   <td className="px-3 py-2">
-                    <div className="max-w-[220px] truncate text-neutral-800">{q.customerName || '—'}</div>
-                    <div className="max-w-[220px] truncate text-xs text-neutral-400">{q.name} · {rowDate(q)}</div>
+                    <div className="max-w-[220px] truncate text-ink">{q.customerName || '—'}</div>
+                    <div className="max-w-[220px] truncate text-xs text-ink-faint">{q.name} · {rowDate(q)}</div>
                   </td>
-                  <td className="px-3 py-2 text-right tabular-nums text-neutral-600">{formatNumber(q.totalM2)}</td>
-                  <td className="px-3 py-2 text-right tabular-nums text-amber-600 font-medium">{formatPercent(q.matchCoverage)}</td>
+                  <td className="px-3 py-2 text-right tabular-nums text-ink-soft">{formatNumber(q.totalM2)}</td>
+                  <td className="px-3 py-2 text-right tabular-nums text-warn font-medium">{formatPercent(q.matchCoverage)}</td>
                 </tr>
               ))}
               {lowCoverage.length === 0 && (
                 <tr>
-                  <td colSpan={3} className="px-3 py-6 text-center text-sm text-neutral-400">Alles 100% gedekt 🎉</td>
+                  <td colSpan={3} className="px-3 py-6 text-center text-sm text-ink-faint">Alles 100% gedekt 🎉</td>
                 </tr>
               )}
             </tbody>
@@ -156,26 +156,26 @@ function MissingPricesBlock({
 }) {
   const totalRevenue = missing.reduce((s, m) => s + m.revenue, 0);
   return (
-    <div className="rounded-xl border border-amber-200 bg-amber-50/50 p-4">
+    <div className="rounded-xl border border-warn/25 bg-warn-soft/50 p-4">
       <div className="mb-2 flex items-baseline justify-between gap-2">
-        <h3 className="text-sm font-semibold text-amber-800">
+        <h3 className="text-sm font-semibold text-warn">
           Ontbrekende inkoopprijzen{' '}
-          <span className="font-normal text-amber-600">
+          <span className="font-normal text-warn">
             ({missing.length} {missing.length === 1 ? 'product' : 'producten'})
           </span>
         </h3>
-        <span className="text-xs text-amber-700">
+        <span className="text-xs text-warn">
           {formatEuro(totalRevenue)} omzet zonder marge
         </span>
       </div>
-      <p className="mb-3 text-xs text-amber-700/80">
+      <p className="mb-3 text-xs text-warn/80">
         Deze vloerproducten hebben geen inkoopprijs — vul €/m² in om de marge te completeren.
         Wordt bij de eerstvolgende synchronisatie verwerkt en geldt ook voor oudere offertes.
       </p>
-      <div className="overflow-hidden rounded-lg border border-amber-200 bg-white">
+      <div className="overflow-hidden rounded-lg border border-warn/25 bg-white">
         <table className="w-full border-collapse text-sm">
-          <thead className="bg-amber-50 text-xs text-amber-700/70">
-            <tr className="border-b border-amber-100">
+          <thead className="bg-warn-soft text-xs text-warn/70">
+            <tr className="border-b border-warn/15">
               <th className="px-3 py-2 text-left font-medium">Product</th>
               <th className="px-3 py-2 text-right font-medium">Offertes</th>
               <th className="px-3 py-2 text-right font-medium">M²</th>
@@ -183,21 +183,21 @@ function MissingPricesBlock({
               <th className="px-3 py-2 text-right font-medium">Inkoopprijs</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-amber-50">
+          <tbody className="divide-y divide-warn/15">
             {missing.map((m) => (
               <tr key={m.code}>
                 <td className="px-3 py-2">
-                  <span className="rounded bg-neutral-100 px-1.5 py-0.5 font-medium text-neutral-700">
+                  <span className="rounded bg-sunk px-1.5 py-0.5 font-medium text-ink-soft">
                     {formatProduct(m.code)}
                   </span>
                 </td>
-                <td className="px-3 py-2 text-right tabular-nums text-neutral-600">
+                <td className="px-3 py-2 text-right tabular-nums text-ink-soft">
                   {m.quotationCount}
                 </td>
-                <td className="px-3 py-2 text-right tabular-nums text-neutral-600">
+                <td className="px-3 py-2 text-right tabular-nums text-ink-soft">
                   {formatNumber(m.m2)}
                 </td>
-                <td className="px-3 py-2 text-right tabular-nums text-neutral-600">
+                <td className="px-3 py-2 text-right tabular-nums text-ink-soft">
                   {formatEuro(m.revenue)}
                 </td>
                 <td className="px-3 py-2 text-right">

@@ -7,9 +7,9 @@ import PriceInput from './PriceInput';
 import QuotationCorrection from './QuotationCorrection';
 
 export const STATUS_STYLE: Record<QuotationStatus, string> = {
-  accepted: 'bg-emerald-50 text-emerald-700 ring-emerald-200',
-  open: 'bg-sky-50 text-sky-700 ring-sky-200',
-  refused: 'bg-rose-50 text-rose-700 ring-rose-200',
+  accepted: 'bg-good-soft text-good ring-good/30',
+  open: 'bg-oak-soft text-oak ring-oak/30',
+  refused: 'bg-crit-soft text-crit ring-crit/30',
 };
 
 export const STATUS_LABEL: Record<QuotationStatus, string> = {
@@ -19,8 +19,8 @@ export const STATUS_LABEL: Record<QuotationStatus, string> = {
 };
 
 export function marginColor(margin: number | null): string {
-  if (margin == null) return 'text-neutral-400';
-  return margin >= 0 ? 'text-neutral-800' : 'text-rose-600';
+  if (margin == null) return 'text-ink-faint';
+  return margin >= 0 ? 'text-ink' : 'text-crit';
 }
 
 export default function QuotationModal({
@@ -49,7 +49,7 @@ export default function QuotationModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-neutral-900/40 p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 p-4"
       onClick={onClose}
     >
       <div
@@ -57,10 +57,10 @@ export default function QuotationModal({
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-start justify-between gap-3 border-b border-neutral-200 px-5 py-4">
+        <div className="flex items-start justify-between gap-3 border-b border-line px-5 py-4">
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <h3 className="truncate text-base font-semibold text-neutral-900">
+              <h3 className="truncate text-base font-semibold text-ink">
                 {q.customerName || '—'}
               </h3>
               <span
@@ -69,11 +69,11 @@ export default function QuotationModal({
                 {STATUS_LABEL[q.status]}
               </span>
             </div>
-            <p className="mt-0.5 truncate text-sm text-neutral-500">
+            <p className="mt-0.5 truncate text-sm text-ink-mute">
               {q.name}
-              {location && <span className="text-neutral-400"> · {location}</span>}
+              {location && <span className="text-ink-faint"> · {location}</span>}
             </p>
-            <p className="mt-0.5 text-xs text-neutral-400 tabular-nums">
+            <p className="mt-0.5 text-xs text-ink-faint tabular-nums">
               Aangemaakt {q.dateCreated || '—'}
               {q.dateAccepted && ` · ${dateLabel} ${q.dateAccepted}`}
             </p>
@@ -82,18 +82,18 @@ export default function QuotationModal({
             <button
               type="button"
               onClick={onClose}
-              className="rounded-lg p-1 text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700"
+              className="rounded-lg p-1 text-ink-faint hover:bg-sunk hover:text-ink-soft"
               aria-label="Sluiten"
             >
               ✕
             </button>
-            <div className="flex items-center gap-2 whitespace-nowrap text-xs text-neutral-500">
+            <div className="flex items-center gap-2 whitespace-nowrap text-xs text-ink-mute">
               <span>
                 Dekking:{' '}
-                <strong className="text-neutral-700">{formatPercent(q.matchCoverage)}</strong>
+                <strong className="text-ink-soft">{formatPercent(q.matchCoverage)}</strong>
               </span>
               {q.verified && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-emerald-700 ring-1 ring-emerald-200">
+                <span className="inline-flex items-center gap-1 rounded-full bg-good-soft px-2 py-0.5 text-good ring-1 ring-good/30">
                   ✓ Geverifieerd
                 </span>
               )}
@@ -120,11 +120,11 @@ export default function QuotationModal({
 
           {/* Floor lines */}
           <div className="mt-4">
-            <p className="mb-1.5 text-xs font-medium text-neutral-500">Vloerregels</p>
+            <p className="mb-1.5 text-xs font-medium text-ink-mute">Vloerregels</p>
             {lines.length > 0 ? (
-              <div className="overflow-hidden rounded-lg border border-neutral-200">
+              <div className="overflow-hidden rounded-lg border border-line">
                 <table className="w-full text-xs">
-                  <thead className="bg-neutral-50 text-neutral-400">
+                  <thead className="bg-sunk text-ink-faint">
                     <tr>
                       <th className="px-3 py-1.5 text-left font-medium">Product</th>
                       <th className="px-3 py-1.5 text-right font-medium">M²</th>
@@ -132,23 +132,23 @@ export default function QuotationModal({
                       <th className="px-3 py-1.5 text-right font-medium">Marge</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-neutral-100">
+                  <tbody className="divide-y divide-hair">
                     {lines.map((l, i) => (
                       <tr key={i}>
                         <td className="px-3 py-1.5">
-                          <span className="rounded bg-neutral-100 px-1.5 py-0.5 font-medium text-neutral-700">
+                          <span className="rounded bg-sunk px-1.5 py-0.5 font-medium text-ink-soft">
                             {formatProduct(l.code)}
                           </span>
                           {l.desc && (
-                            <span className="mt-0.5 block max-w-[16rem] truncate text-[11px] text-neutral-400" title={l.desc}>
+                            <span className="mt-0.5 block max-w-[16rem] truncate text-[11px] text-ink-faint" title={l.desc}>
                               {l.desc}
                             </span>
                           )}
                         </td>
-                        <td className="px-3 py-1.5 text-right tabular-nums text-neutral-600">
+                        <td className="px-3 py-1.5 text-right tabular-nums text-ink-soft">
                           {formatNumber(l.m2)}
                         </td>
-                        <td className="px-3 py-1.5 text-right tabular-nums text-neutral-600">
+                        <td className="px-3 py-1.5 text-right tabular-nums text-ink-soft">
                           {formatEuro(l.revenue, true)}
                         </td>
                         <td className="px-3 py-1.5 text-right tabular-nums">
@@ -168,14 +168,14 @@ export default function QuotationModal({
                   </tbody>
                 </table>
                 {hasUnpriced && (
-                  <p className="border-t border-neutral-100 bg-amber-50/50 px-3 py-1.5 text-xs text-amber-700">
+                  <p className="border-t border-hair bg-warn-soft/50 px-3 py-1.5 text-xs text-warn">
                     Vul de inkoopprijs (€/m²) in bij regels zonder marge. Wordt in de marges
                     verwerkt bij de eerstvolgende synchronisatie.
                   </p>
                 )}
               </div>
             ) : (
-              <span className="text-xs text-neutral-400">
+              <span className="text-xs text-ink-faint">
                 Geen gematchte vloerregels
                 {q.matchCoverage != null && q.matchCoverage < 100
                   ? ' — voeg ontbrekende prijzen toe in Instellingen.'
@@ -194,15 +194,15 @@ export default function QuotationModal({
 function Stat({
   label,
   value,
-  className = 'text-neutral-800',
+  className = 'text-ink',
 }: {
   label: string;
   value: string;
   className?: string;
 }) {
   return (
-    <div className="rounded-lg bg-neutral-50 px-3 py-2">
-      <div className="text-xs text-neutral-400">{label}</div>
+    <div className="rounded-lg bg-sunk px-3 py-2">
+      <div className="text-xs text-ink-faint">{label}</div>
       <div className={`mt-0.5 text-sm font-semibold tabular-nums ${className}`}>{value}</div>
     </div>
   );

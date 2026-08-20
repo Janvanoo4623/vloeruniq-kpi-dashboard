@@ -47,14 +47,14 @@ export default function TrendsView({ snapshot }: { snapshot: Snapshot }) {
       </div>
 
       <div className="mb-4 flex items-center justify-end gap-2">
-        <span className="text-xs text-neutral-400">Weergave:</span>
-        <div className="flex rounded-lg border border-neutral-200 bg-white p-0.5 text-xs">
+        <span className="text-xs text-ink-faint">Weergave:</span>
+        <div className="flex rounded-lg border border-line bg-white p-0.5 text-xs">
           {(['week', 'month'] as Granularity[]).map((g) => (
             <button
               key={g}
               onClick={() => setGran(g)}
               className={`rounded-md px-3 py-1 font-medium transition ${
-                gran === g ? 'bg-neutral-900 text-white' : 'text-neutral-500 hover:text-neutral-900'
+                gran === g ? 'bg-ink text-white' : 'text-ink-mute hover:text-ink'
               }`}
             >
               {g === 'week' ? 'Per week' : 'Per maand'}
@@ -132,10 +132,10 @@ export default function TrendsView({ snapshot }: { snapshot: Snapshot }) {
 
 function SummaryStat({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
-    <div className="rounded-xl border border-neutral-200 bg-white px-3 py-2.5 shadow-sm">
-      <div className="text-xs text-neutral-400">{label}</div>
-      <div className="mt-0.5 text-lg font-semibold tabular-nums text-neutral-900">{value}</div>
-      {sub && <div className="text-[11px] text-neutral-400">{sub}</div>}
+    <div className="rounded-xl border border-line bg-white px-3 py-2.5 shadow-sm">
+      <div className="text-xs text-ink-faint">{label}</div>
+      <div className="mt-0.5 text-lg font-semibold tabular-nums text-ink">{value}</div>
+      {sub && <div className="text-[11px] text-ink-faint">{sub}</div>}
     </div>
   );
 }
