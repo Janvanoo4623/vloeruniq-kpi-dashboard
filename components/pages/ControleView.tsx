@@ -41,7 +41,7 @@ export default function ControleView({
         <p className="mt-1.5 max-w-[86ch] text-[13px] leading-relaxed text-accent/90">
           Bij deze offertes staat in de tekst niet of het leggen erbij zat. De app rekent nu
           voorzichtigheidshalve arbeid (€17/m²). Per offerte hoef je één ding te beslissen:{' '}
-          <strong>klopt dat, of is de vloer los verkocht?</strong> Beide knoppen halen de regel van
+          <strong>klopt dat, of is de vloer los verkocht?</strong>{' '}Beide knoppen halen de regel van
           de lijst — &ldquo;los verkocht&rdquo; past ook de marge aan, &ldquo;klopt zo&rdquo; laat
           de cijfers staan.
         </p>
