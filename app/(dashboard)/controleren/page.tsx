@@ -1,7 +1,7 @@
 import { getAllQuotations, getCurrentPrices, getOverrides } from '@/lib/db';
 import { applyOverrides } from '@/lib/overrides';
 import { computeReviewList } from '@/lib/review';
-import { computeMissingPrices } from '@/lib/missing-prices';
+import { computeMissingPrices, computeUnmatchedQuotations } from '@/lib/missing-prices';
 import ControleView from '@/components/pages/ControleView';
 
 export const dynamic = 'force-dynamic';
@@ -24,6 +24,7 @@ export default async function ControlerenPage() {
     <ControleView
       review={computeReviewList(resolved, overrides)}
       missing={computeMissingPrices(resolved, pricedCodes)}
+      unmatched={computeUnmatchedQuotations(resolved)}
     />
   );
 }

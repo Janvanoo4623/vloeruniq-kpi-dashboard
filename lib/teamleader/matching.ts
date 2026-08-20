@@ -92,6 +92,25 @@ const NO_LABOR_RE =
   /\b(?:excl\.?|exclusief|ex\.?|zonder)\s*(?:het\s+)?leg(?:gen?|service)?\b|\balleen\s+(?:leveren|levering)\b/i;
 const HAS_LABOR_RE = /\bleg(?:gen?|service)\b|\bgelegd\b|\bmont(?:age|eren)\b/i;
 
+/**
+ * Naam afleiden uit de omschrijving als er géén P-nummer is en geen naam uit de
+ * prijslijst matcht. Zonder dit verdwijnt de regel volledig: hij telt wél mee in
+ * m² en omzet, maar duikt nergens op als "vloer zonder inkoopprijs" — want die
+ * lijst keek alleen naar regels die al een product hádden.
+ *
+ * Gemeten op de 60 grootste onherkende offertes: 99 regels, 8.592 m² en
+ * EUR 423.777 aan omzet zaten zo in een blinde vlek. De naam is het stuk vóór de
+ * eerste pipe ("PVC Visgraat Volano Light Oak | Incl. 10% snijverlies | ..."),
+ * want daarachter staat consequent de uitvoering, niet het product.
+ */
+function deriveProductName(rawDesc: string): string | null {
+  const first = rawDesc.split('|')[0].trim().replace(/\s+/g, ' ');
+  if (first.length < 3 || first.length > 80) return null;
+  // Een losse "PVC" of "Stroken" is geen product; er moet iets onderscheidends staan.
+  if (/^(pvc|visgraat|stroken|tegels|klik)$/i.test(first)) return null;
+  return first;
+}
+
 export function parseQuotation(
   summary: TLQuotationSummary,
   detail: TLQuotationDetail | null,
@@ -172,6 +191,17 @@ export function parseQuotation(
         }
       }
 
+      // Niets herkend? Dan de naam uit de omschrijving halen, zodat de regel
+      // zichtbaar wordt als "vloer zonder inkoopprijs" in plaats van te verdwijnen.
+      let derivedCode = false;
+      if (!product) {
+        const afgeleid = deriveProductName(descTrimmed);
+        if (afgeleid) {
+          product = afgeleid;
+          derivedCode = true;
+        }
+      }
+
       if (product) product = canonicalProduct(product);
       if (product && !products.includes(product)) products.push(product);
 
@@ -221,6 +251,8 @@ export function parseQuotation(
           laborPerM2,
           installMode,
           laborRule,
+          // true = naam uit de omschrijving afgeleid, dus zeker nog geen prijs.
+          ...(derivedCode ? { derivedCode: true } : {}),
         });
       }
     }

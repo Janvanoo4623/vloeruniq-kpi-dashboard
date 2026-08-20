@@ -77,6 +77,8 @@ export interface QuotationLine {
   laborPerM2?: number; // labour + custom per-m² costs (0 when installation is excluded)
   installMode?: InstallMode;
   laborRule?: LaborRule;
+  /** `code` is uit de omschrijving afgeleid omdat niets in de prijslijst matchte. */
+  derivedCode?: boolean;
 }
 
 /**

@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { AlertTriangle, ArrowRight, Check, Info, Tag } from 'lucide-react';
 import { supplyOnlyHint, type ReviewItem } from '@/lib/review';
-import type { MissingPrice } from '@/lib/missing-prices';
+import type { MissingPrice, UnmatchedQuotation } from '@/lib/missing-prices';
 import { formatEuro, formatNumber, formatPercent, formatProduct } from '@/lib/format';
 import { STATUS_LABEL, STATUS_STYLE } from '@/components/QuotationModal';
 import { Badge, Button, Empty, Panel, SectionLabel, cn } from '@/components/ui';
@@ -17,19 +17,22 @@ import KpiCard from '@/components/KpiCard';
 export default function ControleView({
   review,
   missing,
+  unmatched,
 }: {
   review: ReviewItem[];
   missing: MissingPrice[];
+  unmatched: UnmatchedQuotation[];
 }) {
   const open = review.filter((r) => !r.resolved);
   const laborAtStake = open.reduce((s, r) => s + r.laborAtStake, 0);
   const missingRevenue = missing.reduce((s, m) => s + m.revenue, 0);
+  const unmatchedRevenue = unmatched.reduce((s, u) => s + u.revenueExVat, 0);
 
   return (
     <div className="space-y-6">
       <section>
         <SectionLabel>Wat er open staat</SectionLabel>
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           <KpiCard
             label="Legstatus onbekend"
             value={formatNumber(open.length)}
@@ -42,6 +45,13 @@ export default function ControleView({
             value={formatNumber(missing.length)}
             sub={`${formatEuro(missingRevenue)} omzet zonder marge`}
             accent={missing.length > 0 ? 'crit' : 'good'}
+            higherIsBetter={false}
+          />
+          <KpiCard
+            label="Geen vloer herkend"
+            value={formatNumber(unmatched.length)}
+            sub={`${formatEuro(unmatchedRevenue)} omzet buiten de m²-telling`}
+            accent={unmatched.length > 0 ? 'crit' : 'good'}
             higherIsBetter={false}
           />
           <KpiCard
@@ -93,6 +103,7 @@ export default function ControleView({
                   <th className="px-5 py-2.5 text-right font-semibold">Offertes</th>
                   <th className="px-5 py-2.5 text-right font-semibold">m²</th>
                   <th className="px-5 py-2.5 text-right font-semibold">Omzet zonder marge</th>
+                  <th className="px-5 py-2.5 text-left font-semibold">Wat te doen</th>
                 </tr>
               </thead>
               <tbody>
@@ -109,11 +120,78 @@ export default function ControleView({
                     <td className="px-5 py-2.5 text-right font-medium tabular-nums text-ink">
                       {formatEuro(m.revenue)}
                     </td>
+                    <td className="px-5 py-2.5 text-[11.5px] text-ink-faint">
+                      {m.derived
+                        ? 'Naam uit de offertetekst — voeg toe als product, of hernoem naar een bestaand P-nummer'
+                        : 'Vul de inkoopprijs in bij Prijzen'}
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
+        )}
+      </Panel>
+
+      <Panel
+        title="Offertes waarin we geen vloer herkennen"
+        subtitle="Meestal een project dat per ruimte is uitgesplitst — de m² staan er wel, maar de regel noemt geen vloer"
+        bodyClassName="p-0"
+      >
+        {unmatched.length === 0 ? (
+          <Empty>In elke offerte met omzet is minstens één vloerregel herkend.</Empty>
+        ) : (
+          <>
+            <p className="border-b border-hair px-5 py-3 text-[12px] leading-relaxed text-ink-mute">
+              Deze m² tellen bewust <strong>niet</strong> mee. In dezelfde offertes staan regels als
+              &ldquo;Verwijderen en afvoeren tapijt 370&rdquo; met net zo goed m², en een ruimere
+              regel zou die meesleuren. Wil je er één meenemen, zet dan de inkoopprijs handmatig via
+              het potloodje in de offerte.
+            </p>
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[560px] text-[13px]">
+                <thead>
+                  <tr className="border-b border-hair text-[11px] uppercase tracking-wide text-ink-faint">
+                    <th className="px-5 py-2.5 text-left font-semibold">Klant</th>
+                    <th className="px-5 py-2.5 text-left font-semibold">Status</th>
+                    <th className="px-5 py-2.5 text-right font-semibold">m²</th>
+                    <th className="px-5 py-2.5 text-right font-semibold">Omzet</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {unmatched.slice(0, 25).map((u) => (
+                    <tr key={u.id} className="border-b border-hair last:border-0 hover:bg-sunk/60">
+                      <td className="px-5 py-2.5">
+                        <span className="font-medium text-ink">{u.customerName || u.name || 'Offerte'}</span>
+                        <span className="ml-2 text-[11.5px] text-ink-faint">{u.date}</span>
+                      </td>
+                      <td className="px-5 py-2.5">
+                        <span
+                          className={cn(
+                            'rounded-full px-2 py-0.5 text-[10.5px] font-semibold ring-1 ring-inset',
+                            STATUS_STYLE[u.status],
+                          )}
+                        >
+                          {STATUS_LABEL[u.status]}
+                        </span>
+                      </td>
+                      <td className="px-5 py-2.5 text-right tabular-nums text-ink-mute">
+                        {u.totalM2 > 0 ? formatNumber(u.totalM2) : '—'}
+                      </td>
+                      <td className="px-5 py-2.5 text-right font-semibold tabular-nums text-ink">
+                        {formatEuro(u.revenueExVat)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {unmatched.length > 25 && (
+              <p className="border-t border-hair px-5 py-3 text-[11.5px] text-ink-faint">
+                25 van {unmatched.length} getoond, grootste omzet eerst.
+              </p>
+            )}
+          </>
         )}
       </Panel>
     </div>

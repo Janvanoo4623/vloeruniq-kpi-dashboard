@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import type { RegionInsight } from '@/lib/insights';
+import type { MarketShareOverview } from '@/lib/market-share';
+import MarktaandeelPanel from './MarktaandeelPanel';
 import { formatEuro, formatNumber, formatPercent } from '@/lib/format';
 import { Empty, Panel, SectionLabel, cn } from '@/components/ui';
 import KpiCard from '@/components/KpiCard';
@@ -19,9 +21,11 @@ type SortKey = 'revenue' | 'winRate' | 'marginPct' | 'quotes';
 export default function RegioView({
   regions,
   minSample,
+  marketShare,
 }: {
   regions: RegionInsight[];
   minSample: number;
+  marketShare: MarketShareOverview;
 }) {
   const [sort, setSort] = useState<SortKey>('revenue');
 
@@ -81,6 +85,8 @@ export default function RegioView({
           />
         </div>
       </section>
+
+      <MarktaandeelPanel data={marketShare} />
 
       <Panel
         title="Winkans en marge per plaats"
