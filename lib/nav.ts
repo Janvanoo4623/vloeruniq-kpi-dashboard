@@ -15,6 +15,7 @@ import {
   CalendarRange,
   MapPin,
   Users2,
+  TrendingDown,
 } from 'lucide-react';
 
 export interface NavItem {
@@ -73,6 +74,13 @@ export const NAV: NavGroup[] = [
         title: 'Cashflow',
         subtitle: 'Openstaande facturen en hoe snel er betaald wordt',
         Icon: Banknote,
+      },
+      {
+        href: '/verloren',
+        label: 'Verloren',
+        title: 'Verloren omzet',
+        subtitle: 'Wat er niet doorging, en wat daarvan nog te bellen is',
+        Icon: TrendingDown,
       },
       {
         href: '/pijplijn',
