@@ -13,6 +13,9 @@ export async function backfillAll(cutoff: string = EPOCH): Promise<{
   quotations: number;
   deals: number;
   invoices: number;
+  markedDeleted: number;
+  restored: number;
+  skipped?: string;
 }> {
   const [priceRows, costRows] = await Promise.all([db.getPriceRows(), db.getCostRows()]);
   const customerLookup = await buildCustomerLookup();
@@ -26,5 +29,18 @@ export async function backfillAll(cutoff: string = EPOCH): Promise<{
   await db.upsertDeals(runTimeRows);
   await db.upsertInvoices(invoices);
 
-  return { quotations: quotations.length, deals: runTimeRows.length, invoices: invoices.length };
+  // De backfill haalt ALLE statussen zonder datumgrens op, dus wat hier niet in
+  // zit bestaat niet meer in Teamleader. Alleen hier is die conclusie geldig.
+  const { marked, restored, skipped } = await db.markDeletedAtSource(
+    new Set(quotations.map((q) => q.id)),
+  );
+
+  return {
+    quotations: quotations.length,
+    deals: runTimeRows.length,
+    invoices: invoices.length,
+    markedDeleted: marked,
+    restored,
+    skipped,
+  };
 }

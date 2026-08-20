@@ -10,12 +10,16 @@ export const STATUS_STYLE: Record<QuotationStatus, string> = {
   accepted: 'bg-good-soft text-good ring-good/30',
   open: 'bg-oak-soft text-oak ring-oak/30',
   refused: 'bg-crit-soft text-crit ring-crit/30',
+  // Verlopen is een verlies, maar geen afwijzing — grijs in plaats van rood,
+  // zodat je in één blik ziet dat hier niemand 'nee' heeft gezegd.
+  expired: 'bg-sunk text-ink-mute ring-ink-faint/30',
 };
 
 export const STATUS_LABEL: Record<QuotationStatus, string> = {
   accepted: 'Geaccepteerd',
   open: 'Open',
   refused: 'Geweigerd',
+  expired: 'Verlopen',
 };
 
 export function marginColor(margin: number | null): string {

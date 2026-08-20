@@ -20,18 +20,20 @@ function emptyWeekRevenue(): WeekRevenue {
     acceptedRevenue: 0,
     openRevenue: 0,
     refusedRevenue: 0,
+    expiredRevenue: 0,
     acceptedCount: 0,
     openCount: 0,
     refusedCount: 0,
+    expiredCount: 0,
     acceptedM2: 0,
     acceptedMargin: 0,
     acceptedMarginRev: 0,
   };
 }
 
-/** The date that buckets a quotation into a week (accepted/refused date else created). */
+/** The date that buckets a quotation into a week (decision date else created). */
 function relevantDate(q: QuotationRow): string {
-  if ((q.status === 'accepted' || q.status === 'refused') && q.dateAccepted) {
+  if (q.status !== 'open' && q.dateAccepted) {
     return q.dateAccepted;
   }
   return q.dateCreated;
@@ -67,6 +69,9 @@ export function buildSnapshot(
     } else if (q.status === 'refused') {
       w.refusedRevenue += q.revenueExVat;
       w.refusedCount += 1;
+    } else if (q.status === 'expired') {
+      w.expiredRevenue += q.revenueExVat;
+      w.expiredCount += 1;
     }
   }
 
@@ -183,9 +188,11 @@ export function buildSnapshot(
   let acceptedRevenue = 0;
   let openRevenue = 0;
   let refusedRevenue = 0;
+  let expiredRevenue = 0;
   let acceptedCount = 0;
   let openCount = 0;
   let refusedCount = 0;
+  let expiredCount = 0;
   let acceptedM2 = 0;
   let totalMargin = 0;
   let totalMarginRev = 0;
@@ -193,9 +200,11 @@ export function buildSnapshot(
     acceptedRevenue += w.acceptedRevenue;
     openRevenue += w.openRevenue;
     refusedRevenue += w.refusedRevenue;
+    expiredRevenue += w.expiredRevenue;
     acceptedCount += w.acceptedCount;
     openCount += w.openCount;
     refusedCount += w.refusedCount;
+    expiredCount += w.expiredCount;
     acceptedM2 += w.acceptedM2;
     totalMargin += w.acceptedMargin;
     totalMarginRev += w.acceptedMarginRev;
@@ -208,10 +217,13 @@ export function buildSnapshot(
     runCount += w.count;
   }
 
+  // Verlopen telt als verloren: een offerte die stilletjes verloopt is net zo
+  // goed niet gewonnen als eentje die de klant afwijst. Vóór 2026-08-20 werd
+  // 'expired' helemaal niet opgehaald, waardoor die offertes als 'open' bleven
+  // staan en de conversie te rooskleurig was.
+  const decidedCount = acceptedCount + refusedCount + expiredCount;
   const conversionPct =
-    acceptedCount + refusedCount > 0
-      ? round((acceptedCount / (acceptedCount + refusedCount)) * 100, 1)
-      : 0;
+    decidedCount > 0 ? round((acceptedCount / decidedCount) * 100, 1) : 0;
   const avgRevenuePerDeal = acceptedCount > 0 ? round(acceptedRevenue / acceptedCount) : 0;
   const avgMarginPct = totalMarginRev > 0 ? round((totalMargin / totalMarginRev) * 100, 1) : 0;
   const avgRunTimeDays = runCount > 0 ? round(totalRunDays / runCount, 1) : 0;
@@ -224,6 +236,7 @@ export function buildSnapshot(
       acceptedRevenue: round(w.acceptedRevenue),
       openRevenue: round(w.openRevenue),
       refusedRevenue: round(w.refusedRevenue),
+      expiredRevenue: round(w.expiredRevenue),
       acceptedM2: round(w.acceptedM2),
       acceptedMargin: round(w.acceptedMargin),
       acceptedMarginRev: round(w.acceptedMarginRev),
@@ -239,9 +252,11 @@ export function buildSnapshot(
         acceptedRevenue: round(acceptedRevenue),
         openRevenue: round(openRevenue),
         refusedRevenue: round(refusedRevenue),
+        expiredRevenue: round(expiredRevenue),
         acceptedCount,
         openCount,
         refusedCount,
+        expiredCount,
         conversionPct,
         avgRevenuePerDeal,
         m2Sold: round(acceptedM2),

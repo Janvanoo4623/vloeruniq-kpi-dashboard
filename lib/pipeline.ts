@@ -1,6 +1,7 @@
 // Weighted pipeline forecast: how much of the current open-quotation value is
-// likely to become revenue. Teamleader's "refused" status is unreliable (open
-// quotes are rarely marked lost), so we DON'T use accepted/(accepted+refused).
+// likely to become revenue. Teamleader's "refused" status is unreliable (people
+// let a quote expire rather than marking it lost), so we DON'T use
+// accepted/(accepted+refused).
 // Instead we derive a win-rate from a *matured cohort*: quotations old enough to
 // have been decided. A quote still open after MATURITY_DAYS is treated as lost.
 import type { QuotationRow } from './types';
@@ -62,8 +63,10 @@ export function computePipeline(
     if (!created) continue;
     const age = daysBetween(created, asOfMs);
 
-    // Matured cohort (old enough to have been decided) → win-rate basis.
-    if (age >= MATURITY_DAYS && (q.status === 'accepted' || q.status === 'open' || q.status === 'refused')) {
+    // Matured cohort (old enough to have been decided) → win-rate basis. Every
+    // status counts: accepted is a win, refused/expired are losses, and a quote
+    // still open after MATURITY_DAYS is effectively lost too.
+    if (age >= MATURITY_DAYS) {
       maturedTotal += 1;
       if (q.status === 'accepted') maturedAccepted += 1;
     }

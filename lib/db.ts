@@ -134,6 +134,10 @@ function quotationToRow(q: QuotationRow) {
     margin_pct: q.marginPct,
     match_coverage: q.matchCoverage,
     verified: q.verified,
+    // deleted_at_source bewust NIET meegeschreven: de kolom wordt met een losse
+    // migratie toegevoegd, en tot die tijd zou een upsert erop de hele sync laten
+    // vallen. markDeletedAtSource zet hem terug op false als een offerte weer
+    // opduikt — dat is de enige plek die er iets over mag beweren.
     lines: q.lines ?? [],
     synced_at: new Date().toISOString(),
   };
@@ -355,6 +359,7 @@ function rowToQuotation(r: Row): QuotationRow {
     marginPct: numOrNull(r.margin_pct),
     matchCoverage: numOrNull(r.match_coverage),
     verified: Boolean(r.verified),
+    deletedAtSource: Boolean(r.deleted_at_source),
     // Derived from the stored lines rather than a column — the lines JSONB is the
     // single source of truth for what each line's text did (and didn't) say.
     needsReview: lines.some((l) => l.laborRule === 'unknown'),
@@ -392,8 +397,65 @@ async function readAll(table: string): Promise<Row[]> {
   return out;
 }
 
+/**
+ * Alle offertes die nog in Teamleader bestaan. Rijen die daar verwijderd zijn
+ * blijven in de database staan (historie wissen is niet terug te draaien) maar
+ * horen in geen enkele aggregatie thuis — zie markDeletedAtSource.
+ */
 export async function getAllQuotations(): Promise<QuotationRow[]> {
+  return (await readAll('quotations')).map(rowToQuotation).filter((q) => !q.deletedAtSource);
+}
+
+/** Inclusief de bij de bron verwijderde offertes — voor beheer/inzicht. */
+export async function getAllQuotationsIncludingDeleted(): Promise<QuotationRow[]> {
   return (await readAll('quotations')).map(rowToQuotation);
+}
+
+/**
+ * Markeer elke opgeslagen offerte die NIET in `liveIds` zit als verwijderd bij de
+ * bron, en haal de markering weg bij offertes die weer opduiken. Alleen aan te
+ * roepen na een volledige backfill: die heeft het complete beeld. De 90-daagse
+ * sync haalt oudere offertes niet op en zou ze dus ten onrechte wegstrepen.
+ */
+export async function markDeletedAtSource(liveIds: Set<string>): Promise<{
+  marked: number;
+  restored: number;
+  skipped?: string;
+}> {
+  const probe = await supabase().from('quotations').select('deleted_at_source').limit(1);
+  if (probe.error) {
+    // Migratie nog niet gedraaid — overslaan in plaats van de backfill laten falen.
+    return {
+      marked: 0,
+      restored: 0,
+      skipped:
+        'kolom deleted_at_source bestaat nog niet — draai in de Supabase SQL editor: ' +
+        'alter table quotations add column if not exists deleted_at_source boolean default false;',
+    };
+  }
+  const rows = await readAll('quotations');
+  const toMark = rows
+    .filter((r) => !liveIds.has(r.id as string) && !r.deleted_at_source)
+    .map((r) => r.id as string);
+  const toRestore = rows
+    .filter((r) => liveIds.has(r.id as string) && r.deleted_at_source)
+    .map((r) => r.id as string);
+
+  for (const [ids, value] of [
+    [toMark, true],
+    [toRestore, false],
+  ] as const) {
+    for (let i = 0; i < ids.length; i += 200) {
+      const chunk = ids.slice(i, i + 200);
+      if (chunk.length === 0) continue;
+      const { error } = await supabase()
+        .from('quotations')
+        .update({ deleted_at_source: value })
+        .in('id', chunk);
+      if (error) throw new Error(`db.markDeletedAtSource: ${error.message}`);
+    }
+  }
+  return { marked: toMark.length, restored: toRestore.length };
 }
 
 export async function getAllDeals(): Promise<RunTimeRow[]> {

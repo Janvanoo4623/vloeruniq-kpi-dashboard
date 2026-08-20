@@ -1,7 +1,14 @@
 // Shared types for the Vloeruniq KPI dashboard.
 // See docs/DATA-MODEL.md for the meaning of each field.
 
-export type QuotationStatus = 'accepted' | 'open' | 'refused';
+/**
+ * Teamleader kent ook 'expired'. Die haalden we eerst niet op, waardoor een
+ * verlopen offerte uit accepted/open/refused viel en bij ons eeuwig op 'open'
+ * bleef staan — 23 spookoffertes in de pijplijn. Verlopen telt nu als verloren,
+ * maar blijft apart zichtbaar van 'geweigerd': stilletjes verlopen vraagt een
+ * andere actie dan een klant die nee zegt.
+ */
+export type QuotationStatus = 'accepted' | 'open' | 'refused' | 'expired';
 
 /** One row of the Revenue table (per quotation). */
 export interface QuotationRow {
@@ -27,6 +34,13 @@ export interface QuotationRow {
   marginPct: number | null;
   matchCoverage: number | null; // % of m² that matched a price
   verified: boolean; // 100% coverage and margin present
+  /**
+   * Staat niet meer in Teamleader (bron geeft 404). We bewaren de rij — historie
+   * stil laten verdampen is niet terug te draaien — maar houden hem overal uit
+   * de aggregaties. Alleen een volledige backfill kan dit vaststellen; de
+   * 90-daagse sync ziet oudere offertes niet en mag er dus niets uit afleiden.
+   */
+  deletedAtSource?: boolean;
   needsReview?: boolean; // >=1 floor line whose text doesn't say if leggen is included
   products: string[]; // matched floor products (P-numbers / names), distinct, in order
   lines?: QuotationLine[]; // per-product line stats (populated at sync time, stored in DB)
@@ -93,9 +107,11 @@ export interface WeekRevenue {
   acceptedRevenue: number;
   openRevenue: number;
   refusedRevenue: number;
+  expiredRevenue: number;
   acceptedCount: number;
   openCount: number;
   refusedCount: number;
+  expiredCount: number;
   acceptedM2: number;
   acceptedMargin: number; // sum of per-quotation margin (only those with a margin)
   acceptedMarginRev: number; // matching revenue base for avg margin %
@@ -110,9 +126,12 @@ export interface RevenueTotals {
   acceptedRevenue: number;
   openRevenue: number;
   refusedRevenue: number;
+  expiredRevenue: number;
   acceptedCount: number;
   openCount: number;
   refusedCount: number;
+  expiredCount: number;
+  /** Geaccepteerd / (geaccepteerd + geweigerd + verlopen). Verlopen telt als verloren. */
   conversionPct: number;
   avgRevenuePerDeal: number;
   m2Sold: number;

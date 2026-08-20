@@ -12,6 +12,15 @@ async function main() {
   const r = await backfillAll();
   const secs = ((Date.now() - t0) / 1000).toFixed(0);
   console.log(`[backfill] klaar in ${secs}s: ${r.quotations} offertes, ${r.deals} deals, ${r.invoices} facturen opgeslagen in Supabase.`);
+  if (r.markedDeleted > 0) {
+    console.log(`[backfill] ${r.markedDeleted} offerte(s) staan niet meer in Teamleader — gemarkeerd als verwijderd bij de bron (rij blijft bewaard, telt niet meer mee).`);
+  }
+  if (r.skipped) {
+    console.log(`[backfill] LET OP — verwijderde offertes niet gemarkeerd: ${r.skipped}`);
+  }
+  if (r.restored > 0) {
+    console.log(`[backfill] ${r.restored} eerder verwijderde offerte(s) zijn weer opgedoken — markering weggehaald.`);
+  }
   process.exit(0);
 }
 

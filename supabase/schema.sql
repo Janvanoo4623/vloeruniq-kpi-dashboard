@@ -84,6 +84,11 @@ create index if not exists quotations_date
   on quotations (coalesce(date_accepted, date_created));
 create index if not exists quotations_status on quotations (status);
 
+-- Offertes die niet meer in Teamleader staan (bron geeft 404). We bewaren de rij
+-- maar houden hem overal uit de aggregaties; alleen een volledige backfill kan
+-- dit vaststellen, want de 90-daagse sync ziet oudere offertes sowieso niet.
+alter table quotations add column if not exists deleted_at_source boolean default false;
+
 -- Accumulated won deals (run-time / doorlooptijd).
 create table if not exists deals (
   id text primary key,

@@ -104,15 +104,17 @@ export function parseQuotation(
   const postalCode = customer?.postalCode ?? '';
 
   const isAccepted = status === 'accepted';
-  const isRefused = status === 'refused';
+  // Geweigerd en verlopen zijn allebei een beslismoment: de offerte is niet meer
+  // in de running en updated_at is de datum waarop dat gebeurde.
+  const isDecidedLost = status === 'refused' || status === 'expired';
   const createdAt = dateOnly(summary.created_at);
   const updatedAt = dateOnly(summary.updated_at);
   const dateAccepted = isAccepted ? updatedAt : '';
 
-  // Relevant date drives month/quarter/year (refused uses its updated date).
+  // Relevant date drives month/quarter/year (lost quotes use their updated date).
   let relevantDate = createdAt;
   if (isAccepted && dateAccepted) relevantDate = dateAccepted;
-  if (isRefused && updatedAt) relevantDate = updatedAt;
+  if (isDecidedLost && updatedAt) relevantDate = updatedAt;
   const { month, quarter, year } = deriveDateParts(relevantDate);
 
   let totalM2 = 0;

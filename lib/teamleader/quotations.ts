@@ -80,10 +80,15 @@ export async function fetchQuotations(
   priceRows: PriceRow[],
   costRows: CostRow[],
 ): Promise<{ rows: QuotationRow[]; productLines: AggLine[] }> {
+  // 'expired' hoort erbij. Zolang die status niet werd opgehaald, viel een
+  // verlopen offerte uit alle drie de andere en bleef hij bij ons voor altijd
+  // op 'open' staan — spookomzet in de pijplijn. Net als accepted/refused
+  // filteren we hem op updated_at, want dát is de datum waarop hij verliep.
   const summaries: TLQuotationSummary[] = [
     ...(await fetchQuotationsByStatus('accepted', cutoff, true)),
     ...(await fetchQuotationsByStatus('open', cutoff, false)),
     ...(await fetchQuotationsByStatus('refused', cutoff, true)),
+    ...(await fetchQuotationsByStatus('expired', cutoff, true)),
   ];
 
   const today = new Date().toISOString().split('T')[0];
