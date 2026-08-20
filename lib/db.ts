@@ -270,6 +270,93 @@ export async function removeExclusion(id: string): Promise<void> {
   if (error) throw new Error(`db.removeExclusion: ${error.message}`);
 }
 
+// ── Synchronisatie-lock ─────────────────────────────────────────────────
+/**
+ * Er mag maar ÉÉN proces tegelijk met Teamleader praten. Niet uit netheid: de
+ * refresh token roteert bij elke vernieuwing en de vorige wordt onmiddellijk
+ * ingetrokken. Twee processen die tegelijk verversen maken elkaars token
+ * ongeldig en breken de koppeling. Zie CLAUDE.md, "token-ownership rule".
+ *
+ * De oude lock las eerst de status en schreef daarna pas — twee processen konden
+ * dus allebei "niet bezig" lezen en allebei doorgaan. Deze claim is één UPDATE
+ * met de voorwaarde erin, dus Postgres serialiseert hem op de rijlock: van twee
+ * gelijktijdige pogingen slaagt er precies één.
+ */
+const STALE_LOCK_MS = 15 * 60 * 1000;
+
+export interface LockResult {
+  ok: boolean;
+  /** Wie hem vasthoudt, als de claim mislukte. */
+  holder?: string;
+  since?: string;
+}
+
+async function ensureMetaRow(): Promise<void> {
+  const { error } = await supabase()
+    .from('sync_meta')
+    .upsert({ id: 1 }, { onConflict: 'id', ignoreDuplicates: true });
+  if (error) throw new Error(`db.ensureMetaRow: ${error.message}`);
+}
+
+/**
+ * Claim de lock. `owner` is puur informatief ("backfill", "cron") en wordt in
+ * het bestaande counts-veld gezet: dat is tijdens een run toch leeg, en zo hoeft
+ * er geen kolom bij.
+ */
+export async function acquireSyncLock(
+  owner: string,
+  staleMs: number = STALE_LOCK_MS,
+): Promise<LockResult> {
+  await ensureMetaRow();
+  const now = new Date();
+  const staleBefore = new Date(now.getTime() - staleMs).toISOString();
+
+  const { data, error } = await supabase()
+    .from('sync_meta')
+    .update({
+      status: 'running',
+      started_at: now.toISOString(),
+      counts: { lockOwner: owner },
+      error: null,
+    })
+    .eq('id', 1)
+    // Claimbaar als er niets draait, de status onbekend is, of de vorige run
+    // is blijven hangen (proces gekilld voordat hij kon opruimen).
+    .or(`status.is.null,status.neq.running,started_at.lt.${staleBefore}`)
+    .select('started_at');
+
+  if (error) throw new Error(`db.acquireSyncLock: ${error.message}`);
+  if (data && data.length > 0) return { ok: true };
+
+  const huidige = await getMeta();
+  const counts = huidige?.counts as { lockOwner?: string } | null;
+  return {
+    ok: false,
+    holder: counts?.lockOwner ?? 'onbekend proces',
+    since: huidige?.startedAt ?? undefined,
+  };
+}
+
+/** Geef de lock vrij. Faalt nooit hard — een vastzittende lock verloopt vanzelf. */
+export async function releaseSyncLock(): Promise<void> {
+  const { error } = await supabase()
+    .from('sync_meta')
+    .update({ status: 'idle' })
+    .eq('id', 1)
+    .eq('status', 'running');
+  if (error) console.warn(`[lock] vrijgeven mislukt: ${error.message}`);
+}
+
+/** Leesbare melding voor wie de lock niet kreeg. */
+export function lockBusyMessage(r: LockResult): string {
+  const sinds = r.since ? ` (sinds ${new Date(r.since).toLocaleTimeString('nl-NL')})` : '';
+  return (
+    `Er loopt al een synchronisatie: ${r.holder}${sinds}. ` +
+    'Twee tegelijk kunnen elkaars Teamleader-token ongeldig maken, dus deze stopt hier. ' +
+    'Wacht tot de andere klaar is, of forceer bewust als je zeker weet dat er niets draait.'
+  );
+}
+
 // ── App-instellingen (KPI-definities) ───────────────────────────────────
 /**
  * Vrije sleutel/waarde-tabel voor instellingen die geen prijs of kostenpost zijn.

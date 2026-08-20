@@ -38,6 +38,10 @@ a live web dashboard the business owner and his client can view on any device.
 - **Only one system may own the Teamleader refresh token.** Teamleader rotates the refresh
   token on every refresh and invalidates the old one. This app is now the sole owner; the
   original Apps Script trigger has been disabled. Never refresh the token from two places.
+  **This includes the app against itself:** a backfill and the cron running at the same time
+  will revoke each other's token. Every process that talks to Teamleader must claim the lock
+  (`db.acquireSyncLock`) — see `docs/ARCHITECTURE.md`. Before starting a sync or backfill by
+  hand, verify nothing else is running; do not rely on a single `pgrep` check.
 - **Never block page render on Teamleader.** The full sync takes ~3 minutes and is rate-limited.
   It runs only in `/api/sync` (cron / manual). The UI reads the precomputed snapshot.
 - **Secrets live in `.env.local`** (gitignored) and Vercel env vars. Never hardcode the client

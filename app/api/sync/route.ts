@@ -24,11 +24,12 @@ export async function POST(request: Request) {
   }
 
   try {
-    const { meta } = await syncAndStore({ force: false });
+    const { meta } = await syncAndStore({ force: false, owner: 'cron/api-sync' });
     return NextResponse.json({ ok: true, meta });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    const status = message.includes('already running') ? 409 : 500;
+    // 409 = de lock was bezet; dat is geen storing maar "kom straks terug".
+    const status = message.startsWith('Er loopt al een synchronisatie') ? 409 : 500;
     return NextResponse.json({ ok: false, error: message }, { status });
   }
 }

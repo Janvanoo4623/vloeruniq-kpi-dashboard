@@ -62,6 +62,30 @@ Consequences for this codebase:
   This is why we cannot store the rotating token in a Vercel env var (env vars are immutable at
   runtime).
 
+### Hoe dit wordt afgedwongen (sinds 2026-08-20)
+
+"Eén eigenaar" is niet genoeg: één systeem kan ook zichzelf in de weg zitten. Een backfill duurt
+zo'n tien minuten en praat die hele tijd met Teamleader; loopt de cron er tegelijk doorheen, dan
+verversen ze allebei de token en trekken ze elkaars token in. Dat is precies wat er gebeurde toen
+er twee lokale backfills tegelijk draaiden — resultaat: `invalid_grant, token has been revoked`.
+
+Er is daarom één lock, in `sync_meta`, die **elk** proces moet claimen dat met Teamleader praat:
+
+```
+db.acquireSyncLock(owner)   // atomair: één UPDATE met de voorwaarde erin
+db.releaseSyncLock()
+```
+
+De claim is bewust één statement (`update … where id = 1 and (status is null or status <> 'running'
+or started_at < now() - 15min)`), zodat Postgres hem serialiseert op de rijlock. De oude versie las
+eerst de status en schreef daarna pas — twee processen konden dus allebei "niet bezig" lezen en
+allebei doorgaan. Dat is geen theoretisch risico gebleken.
+
+Gebruikers van de lock: `/api/sync` (cron), `/api/refresh` (de vernieuwknop) en `npm run backfill`.
+Een lock die ouder is dan 15 minuten wordt overgenomen, zodat een gekild proces de boel niet
+blokkeert. `npm run backfill -- --force` slaat de lock over — alleen doen als je zéker weet dat er
+niets anders draait.
+
 ## Datastore abstraction
 
 `lib/store.ts` exposes a small interface so the rest of the code is storage-agnostic:

@@ -51,11 +51,11 @@ export async function POST() {
 
   // Local / Pro: run inline.
   try {
-    const { meta } = await syncAndStore({ force: false });
+    const { meta } = await syncAndStore({ force: false, owner: 'vernieuwknop' });
     return NextResponse.json({ ok: true, meta });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    const status = message.includes('already running') ? 409 : 500;
+    const status = message.includes('Er loopt al een synchronisatie') ? 409 : 500;
     return NextResponse.json({ ok: false, error: message }, { status });
   }
 }

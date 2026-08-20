@@ -9,7 +9,33 @@ import { fetchInvoices } from './invoices';
 
 const EPOCH = '2000-01-01';
 
-export async function backfillAll(cutoff: string = EPOCH): Promise<{
+export async function backfillAll(
+  cutoff: string = EPOCH,
+  { force = false }: { force?: boolean } = {},
+): Promise<{
+  quotations: number;
+  deals: number;
+  invoices: number;
+  markedDeleted: number;
+  restored: number;
+  skipped?: string;
+}> {
+  // Dezelfde lock als de gewone sync. Een backfill duurt ~10 minuten en praat
+  // die hele tijd met Teamleader; loopt de cron er tegelijk doorheen, dan
+  // verversen ze allebei de refresh token en trekken ze elkaars token in.
+  if (!force) {
+    const lock = await db.acquireSyncLock('backfill');
+    if (!lock.ok) throw new Error(db.lockBusyMessage(lock));
+  }
+
+  try {
+    return await runBackfill(cutoff);
+  } finally {
+    await db.releaseSyncLock();
+  }
+}
+
+async function runBackfill(cutoff: string): Promise<{
   quotations: number;
   deals: number;
   invoices: number;

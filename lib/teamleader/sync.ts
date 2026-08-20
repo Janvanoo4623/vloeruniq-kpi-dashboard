@@ -10,8 +10,6 @@ import { fetchQuotations } from './quotations';
 import { fetchInvoices, summarizeInvoices } from './invoices';
 import { buildSnapshot } from './aggregate';
 
-const STALE_LOCK_MS = 15 * 60 * 1000;
-
 /** Run the full pipeline and return the computed snapshot (persists raw rows). */
 export async function runSync(): Promise<{ snapshot: Snapshot; pushed: number }> {
   const cutoff = getCutoffDate();
@@ -59,25 +57,31 @@ export async function runSync(): Promise<{ snapshot: Snapshot; pushed: number }>
 
 /** Run the pipeline with locking + meta tracking, persisting snapshot and meta. */
 export async function syncAndStore(
-  { force = false }: { force?: boolean } = {},
+  { force = false, owner = 'sync' }: { force?: boolean; owner?: string } = {},
 ): Promise<{ snapshot: Snapshot; meta: SyncMeta }> {
   const existing = await db.getMeta();
 
-  if (!force && existing?.status === 'running' && existing.startedAt) {
-    const age = Date.now() - Date.parse(existing.startedAt);
-    if (age < STALE_LOCK_MS) throw new Error('A sync is already running.');
+  // De lock is atomair (één UPDATE met de voorwaarde erin), dus van twee
+  // gelijktijdige pogingen slaagt er precies één. Dat moet ook, want twee
+  // processen die tegelijk het Teamleader-token verversen maken elkaars token
+  // ongeldig — zie db.acquireSyncLock.
+  if (!force) {
+    const lock = await db.acquireSyncLock(owner);
+    if (!lock.ok) throw new Error(db.lockBusyMessage(lock));
   }
 
   const startIso = new Date().toISOString();
   const start = Date.now();
-  await db.setMeta({
-    status: 'running',
-    startedAt: startIso,
-    lastSyncAt: existing?.lastSyncAt ?? null,
-    durationMs: null,
-    counts: null,
-    error: null,
-  });
+  if (force) {
+    await db.setMeta({
+      status: 'running',
+      startedAt: startIso,
+      lastSyncAt: existing?.lastSyncAt ?? null,
+      durationMs: null,
+      counts: null,
+      error: null,
+    });
+  }
 
   try {
     const { snapshot, pushed } = await runSync();
