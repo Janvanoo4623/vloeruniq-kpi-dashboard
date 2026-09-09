@@ -48,6 +48,11 @@ a live web dashboard the business owner and his client can view on any device.
   secret or tokens. See `.env.example`.
 - **Business numbers must match the Sheet.** When changing matching/margin logic, cross-check
   against the source spreadsheet values documented in `docs/DATA-MODEL.md`.
+- **Margins are computed at read time, not at sync time** (`lib/resolve.ts`, since 2026-09-09).
+  Prices and costs are resolved per quotation date from `product_prices` / `cost_settings`, so a
+  price edit works immediately and its `effective_from` decides how far back it reaches. When you
+  touch that resolver, diff every stored margin before and after and make each change explainable
+  from a price or cost row — that check is what proved the port correct on all 843 quotations.
 
 ## Commands
 

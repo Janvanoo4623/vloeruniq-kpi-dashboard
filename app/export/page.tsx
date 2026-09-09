@@ -130,7 +130,7 @@ export default async function ExportPage({
   const inPeriode = [...snap.quotations].sort((a, b) => b.revenueExVat - a.revenueExVat);
 
   return (
-    <div className="mx-auto max-w-[900px] bg-white px-8 py-8 text-ink print:px-0 print:py-0">
+    <div className="mx-auto max-w-[900px] bg-white px-4 py-6 text-ink sm:px-8 sm:py-8 print:px-0 print:py-0">
       <PrintKnop />
 
       {/* ── Voorblad ─────────────────────────────────────────────────── */}
@@ -556,31 +556,36 @@ function Tabel({
       {rijen.length === 0 ? (
         <p className="text-[12px] text-ink-faint">Geen rijen in deze periode.</p>
       ) : (
-        <table className="w-full border-collapse text-[12px]">
-          <thead>
-            <tr className="border-b border-line text-[10.5px] uppercase tracking-wide text-ink-faint">
-              {kop.map((k, i) => (
-                <th key={k} className={`py-1.5 font-semibold ${rechts[i] ? 'text-right' : 'text-left'}`}>
-                  {k}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {rijen.map((r, i) => (
-              <tr key={i} className="border-b border-hair last:border-0">
-                {r.map((c, j) => (
-                  <td
-                    key={j}
-                    className={`py-1 ${rechts[j] ? 'text-right tabular-nums' : 'text-ink-soft'}`}
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[520px] border-collapse text-[12px] print:min-w-0">
+            <thead>
+              <tr className="border-b border-line text-[10.5px] uppercase tracking-wide text-ink-faint">
+                {kop.map((k, i) => (
+                  <th
+                    key={k}
+                    className={`py-1.5 font-semibold ${rechts[i] ? 'text-right' : 'text-left'}`}
                   >
-                    {c}
-                  </td>
+                    {k}
+                  </th>
                 ))}
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {rijen.map((r, i) => (
+                <tr key={i} className="border-b border-hair last:border-0">
+                  {r.map((c, j) => (
+                    <td
+                      key={j}
+                      className={`py-1 ${rechts[j] ? 'text-right tabular-nums' : 'text-ink-soft'}`}
+                    >
+                      {c}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
       {voetnoot && <p className="mt-1 text-[11px] text-ink-faint">{voetnoot}</p>}
     </div>

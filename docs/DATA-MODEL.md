@@ -160,12 +160,38 @@ prijsPerM2 = omzetVloer / totalM2
 
 ---
 
+### Margins are computed at READ time (2026-09-09)
+
+`lib/resolve.ts` recomputes every quotation's margin on each render, from the
+price list and cost settings **as they applied on the quotation's date**. What
+the sync stores is what was *sold* — description, m², revenue, install mode,
+whether installation was included — not what it cost.
+
+Before this, `matching.ts` froze purchase price, underlay and labour into each
+line at sync time. A price you changed afterwards did nothing except for the
+quotations the 90-day window happened to refetch. Jan lowered the labour rate
+from €17 to €11 on 2026-08-25 and it reached 53 of 18,060 priced m².
+
+Consequences:
+
+- A price or cost edit is visible **immediately**, no sync and no backfill.
+- `effective_from` decides how far back it reaches: Instellingen offers *vanaf
+  vandaag*, *met terugwerkende kracht* (2000-01-01) or a date you pick.
+- Two rows with the same `effective_from`: the **last inserted** wins
+  (`getPriceRows`/`getCostRows` order by effective_from, then id).
+- The stored per-line components remain the floor: if no price row matches, the
+  synced value still applies, so an empty price list can never silently zero
+  every margin.
+
+Verified against production on 2026-09-09: the resolver reproduced all 843
+stored margins to the cent before the labour rate was backdated.
+
 ### Per-quotation manual corrections (overrides)
 
 Feedback (2026-07-13) added two one-off, per-quotation corrections, stored in
-`quotation_overrides` and applied at **read time** (`lib/overrides.ts`) so they
-take effect **instantly and retroactively** — no re-sync, works on any stored
-quotation regardless of age:
+`quotation_overrides` and applied at **read time** (now in `lib/resolve.ts`) so
+they take effect **instantly and retroactively** — no re-sync, works on any
+stored quotation regardless of age:
 
 - **Special purchase price per floor line** (`prices[code] = €/m²`): overrides the
   matched purchase price for that one quotation only (e.g. the voetbalkantine
@@ -173,11 +199,20 @@ quotation regardless of age:
 - **`no_labor` (los verkocht — geen legservice)**: drops the labour €/m² for a
   floor sold without installation.
 
-Only quotations that have an override row are recomputed; every other quotation
-keeps its synced margins untouched. Margins recompute from the per-line cost
-components stored at sync time (`purchasePerM2` / `underlayPerM2` / `laborPerM2`);
-rows synced before those existed fall back to the default constant rates + a
-glued check on the line description (approximate until re-synced, exact after).
+Since 2026-09-09 a third kind exists: **free-field corrections** (`fields` jsonb
+on the offerte-level row). Per quotation: revenue ex VAT, floor revenue, status,
+created and decision date. Per floor line (keyed by position): product, m²,
+revenue, underlay €/m², labour €/m². Empty means "take what Teamleader says".
+Line corrections are ignored once the line count changes — the quotation was
+revised in Teamleader and they no longer refer to the same rows.
+
+Customer name, city and postcode are deliberately **not** editable: the customer
+and region analyses key on them, and a hand-typed name would silently drift from
+Teamleader.
+
+Requires one manual migration: `alter table quotation_overrides add column if not
+exists fields jsonb;`. Until it runs, everything keeps working and saving a field
+correction returns a readable message instead of a database error.
 
 ## Run time (`doorlooptijd`)
 
