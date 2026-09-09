@@ -114,7 +114,7 @@ export default function QuotationsTable({
               <Th>Vloer</Th>
               <Th className="text-center">Status</Th>
               <Th className="text-right" onClick={() => toggleSort('revenue')}>
-                Omzet{arrow('revenue')}
+                Offerte-omzet{arrow('revenue')}
               </Th>
               <Th className="text-right" onClick={() => toggleSort('m2')}>
                 M²{arrow('m2')}

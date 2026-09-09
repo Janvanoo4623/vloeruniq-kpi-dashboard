@@ -63,7 +63,7 @@ export default function RegioView({
   return (
     <div className="space-y-6">
       <section>
-        <SectionLabel>Over alle offertes, niet alleen de gekozen periode</SectionLabel>
+        <SectionLabel>Over alle offertes, niet alleen de gekozen periode — omzet ex btw</SectionLabel>
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           <KpiCard
             label="Plaatsen"

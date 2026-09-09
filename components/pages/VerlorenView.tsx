@@ -68,7 +68,7 @@ export default function VerlorenView({
   return (
     <div className="space-y-6">
       <section>
-        <SectionLabel>Over de hele historie</SectionLabel>
+        <SectionLabel>Over de hele historie — bedragen ex btw</SectionLabel>
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           <KpiCard
             label="Niet doorgegaan"

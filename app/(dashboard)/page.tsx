@@ -40,7 +40,7 @@ export default function OverzichtPage() {
   return (
     <div className="space-y-6">
       <section>
-        <SectionLabel>In deze periode</SectionLabel>
+        <SectionLabel>In deze periode — offertebedragen ex btw</SectionLabel>
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-6">
           <KpiCard
             label="Omzet geaccepteerd"
@@ -114,7 +114,7 @@ export default function OverzichtPage() {
           <KpiCard
             label="Gefactureerd"
             value={formatEuro(snap.invoicing.invoicedExcl)}
-            sub={`${snap.invoicing.invoiceCount} facturen`}
+            sub={`${snap.invoicing.invoiceCount} facturen · ex btw`}
           />
           <KpiCard
             label="Betaald"
@@ -123,7 +123,7 @@ export default function OverzichtPage() {
               snap.invoicing.invoicedExcl > 0
                 ? Math.round((snap.invoicing.paidExcl / snap.invoicing.invoicedExcl) * 1000) / 10
                 : null,
-            )} van gefactureerd`}
+            )} van gefactureerd · ex btw`}
           />
           <KpiCard
             label="Verwacht uit pijplijn"
@@ -131,7 +131,7 @@ export default function OverzichtPage() {
             sub={
               pipeline.winRate == null
                 ? 'te weinig historie voor een winkans'
-                : `${formatEuro(pipeline.openValue)} open × ${formatPercent(pipeline.winRate)} winkans`
+                : `${formatEuro(pipeline.openValue)} open × ${formatPercent(pipeline.winRate)} winkans · ex btw`
             }
           />
         </div>

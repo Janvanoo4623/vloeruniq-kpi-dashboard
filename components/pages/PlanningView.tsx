@@ -49,7 +49,7 @@ export default function PlanningView({
   return (
     <div className="space-y-6">
       <section>
-        <SectionLabel>Nog uit te voeren</SectionLabel>
+        <SectionLabel>Nog uit te voeren — omzet ex btw</SectionLabel>
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           <KpiCard
             label="Orderportefeuille"

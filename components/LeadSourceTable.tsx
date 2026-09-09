@@ -15,7 +15,7 @@ export default function LeadSourceTable({ data }: { data: LeadSourceStat[] }) {
         <thead className="bg-sunk text-xs text-ink-mute">
           <tr className="border-b border-line">
             <th className="px-3 py-2 text-left font-medium">Leadbron</th>
-            <th className="px-3 py-2 text-right font-medium">Omzet</th>
+            <th className="px-3 py-2 text-right font-medium">Omzet (ex btw)</th>
             <th className="px-3 py-2 text-right font-medium"># deals</th>
             <th className="px-3 py-2 text-right font-medium">Gem. deal</th>
             <th className="px-3 py-2 text-right font-medium">Marge %</th>

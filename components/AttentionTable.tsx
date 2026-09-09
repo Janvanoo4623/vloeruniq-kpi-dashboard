@@ -57,7 +57,7 @@ export default function AttentionTable({
             <thead className="bg-sunk text-xs text-ink-mute">
               <tr className="border-b border-line">
                 <th className="px-3 py-2 text-left font-medium">Klant</th>
-                <th className="px-3 py-2 text-right font-medium">Omzet</th>
+                <th className="px-3 py-2 text-right font-medium" title="Totale offerte ex btw; het margepercentage gaat over de vloeromzet">Offerte-omzet</th>
                 <th className="px-3 py-2 text-right font-medium">Marge €</th>
                 <th className="px-3 py-2 text-right font-medium">Marge %</th>
               </tr>

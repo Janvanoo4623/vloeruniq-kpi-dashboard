@@ -244,7 +244,7 @@ function PricesTab({ prices, post, busy }: { prices: CurrentPrice[]; post: Post;
           <thead className="sticky top-0 bg-sunk text-xs text-ink-mute">
             <tr className="border-b border-line">
               <th className="px-3 py-2 text-left font-medium">Product</th>
-              <th className="px-3 py-2 text-left font-medium">Inkoopprijs / m²</th>
+              <th className="px-3 py-2 text-left font-medium">Inkoopprijs / m² (ex btw)</th>
               <th className="px-3 py-2 text-left font-medium">Geldig sinds</th>
               <th className="px-3 py-2" />
             </tr>
@@ -311,7 +311,7 @@ function PricesTab({ prices, post, busy }: { prices: CurrentPrice[]; post: Post;
           />
         </div>
         <div>
-          <label className="block text-xs text-ink-mute">Prijs / m²</label>
+          <label className="block text-xs text-ink-mute">Prijs / m² (ex btw)</label>
           <input
             type="number"
             step="0.01"
@@ -372,7 +372,7 @@ function CostsTab({ costs, post, busy }: { costs: CurrentCost[]; post: Post; bus
       <IngangKiezer keuze={keuze} setKeuze={setKeuze} datum={datum} setDatum={setDatum} />
 
       <p className="mb-3 text-sm text-ink-mute">
-        Kosten per m². <strong>Arbeid</strong> en <strong>extra kosten</strong> gelden voor élke
+        Kosten per m², ex btw. <strong>Arbeid</strong> en <strong>extra kosten</strong> gelden voor élke
         gelegde vloer — behalve waar de offerte het leggen uitsluit.
         <strong>Primer/lijm/egaline</strong> gelden alleen bij gelijmd PVC en{' '}
         <strong>zelfklevend</strong> alleen bij een zelfklevende ondervloer; die twee sluiten
@@ -433,7 +433,7 @@ function CostsTab({ costs, post, busy }: { costs: CurrentCost[]; post: Post; bus
           />
         </div>
         <div>
-          <label className="block text-xs text-ink-mute">Bedrag / m²</label>
+          <label className="block text-xs text-ink-mute">Bedrag / m² (ex btw)</label>
           <input
             type="number"
             step="0.01"

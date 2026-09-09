@@ -20,7 +20,7 @@ export default function UitzonderingenView({ data }: { data: ExceptionsOverview 
   return (
     <div className="space-y-6">
       <section>
-        <SectionLabel>Wat er handmatig is bijgesteld</SectionLabel>
+        <SectionLabel>Wat er handmatig is bijgesteld — bedragen ex btw</SectionLabel>
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           <KpiCard
             label="Gecorrigeerde offertes"

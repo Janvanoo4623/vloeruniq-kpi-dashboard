@@ -422,7 +422,7 @@ function GeenVloerBakje({ items }: { items: UnmatchedQuotation[] }) {
         <>
           <div className="flex items-center gap-x-4 border-b border-hair px-5 py-2 text-[10.5px] font-semibold uppercase tracking-wide text-ink-faint">
             <span className="flex-1">Klant</span>
-            <span className="w-[86px] shrink-0 text-right">Omzet</span>
+            <span className="w-[86px] shrink-0 text-right">Offerte-omzet</span>
             <span className="w-[188px] shrink-0" aria-hidden />
           </div>
           <ul className="divide-y divide-hair">

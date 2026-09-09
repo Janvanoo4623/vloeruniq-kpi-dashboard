@@ -33,7 +33,7 @@ export default function PijplijnView({
   return (
     <div className="space-y-6">
       <section>
-        <SectionLabel>Open offertes — huidige stand</SectionLabel>
+        <SectionLabel>Open offertes — huidige stand, bedragen ex btw</SectionLabel>
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           <KpiCard label="Open waarde" value={formatEuro(pipeline.openValue)} sub={`${pipeline.openCount} offertes`} />
           <KpiCard

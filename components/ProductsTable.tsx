@@ -55,7 +55,7 @@ export default function ProductsTable({ rows }: { rows: ProductStat[] }) {
             <tr className="border-b border-line">
               <Th>Product</Th>
               <Th className="text-right" onClick={() => toggleSort('revenue')}>
-                Omzet{arrow('revenue')}
+                Omzet (ex btw){arrow('revenue')}
               </Th>
               <Th className="text-right" onClick={() => toggleSort('m2')}>
                 M²{arrow('m2')}

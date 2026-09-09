@@ -18,7 +18,7 @@ export default function LeadbronnenView({ trend }: { trend: LeadSourceTrend }) {
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-        <ChartCard title="Omzet per leadbron" subtitle="Geaccepteerde offertes">
+        <ChartCard title="Omzet per leadbron" subtitle="Geaccepteerde offertes, ex btw">
           {snap.leadSources.length > 0 ? <LeadSourceDonut data={snap.leadSources} /> : <Empty>Geen data</Empty>}
         </ChartCard>
         <ChartCard
@@ -39,7 +39,7 @@ export default function LeadbronnenView({ trend }: { trend: LeadSourceTrend }) {
 
       <ChartCard
         title="Leadbron-kwaliteit"
-        subtitle="Omzet, dealgrootte, marge en doorlooptijd per bron"
+        subtitle="Omzet, dealgrootte, marge en doorlooptijd per bron — bedragen ex btw"
       >
         <LeadSourceTable data={snap.leadSources} />
       </ChartCard>
