@@ -22,7 +22,7 @@ export default function PipelineCard({
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
       <div>
         {/* Headline numbers */}
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           <Stat label="Open pijplijn" value={formatEuro(pipeline.openValue)} sub={`${pipeline.openCount} offertes`} />
           <Stat
             label="Winkans"

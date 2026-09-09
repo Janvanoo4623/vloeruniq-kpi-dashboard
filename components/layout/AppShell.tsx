@@ -1,8 +1,8 @@
 'use client';
 
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { X } from 'lucide-react';
-import Sidebar from './Sidebar';
+import Sidebar, { MobileSidebar } from './Sidebar';
 import TopBar from './TopBar';
 import { useDashboard } from './DashboardProvider';
 
@@ -19,14 +19,18 @@ export default function AppShell({
   children: ReactNode;
 }) {
   const { message, dismissMessage } = useDashboard();
+  const [menu, setMenu] = useState(false);
 
   return (
-    <div className="h-screen bg-shell p-2.5">
-      <div className="flex h-full overflow-hidden rounded-[22px] border border-black/[0.06] bg-surface shadow-sm">
+    // Op de telefoon geen marge en geen ronde hoeken: die kosten daar alleen maar
+    // ruimte. Het kaartframe blijft vanaf sm.
+    <div className="h-screen bg-shell sm:p-2.5">
+      <div className="flex h-full overflow-hidden border-black/[0.06] bg-surface sm:rounded-[22px] sm:border sm:shadow-sm">
         <Sidebar badges={badges} />
+        <MobileSidebar open={menu} onClose={() => setMenu(false)} badges={badges} />
 
         <div className="flex min-w-0 flex-1 flex-col">
-          <TopBar />
+          <TopBar onMenu={() => setMenu(true)} />
 
           {message && (
             <div className="animate-fade-in border-b border-accent-line bg-accent-soft px-6 py-2.5">
@@ -44,7 +48,7 @@ export default function AppShell({
           )}
 
           <main className="min-w-0 flex-1 overflow-y-auto bg-canvas">
-            <div className="mx-auto w-full max-w-[1400px] px-6 py-6">{children}</div>
+            <div className="mx-auto w-full max-w-[1400px] px-3 py-4 sm:px-6 sm:py-6">{children}</div>
           </main>
         </div>
       </div>

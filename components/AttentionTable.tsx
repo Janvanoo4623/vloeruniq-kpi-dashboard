@@ -52,7 +52,7 @@ export default function AttentionTable({
         <h3 className="mb-2 text-sm font-semibold text-ink-soft">
           Laagste marge <span className="font-normal text-ink-faint">(geaccepteerd)</span>
         </h3>
-        <div className="overflow-hidden rounded-xl border border-line">
+        <div className="overflow-x-auto rounded-xl border border-line">
           <table className="w-full border-collapse text-sm">
             <thead className="bg-sunk text-xs text-ink-mute">
               <tr className="border-b border-line">
@@ -100,7 +100,7 @@ export default function AttentionTable({
         <h3 className="mb-2 text-sm font-semibold text-ink-soft">
           Onvolledige dekking <span className="font-normal text-ink-faint">(niet alle m² geprijsd)</span>
         </h3>
-        <div className="overflow-hidden rounded-xl border border-line">
+        <div className="overflow-x-auto rounded-xl border border-line">
           <table className="w-full border-collapse text-sm">
             <thead className="bg-sunk text-xs text-ink-mute">
               <tr className="border-b border-line">

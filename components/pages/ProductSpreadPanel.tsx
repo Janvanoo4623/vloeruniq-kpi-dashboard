@@ -115,7 +115,7 @@ export default function ProductSpreadPanel({ products }: { products: ProductSpre
                     {p.purchasePerM2 == null ? '—' : formatEuro(p.purchasePerM2, true)}
                   </td>
                   <td className="px-5 py-2.5">
-                    <div className="relative h-5 w-[240px]">
+                    <div className="relative h-5 w-[150px] sm:w-[240px]">
                       {/* Nullijn: links daarvan is verlies. */}
                       <span
                         className="absolute inset-y-0 w-px bg-line"
@@ -138,7 +138,7 @@ export default function ProductSpreadPanel({ products }: { products: ProductSpre
                         title={`mediaan ${formatEuro(p.medianMarginPerM2, true)}/m²`}
                       />
                     </div>
-                    <p className="mt-0.5 w-[240px] whitespace-nowrap text-[10.5px] tabular-nums text-ink-faint">
+                    <p className="mt-0.5 w-[150px] sm:w-[240px] whitespace-nowrap text-[10.5px] tabular-nums text-ink-faint">
                       {formatEuro(p.minMarginPerM2, true)} tot {formatEuro(p.maxMarginPerM2, true)}
                       {p.downside > 5 && (
                         <span className="ml-2 text-warn" title="afstand tussen de slechtste offerte en de mediaan">

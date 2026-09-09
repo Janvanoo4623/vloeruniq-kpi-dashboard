@@ -89,9 +89,9 @@ export default function WeekOverviewTable({ snapshot }: { snapshot: Snapshot }) 
   ];
 
   // Frozen columns: KPI label (left-0) + Totaal (left-44). Same colours/sizing as the offer table.
-  const labelCell = 'sticky left-0 z-20 w-44 min-w-44 bg-white px-3 py-2 text-left';
+  const labelCell = 'sticky left-0 z-20 w-32 min-w-32 sm:w-44 sm:min-w-44 bg-white px-3 py-2 text-left';
   const totalCell =
-    'sticky left-44 z-20 bg-white px-3 py-2 text-right tabular-nums font-medium text-ink border-r border-line';
+    'sticky left-32 sm:left-44 z-20 bg-white px-3 py-2 text-right tabular-nums font-medium text-ink border-r border-line';
   const weekCell = 'whitespace-nowrap px-3 py-2 text-right tabular-nums text-ink-mute';
 
   return (
@@ -114,7 +114,7 @@ export default function WeekOverviewTable({ snapshot }: { snapshot: Snapshot }) 
           <thead className="sticky top-0 z-30 bg-sunk text-xs text-ink-mute">
             <tr className="border-b border-line">
               <th className={`${labelCell} z-40 bg-sunk font-medium`}>KPI</th>
-              <th className="sticky left-44 z-40 border-r border-line bg-sunk px-3 py-2 text-right font-medium text-ink-soft">
+              <th className="sticky left-32 sm:left-44 z-40 border-r border-line bg-sunk px-3 py-2 text-right font-medium text-ink-soft">
                 Totaal
               </th>
               {weeks.map((w) => (

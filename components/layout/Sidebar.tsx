@@ -1,7 +1,9 @@
 'use client';
 
+import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { X } from 'lucide-react';
 import { NAV } from '@/lib/nav';
 import { cn } from '@/components/ui';
 
@@ -9,12 +11,68 @@ import { cn } from '@/components/ui';
  * Vaste linkernavigatie. Het actieve item licht op als witte kaart met schaduw —
  * dezelfde taal als de rest van de app, zodat "waar ben ik" één blik kost.
  * `badges` telt openstaand werk bij een route (nu alleen Controleren).
+ *
+ * Onder lg verdwijnt deze balk: 212 vaste pixels is meer dan de helft van een
+ * telefoonscherm. Daar komt hij als lade terug — zie MobileSidebar.
  */
 export default function Sidebar({ badges }: { badges?: Record<string, number> }) {
+  return (
+    <aside className="hidden w-[212px] shrink-0 flex-col border-r border-line bg-canvas lg:flex 2xl:w-[248px]">
+      <SidebarInhoud badges={badges} />
+    </aside>
+  );
+}
+
+/**
+ * Dezelfde navigatie als lade, voor smalle schermen.
+ *
+ * Via een portal naar <body>, en niet zomaar: de kopbalk heeft backdrop-blur, en
+ * een element met backdrop-filter wordt het containing block voor alles wat
+ * position:fixed is. Een lade die binnen die boom wordt gerenderd centreert zich
+ * dan binnen een balk van 68 pixels hoog. Dezelfde val als bij de periodekiezer,
+ * daar gemeten op top -214.
+ */
+export function MobileSidebar({
+  open,
+  onClose,
+  badges,
+}: {
+  open: boolean;
+  onClose: () => void;
+  badges?: Record<string, number>;
+}) {
+  if (!open || typeof document === 'undefined') return null;
+
+  return createPortal(
+    <div className="fixed inset-0 z-[130] lg:hidden">
+      <div className="absolute inset-0 animate-fade-in bg-ink/40" onClick={onClose} />
+      <aside className="absolute inset-y-0 left-0 flex w-[min(280px,86vw)] flex-col border-r border-line bg-canvas shadow-2xl">
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Menu sluiten"
+          className="absolute right-2 top-4 rounded-lg p-1.5 text-ink-mute transition hover:bg-sunk hover:text-ink"
+        >
+          <X size={16} strokeWidth={2.2} />
+        </button>
+        <SidebarInhoud badges={badges} onNavigate={onClose} />
+      </aside>
+    </div>,
+    document.body,
+  );
+}
+
+function SidebarInhoud({
+  badges,
+  onNavigate,
+}: {
+  badges?: Record<string, number>;
+  onNavigate?: () => void;
+}) {
   const pathname = usePathname();
 
   return (
-    <aside className="flex w-[212px] shrink-0 flex-col border-r border-line bg-canvas 2xl:w-[248px]">
+    <>
       <div className="flex h-[68px] shrink-0 items-center gap-2.5 border-b border-line px-5">
         <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-accent text-[13px] font-bold text-white">
           V
@@ -38,6 +96,7 @@ export default function Sidebar({ badges }: { badges?: Record<string, number> })
                 <Link
                   key={href}
                   href={href}
+                  onClick={onNavigate}
                   aria-current={active ? 'page' : undefined}
                   className={cn(
                     'mb-1 flex items-center gap-3 rounded-xl border px-3 py-2.5 text-[13.5px] transition',
@@ -68,6 +127,6 @@ export default function Sidebar({ badges }: { badges?: Record<string, number> })
           </div>
         ))}
       </nav>
-    </aside>
+    </>
   );
 }

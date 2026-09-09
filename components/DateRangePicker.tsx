@@ -179,6 +179,9 @@ function PeriodeDialoog({
         aria-label="Periode kiezen"
         className={cn(
           'absolute left-1/2 top-1/2 w-[min(760px,94vw)] -translate-x-1/2 -translate-y-1/2',
+          // Op smalle schermen mag de dialoog de volle hoogte gebruiken: met de
+          // maanden onder elkaar wordt hij hoger dan een telefoonscherm.
+          'max-sm:h-[92vh] max-sm:w-[94vw]',
           // Twee maanden naast de snelkeuzes worden hoog; op een laag scherm mag
           // de dialoog nooit half buiten beeld vallen, dus hij scrollt zelf.
           'flex max-h-[92vh] flex-col animate-rise-in overflow-hidden rounded-2xl',
@@ -342,7 +345,9 @@ function Kalender({
         </button>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      {/* Twee maanden naast elkaar geeft op 375 pixels dagcellen van 19 pixels
+          breed — ver onder een bruikbaar tikdoel. Daar dus onder elkaar. */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         {maanden.map((m) => (
           <MaandRooster
             key={`${m.jaar}-${m.maand}`}
