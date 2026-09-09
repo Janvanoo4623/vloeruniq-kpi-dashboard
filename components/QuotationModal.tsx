@@ -122,8 +122,12 @@ export default function QuotationModal({
       if (Object.keys(regel).length === 0) delete regels[String(i)];
       else regels[String(i)] = regel as QuotationLineOverride;
       if (Object.keys(regels).length === 0) {
-        const { lines: _weg, lineCount: _ook, ...rest } = f;
-        return rest;
+        // Geen regelcorrecties meer: lines én lineCount weg, anders blijft er
+        // een lege huls staan die "handmatig aangepast" laat zien.
+        const zonderRegels: QuotationFields = { ...f };
+        zonderRegels.lines = undefined;
+        zonderRegels.lineCount = undefined;
+        return JSON.parse(JSON.stringify(zonderRegels)) as QuotationFields;
       }
       return { ...f, lines: regels, lineCount: lines.length };
     });

@@ -3,6 +3,19 @@
 // (a P-number was recognised, but no price matched — see teamleader/matching.ts).
 import type { QuotationRow } from './types';
 
+/** Eén offerte waarin een vloer zonder inkoopprijs voorkomt. */
+export interface MissingPriceQuotation {
+  id: string;
+  name: string;
+  customerName: string;
+  status: QuotationRow['status'];
+  date: string;
+  /** m² van déze vloer in deze offerte, niet de hele offerte. */
+  m2: number;
+  /** Omzet van déze vloerregels, ex btw. */
+  revenue: number;
+}
+
 export interface MissingPrice {
   code: string;
   quotationCount: number; // # distinct quotations containing this unpriced code
@@ -22,6 +35,12 @@ export interface MissingPrice {
    * offerte op met het potloodje, niet met een prijs in de prijslijst.
    */
   tooGeneric: boolean;
+  /**
+   * Om welke offertes het gaat, grootste bedrag eerst. Zonder deze lijst is
+   * "12 offertes" een getal waar je niets mee kunt: je wilt zien wíe het zijn
+   * voor je een inkoopprijs invult of besluit dat het een eenmalige vloer was.
+   */
+  quotations: MissingPriceQuotation[];
 }
 
 /**
@@ -66,7 +85,7 @@ export function computeMissingPrices(
   quotations: QuotationRow[],
   pricedCodes: Set<string> = new Set(),
 ): MissingPrice[] {
-  const byCode = new Map<string, MissingPrice & { _ids: Set<string> }>();
+  const byCode = new Map<string, MissingPrice & { _ids: Map<string, MissingPriceQuotation> }>();
 
   for (const q of quotations) {
     for (const l of q.lines ?? []) {
@@ -81,16 +100,30 @@ export function computeMissingPrices(
           revenue: 0,
           derived: Boolean(l.derivedCode),
           tooGeneric: isGeneriek(l.code),
-          _ids: new Set(),
+          quotations: [],
+          _ids: new Map(),
         };
         byCode.set(l.code, mp);
       }
       mp.m2 += l.m2;
       mp.revenue += l.revenue;
-      if (!mp._ids.has(q.id)) {
-        mp._ids.add(q.id);
+      let offerte = mp._ids.get(q.id);
+      if (!offerte) {
+        offerte = {
+          id: q.id,
+          name: q.name,
+          customerName: q.customerName,
+          status: q.status,
+          date: q.dateAccepted || q.dateCreated,
+          m2: 0,
+          revenue: 0,
+        };
+        mp._ids.set(q.id, offerte);
         mp.quotationCount += 1;
       }
+      // Optellen per offerte: dezelfde vloer kan op meerdere regels staan.
+      offerte.m2 += l.m2;
+      offerte.revenue += l.revenue;
     }
   }
 
@@ -102,6 +135,9 @@ export function computeMissingPrices(
       revenue: Math.round(mp.revenue),
       derived: mp.derived,
       tooGeneric: mp.tooGeneric,
+      quotations: [...mp._ids.values()]
+        .map((o) => ({ ...o, m2: Math.round(o.m2 * 10) / 10, revenue: Math.round(o.revenue) }))
+        .sort((a, b) => b.revenue - a.revenue),
     }))
     .sort((a, b) => b.revenue - a.revenue);
 }

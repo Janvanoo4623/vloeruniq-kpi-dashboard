@@ -6,6 +6,7 @@ import type { ReviewItem } from '@/lib/review';
 import type { MissingPrice, UnmatchedQuotation } from '@/lib/missing-prices';
 import { formatEuro, formatNumber, formatProduct } from '@/lib/format';
 import { STATUS_LABEL } from '@/components/QuotationModal';
+import MissingPriceModal from '@/components/MissingPriceModal';
 import PriceInput from '@/components/PriceInput';
 import { Badge, Button, Card, Empty, cn } from '@/components/ui';
 import { Pagination, usePaged } from '@/components/ui/Pagination';
@@ -308,6 +309,7 @@ function ReviewRow({ item }: { item: ReviewItem }) {
 
 function PrijzenBakje({ missing }: { missing: MissingPrice[] }) {
   const [opgeslagen, setOpgeslagen] = useState<Set<string>>(new Set());
+  const [open, setOpen] = useState<MissingPrice | null>(null);
   const gepagineerd = usePaged(missing);
 
   return (
@@ -355,8 +357,15 @@ function PrijzenBakje({ missing }: { missing: MissingPrice[] }) {
                       </span>
                     )}
                   </td>
-                  <td className="px-5 py-2.5 text-right tabular-nums text-ink-soft">
-                    {m.quotationCount}
+                  <td className="px-5 py-2.5 text-right">
+                    <button
+                      type="button"
+                      onClick={() => setOpen(m)}
+                      title="Laat zien om welke offertes het gaat"
+                      className="tabular-nums text-ink-soft underline decoration-hair underline-offset-2 transition hover:text-ink"
+                    >
+                      {m.quotationCount} ›
+                    </button>
                   </td>
                   <td className="px-5 py-2.5 text-right tabular-nums text-ink-soft">
                     {formatNumber(m.m2)}
@@ -386,6 +395,8 @@ function PrijzenBakje({ missing }: { missing: MissingPrice[] }) {
           <Pagination {...gepagineerd.props} />
         </div>
       )}
+
+      {open && <MissingPriceModal item={open} onClose={() => setOpen(null)} />}
     </Card>
   );
 }
