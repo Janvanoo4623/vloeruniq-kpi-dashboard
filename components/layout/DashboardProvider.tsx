@@ -6,6 +6,7 @@ import type { PipelineStats } from '@/lib/pipeline';
 import type { PaymentStats } from '@/lib/payments';
 import { weeklySeries, type WeeklyPoint } from '@/lib/series';
 import type { PerM2Stats } from '@/lib/insights';
+import type { CustomerAnalysis } from '@/lib/customers';
 import { presetRange, type RangeState } from '@/components/DateRangePicker';
 import { DEFAULT_PRESET } from '@/lib/default-range';
 
@@ -33,6 +34,8 @@ export interface DashboardData {
   pipeline: PipelineStats;
   payments: PaymentStats;
   pricedCodes: Set<string>;
+  /** Klantanalyses voor de gekozen periode (betaalgedrag blijft over alles). */
+  customers: CustomerAnalysis;
   series: WeeklyPoint[];
   range: RangeState;
   comparison: Comparison | null;
@@ -72,6 +75,7 @@ export default function DashboardProvider({
   pipeline,
   payments,
   pricedCodes,
+  customers: initialCustomers,
   children,
 }: {
   snapshot: Snapshot | null;
@@ -80,9 +84,11 @@ export default function DashboardProvider({
   pipeline: PipelineStats;
   payments: PaymentStats;
   pricedCodes: string[];
+  customers: CustomerAnalysis;
   children: ReactNode;
 }) {
   const [snap, setSnap] = useState<Snapshot | null>(snapshot);
+  const [customers, setCustomers] = useState<CustomerAnalysis>(initialCustomers);
   const [range, setRangeState] = useState<RangeState>(initialRange);
   const [comparison, setComparison] = useState<Comparison | null>(null);
   const [dataLoading, setDataLoading] = useState(false);
@@ -100,6 +106,7 @@ export default function DashboardProvider({
       if (res.ok && data.snapshot) {
         setSnap(data.snapshot);
         setComparison(data.comparison ?? null);
+        if (data.customers) setCustomers(data.customers);
         setRangeState(r);
       } else {
         setMessage(data.error || 'Data laden mislukt.');
@@ -142,6 +149,7 @@ export default function DashboardProvider({
       pipeline,
       payments,
       pricedCodes: pricedSet,
+      customers,
       series,
       range,
       comparison,
@@ -153,7 +161,7 @@ export default function DashboardProvider({
       dismissMessage: () => setMessage(null),
     }),
     [
-      snap, meta, aging, pipeline, payments, pricedSet, series,
+      snap, meta, aging, pipeline, payments, pricedSet, customers, series,
       range, comparison, dataLoading, refreshing, message, setRange, refresh,
     ],
   );

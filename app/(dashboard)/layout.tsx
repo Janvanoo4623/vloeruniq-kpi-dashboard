@@ -12,6 +12,7 @@ import { snapshotForRange } from '@/lib/range';
 import { DEFAULT_PRESET, presetRangeServer } from '@/lib/default-range';
 import { computePipeline } from '@/lib/pipeline';
 import { computePaymentStats } from '@/lib/payments';
+import { customerAnalysis } from '@/lib/customers';
 import { resolveQuotations } from '@/lib/resolve';
 import DashboardProvider from '@/components/layout/DashboardProvider';
 import AppShell from '@/components/layout/AppShell';
@@ -59,6 +60,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const pipeline = computePipeline(resolvedQuotations, exclusions, today);
   const payments = computePaymentStats(invoices, today);
   const pricedCodes = prices.map((p) => p.code.toLowerCase());
+  const customers = customerAnalysis(invoices, resolvedQuotations, from, to);
 
   return (
     <DashboardProvider
@@ -68,6 +70,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       pipeline={pipeline}
       payments={payments}
       pricedCodes={pricedCodes}
+      customers={customers}
     >
       <AppShell>{children}</AppShell>
     </DashboardProvider>

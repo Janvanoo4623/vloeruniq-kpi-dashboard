@@ -7,7 +7,7 @@ import { DAYS_LOOKBACK } from './constants';
 import { getCutoffDate } from './dates';
 import { buildCustomerLookup, fetchRunTime } from './deals';
 import { fetchQuotations } from './quotations';
-import { fetchInvoices, summarizeInvoices } from './invoices';
+import { fetchCreditNotes, fetchInvoices, summarizeInvoices } from './invoices';
 import { buildSnapshot } from './aggregate';
 import { computeQuality, mergeHistory, toSnapshot, type QualitySnapshot } from '../data-quality';
 
@@ -23,7 +23,10 @@ export async function runSync(): Promise<{ snapshot: Snapshot; pushed: number }>
     priceRows,
     costRows,
   );
-  const invoices = await fetchInvoices(cutoff);
+  // Creditnota's komen uit een aparte Teamleader-lijst en worden als factuur met
+  // een negatief bedrag opgeslagen — zie fetchCreditNotes().
+  const [facturen, credits] = await Promise.all([fetchInvoices(cutoff), fetchCreditNotes(cutoff)]);
+  const invoices = [...facturen, ...credits];
   await db.upsertInvoices(invoices);
   const invoicing = summarizeInvoices(invoices);
 

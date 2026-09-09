@@ -25,6 +25,69 @@ interface TLInvoice {
   invoicee?: { name?: string; customer?: { id?: string } | null } | null;
 }
 
+interface TLCreditNote {
+  id?: string;
+  credit_note_date?: string;
+  status?: string;
+  total?: { tax_exclusive?: { amount: number }; tax_inclusive?: { amount: number } };
+  invoicee?: { name?: string; customer?: { id?: string } | null } | null;
+}
+
+/**
+ * Creditnota's. Ze staan in Teamleader in een eigen lijst en zijn dus nooit
+ * meegekomen met de facturen — met als gevolg dat een klant die geld terugkreeg
+ * in "Klanten op omzet" nog steeds voor het volle bedrag bovenaan stond.
+ *
+ * Ze worden opgeslagen als factuur met een negatief bedrag. Daardoor is er geen
+ * migratie nodig en herkent alles wat facturen leest ze vanzelf als credit
+ * (`totalExcl < 0`), inclusief de ene creditregel die al langer als negatieve
+ * factuur in de data zat.
+ *
+ * De endpointnaam en het datumfilter zijn niet hard: mislukt de aanroep, dan
+ * levert deze functie een lege lijst en gaat de rest van de sync gewoon door.
+ * Een sync die klapt op een bijzaak is erger dan een ontbrekende creditnota.
+ */
+export async function fetchCreditNotes(cutoff: string): Promise<InvoiceRow[]> {
+  let notes: TLCreditNote[] = [];
+  try {
+    notes = await fetchAllPages<TLCreditNote>('/creditNotes.list', {
+      filter: { credit_note_date_after: cutoff },
+    });
+  } catch {
+    try {
+      notes = await fetchAllPages<TLCreditNote>('/creditNotes.list', {});
+    } catch (err) {
+      console.warn(
+        '[sync] creditnota\'s niet opgehaald:',
+        err instanceof Error ? err.message : err,
+      );
+      return [];
+    }
+  }
+
+  const neg = (v: number | undefined) => -Math.abs(v ?? 0);
+  return notes
+    .filter((n) => n.id)
+    .filter((n) => !n.credit_note_date || dateOnly(n.credit_note_date) >= cutoff)
+    .map((n) => ({
+      id: n.id as string,
+      invoiceDate: n.credit_note_date ? dateOnly(n.credit_note_date) : '',
+      status: n.status ?? 'creditnota',
+      // Een creditnota staat niet open: hij verrekent. Vandaar betaald, zonder
+      // openstaand bedrag, zodat hij nergens in de cashflow-aging opduikt.
+      paid: true,
+      totalExcl: neg(n.total?.tax_exclusive?.amount),
+      dueIncl: 0,
+      customerId: n.invoicee?.customer?.id ?? '',
+      dueOn: '',
+      customerName: n.invoicee?.name ?? '',
+      paidAt: n.credit_note_date ? dateOnly(n.credit_note_date) : '',
+    }));
+}
+
+/** Een creditnota (of een als negatief geboekte factuur) is geen omzet. */
+export const isCredit = (inv: InvoiceRow): boolean => inv.totalExcl < 0;
+
 /** Fetch invoices with invoice_date on/after `cutoff` and map to InvoiceRow. */
 export async function fetchInvoices(cutoff: string): Promise<InvoiceRow[]> {
   const invoices = await fetchAllPages<TLInvoice>('/invoices.list', {

@@ -7,6 +7,7 @@
 // dubbele spaties en schrijfvarianten). Zodra we facturen aan offertes moeten
 // koppelen kan het niet anders dan op naam, en dan is de match per definitie
 // benaderend. Dat staat overal waar het speelt expliciet in de uitkomst.
+import { isCredit } from './teamleader/invoices';
 import type { InvoiceRow, QuotationRow } from './types';
 
 const DAY = 86400000;
@@ -37,6 +38,8 @@ export interface CustomerStat {
   avgDaysToPay: number | null;
   paidOnTime: number;
   paidTotal: number;
+  /** Wat er aan deze klant is gecrediteerd (positief bedrag), buiten de omzet om. */
+  credited: number;
   /** Cumulatief aandeel van de omzet t/m deze klant (voor de Pareto-curve). */
   cumulativeShare: number;
 }
@@ -59,7 +62,7 @@ export interface CustomerConcentration {
 export function customerConcentration(invoices: InvoiceRow[]): CustomerConcentration {
   const per = new Map<
     string,
-    { name: string; revenue: number; invoices: number; first: string; last: string; lags: number[]; onTime: number; paid: number }
+    { name: string; revenue: number; invoices: number; first: string; last: string; lags: number[]; onTime: number; paid: number; credited: number }
   >();
 
   for (const inv of invoices) {
@@ -68,7 +71,17 @@ export function customerConcentration(invoices: InvoiceRow[]): CustomerConcentra
     const key = inv.customerId || normaliseCustomer(inv.customerName || '') || inv.id;
     const e =
       per.get(key) ??
-      { name: inv.customerName || '—', revenue: 0, invoices: 0, first: inv.invoiceDate, last: inv.invoiceDate, lags: [], onTime: 0, paid: 0 };
+      { name: inv.customerName || '—', revenue: 0, invoices: 0, first: inv.invoiceDate, last: inv.invoiceDate, lags: [], onTime: 0, paid: 0, credited: 0 };
+    // Een creditnota telt niet als omzet en niet als factuur: hij haalt iets
+    // wég. Hem wel meetellen zou een klant die geld terugkreeg even groot laten
+    // lijken als een klant die alles betaalde. Het bedrag blijft zichtbaar in
+    // een eigen kolom, want stilzwijgend weglaten is net zo misleidend.
+    if (isCredit(inv)) {
+      e.credited += -inv.totalExcl;
+      if (!e.name || e.name === '—') e.name = inv.customerName || e.name;
+      per.set(key, e);
+      continue;
+    }
     e.revenue += inv.totalExcl;
     e.invoices += 1;
     if (inv.invoiceDate && inv.invoiceDate < e.first) e.first = inv.invoiceDate;
@@ -95,6 +108,7 @@ export function customerConcentration(invoices: InvoiceRow[]): CustomerConcentra
       avgDaysToPay: e.lags.length >= 3 ? round1(e.lags.reduce((s, v) => s + v, 0) / e.lags.length) : null,
       paidOnTime: e.onTime,
       paidTotal: e.paid,
+      credited: Math.round(e.credited),
       cumulativeShare: 0,
     }))
     .sort((a, b) => b.revenue - a.revenue);
@@ -155,6 +169,7 @@ export function paymentDistribution(
 
   for (const inv of invoices) {
     if (inv.status === 'draft' || !inv.paid || !inv.paidAt || !inv.invoiceDate) continue;
+    if (isCredit(inv)) continue; // een creditnota kent geen betaaltermijn
     dagen.push(Math.max(0, Math.floor((Date.parse(inv.paidAt) - Date.parse(inv.invoiceDate)) / DAY)));
     if (inv.dueOn) {
       metVervaldatum += 1;
@@ -220,7 +235,7 @@ export function unquotedInvoicing(
   let totalRevenue = 0;
 
   for (const inv of invoices) {
-    if (inv.status === 'draft') continue;
+    if (inv.status === 'draft' || isCredit(inv)) continue;
     totalCount += 1;
     totalRevenue += inv.totalExcl;
     const naam = normaliseCustomer(inv.customerName || '');
@@ -326,5 +341,46 @@ export function quotedVsInvoiced(
     p90DaysToInvoice: gesorteerd.length > 0 ? gesorteerd[Math.min(gesorteerd.length - 1, Math.floor(gesorteerd.length * 0.9))] : null,
     matched: lags.length,
     acceptedTotal,
+  };
+}
+
+// ── 4. De drie analyses samen, voor één periode ──────────────────────────
+
+export interface CustomerAnalysis {
+  concentration: CustomerConcentration;
+  payments: PaymentDistribution;
+  unquoted: UnquotedInvoicing;
+  /** De periode waarover concentratie en facturatie-zonder-offerte gaan. */
+  from: string;
+  to: string;
+}
+
+/**
+ * De klantanalyses voor een gekozen periode.
+ *
+ * Concentratie en "facturatie zonder offerte" gaan over de gekozen periode: dat
+ * zijn vragen over wat er in dat venster is gefactureerd, en Jan verwachtte
+ * terecht dat de periodekiezer ze zou raken.
+ *
+ * Betaalgedrag blijft bewust over álle facturen. Een betaaltermijn uit dertig
+ * dagen facturen is geen betaalgedrag maar een toevalstreffer, en de mediaan zou
+ * bij elke periodewissel alle kanten op springen. Dat staat ook zo in de UI.
+ */
+export function customerAnalysis(
+  invoices: InvoiceRow[],
+  quotations: QuotationRow[],
+  from: string,
+  to: string,
+): CustomerAnalysis {
+  const inPeriode = invoices.filter(
+    (inv) => inv.invoiceDate && inv.invoiceDate >= from && inv.invoiceDate <= to,
+  );
+  const concentration = customerConcentration(inPeriode);
+  return {
+    concentration,
+    payments: paymentDistribution(invoices, customerConcentration(invoices)),
+    unquoted: unquotedInvoicing(inPeriode, quotations),
+    from,
+    to,
   };
 }

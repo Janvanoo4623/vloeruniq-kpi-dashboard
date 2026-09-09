@@ -6,6 +6,7 @@ import { summarizeInvoices } from '@/lib/teamleader/invoices';
 import { snapshotForRange } from '@/lib/range';
 import { resolveQuotations } from '@/lib/resolve';
 import { perM2Stats } from '@/lib/insights';
+import { customerAnalysis } from '@/lib/customers';
 import type { InvoiceRow, InvoicingSummary } from '@/lib/types';
 
 export const runtime = 'nodejs';
@@ -86,5 +87,8 @@ export async function GET(request: Request) {
     };
   }
 
-  return NextResponse.json({ range: { from, to }, compare, snapshot, comparison });
+  // De klantanalyses hangen aan de factuurdatum en dus aan dezelfde periode.
+  const customers = customerAnalysis(invoices, quotations, from, to);
+
+  return NextResponse.json({ range: { from, to }, compare, snapshot, comparison, customers });
 }

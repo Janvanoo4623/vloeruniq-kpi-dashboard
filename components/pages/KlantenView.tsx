@@ -13,7 +13,7 @@ import {
   YAxis,
 } from 'recharts';
 import { Info } from 'lucide-react';
-import type { CustomerConcentration, PaymentDistribution, UnquotedInvoicing } from '@/lib/customers';
+import { useDashboard } from '@/components/layout/DashboardProvider';
 import { formatEuro, formatNumber, formatPercent } from '@/lib/format';
 import { AXIS_TICK, CHART } from '@/components/charts/theme';
 import { ChartDefs, grad } from '@/components/charts/Defs';
@@ -30,15 +30,9 @@ import KpiCard from '@/components/KpiCard';
  * wachten. Alles op de factuurkant: een offerte kan verlopen, een factuur is
  * echt geld.
  */
-export default function KlantenView({
-  concentration,
-  payments,
-  unquoted,
-}: {
-  concentration: CustomerConcentration;
-  payments: PaymentDistribution;
-  unquoted: UnquotedInvoicing;
-}) {
+export default function KlantenView() {
+  const { customers: analyse } = useDashboard();
+  const { concentration, payments, unquoted } = analyse;
   const { customers, totalRevenue, customersForHalf, top10Share, repeatCustomers } = concentration;
   // Hook vóór de early return, anders wisselt de hook-volgorde per render.
   const gepagineerd = usePaged(customers);
@@ -46,7 +40,7 @@ export default function KlantenView({
   if (customers.length === 0) {
     return (
       <Panel title="Klanten" subtitle="Concentratie en betaalgedrag">
-        <Empty>Nog geen facturen om op te aggregeren.</Empty>
+        <Empty>Geen facturen in deze periode.</Empty>
       </Panel>
     );
   }
@@ -61,7 +55,7 @@ export default function KlantenView({
   return (
     <div className="space-y-6">
       <section>
-        <SectionLabel>Over alle facturen, ex. btw</SectionLabel>
+        <SectionLabel>Gefactureerd in deze periode, ex btw</SectionLabel>
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           <KpiCard
             label="Klanten"
@@ -149,7 +143,7 @@ export default function KlantenView({
 
       <Panel
         title="Klanten op omzet"
-        subtitle="Gefactureerd ex. btw, met gemiddelde betaaltermijn waar er genoeg facturen zijn"
+        subtitle="Gefactureerd ex btw in de gekozen periode; creditnota’s tellen niet als omzet en staan apart"
         bodyClassName="p-0"
       >
         <div className="overflow-x-auto">
@@ -161,6 +155,7 @@ export default function KlantenView({
                 <th className="px-5 py-2.5 text-right font-semibold">Betaaltermijn</th>
                 <th className="px-5 py-2.5 text-right font-semibold">Op tijd</th>
                 <th className="px-5 py-2.5 text-right font-semibold">Laatste factuur</th>
+                <th className="px-5 py-2.5 text-right font-semibold">Gecrediteerd</th>
                 <th className="px-5 py-2.5 text-right font-semibold">Omzet</th>
               </tr>
             </thead>
@@ -186,6 +181,9 @@ export default function KlantenView({
                     {c.paidTotal > 0 ? `${c.paidOnTime}/${c.paidTotal}` : '—'}
                   </td>
                   <td className="px-5 py-2.5 text-right tabular-nums text-ink-faint">{c.lastInvoice}</td>
+                  <td className="px-5 py-2.5 text-right tabular-nums text-ink-faint">
+                    {c.credited > 0 ? `− ${formatEuro(c.credited)}` : '—'}
+                  </td>
                   <td className="px-5 py-2.5 text-right font-semibold tabular-nums text-ink">
                     {formatEuro(c.revenue)}
                   </td>
@@ -200,14 +198,16 @@ export default function KlantenView({
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
         <Panel
           title="Hoe snel wordt er betaald?"
-          subtitle={`Mediaan ${payments.medianDays} dagen, maar slechts ${formatPercent(payments.onTimePct)} op of vóór de vervaldatum`}
+          subtitle={`Over álle facturen: mediaan ${payments.medianDays} dagen, en slechts ${formatPercent(payments.onTimePct)} op of vóór de vervaldatum`}
         >
           <div className="mb-3 flex items-start gap-2 rounded-xl border border-accent-line bg-accent-soft px-3.5 py-2.5">
             <Info size={14} strokeWidth={2.2} className="mt-0.5 shrink-0 text-accent" />
             <p className="text-[12px] leading-relaxed text-accent/90">
               Die twee cijfers spreken elkaar schijnbaar tegen. Dat komt doordat de verdeling
               tweetoppig is: particulieren rekenen vrijwel meteen af, zakelijke klanten laten het
-              lopen. Eén gemiddelde verstopt dat — vandaar de verdeling erbij.
+              lopen. Eén gemiddelde verstopt dat — vandaar de verdeling erbij. Dit blok kijkt
+              bewust naar alle facturen en niet naar de gekozen periode: een betaaltermijn uit een
+              handvol facturen zegt niets.
             </p>
           </div>
           <ResponsiveContainer width="100%" height={212}>
@@ -238,7 +238,7 @@ export default function KlantenView({
 
         <Panel
           title="Wie laat je het langst wachten?"
-          subtitle="Gemiddelde betaaltermijn, alleen klanten met minstens drie betaalde facturen"
+          subtitle="Over alle facturen — gemiddelde betaaltermijn, alleen klanten met minstens drie betaalde facturen"
           bodyClassName="p-0"
         >
           {payments.slowest.length === 0 ? (
