@@ -1,7 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import type { AgingBucket, OverdueInvoice, QuotationRow } from '@/lib/types';
+import { useRouter } from 'next/navigation';
+import { Check, Pencil, X } from 'lucide-react';
+import type { AgingBucket, AgingInvoice, OverdueInvoice, QuotationRow } from '@/lib/types';
 import { formatEuro, formatNumber } from '@/lib/format';
 import QuotationModal from './QuotationModal';
 
@@ -94,7 +96,14 @@ export default function CashflowCard({
                       <div className="text-xs text-ink-faint">vervallen {o.dueOn || o.invoiceDate}</div>
                     </td>
                     <td className="px-3 py-2 text-right tabular-nums font-medium text-crit">{o.daysOverdue}d</td>
-                    <td className="px-3 py-2 text-right tabular-nums text-ink-soft">{formatEuro(o.amount)}</td>
+                    <td className="px-3 py-2 text-right tabular-nums text-ink-soft">
+                      {o.originalAmount != null && (
+                        <span className="mr-1.5 text-xs text-ink-faint line-through">
+                          {formatEuro(o.originalAmount)}
+                        </span>
+                      )}
+                      {formatEuro(o.amount)}
+                    </td>
                   </tr>
                 );
               })}
@@ -173,7 +182,7 @@ function BucketModal({
                 <th className="px-5 py-2 text-left font-medium">Klant</th>
                 <th className="px-3 py-2 text-left font-medium">Vloer</th>
                 <th className="px-3 py-2 text-right font-medium">m²</th>
-                <th className="px-5 py-2 text-right font-medium">Omzet</th>
+                <th className="px-5 py-2 text-right font-medium">Openstaand</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-hair">
@@ -194,8 +203,8 @@ function BucketModal({
                   <td className="px-3 py-2.5 text-right tabular-nums text-ink-soft">
                     {inv.m2 != null ? `${formatNumber(inv.m2)} m²` : <span className="text-ink-faint">—</span>}
                   </td>
-                  <td className="px-5 py-2.5 text-right tabular-nums text-ink">
-                    {formatEuro(inv.amount)}
+                  <td className="px-5 py-2.5 text-right">
+                    <OpenstaandCel invoice={inv} />
                   </td>
                 </tr>
               ))}
@@ -203,6 +212,108 @@ function BucketModal({
           </table>
         </div>
       </div>
+    </div>
+  );
+}
+
+/**
+ * Wat er nog openstaat op één factuur, met de mogelijkheid het bij te stellen.
+ *
+ * Teamleader kent een factuur alleen als betaald of niet betaald. Betaalt een
+ * klant de helft vooruit, dan blijft hier het volle bedrag staan en overdrijft
+ * de cashflow. Vandaar dit vinkje: aanzetten, invullen wat er werkelijk nog
+ * openstaat, en de aging rekent daarmee. Nul betekent voldaan — de factuur
+ * verdwijnt dan uit het overzicht.
+ */
+function OpenstaandCel({ invoice }: { invoice: AgingInvoice }) {
+  const router = useRouter();
+  const bijgesteld = invoice.originalAmount != null;
+  const [open, setOpen] = useState(false);
+  const [bedrag, setBedrag] = useState(String(invoice.amount));
+  const [busy, setBusy] = useState(false);
+  const [fout, setFout] = useState<string | null>(null);
+
+  async function bewaar(openIncl: number | null) {
+    setBusy(true);
+    setFout(null);
+    try {
+      const res = await fetch('/api/invoices', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: invoice.id, openIncl }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.ok) {
+        setFout(data.error || 'Opslaan mislukt.');
+        return;
+      }
+      setOpen(false);
+      router.refresh(); // aging wordt server-side opnieuw berekend
+    } catch {
+      setFout('Opslaan mislukt (netwerk).');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (!open) {
+    return (
+      <div className="flex items-center justify-end gap-2">
+        {bijgesteld && (
+          <span className="text-xs text-ink-faint line-through">
+            {formatEuro(invoice.originalAmount)}
+          </span>
+        )}
+        <span className="tabular-nums text-ink">{formatEuro(invoice.amount)}</span>
+        <button
+          type="button"
+          onClick={() => {
+            setBedrag(String(invoice.amount));
+            setOpen(true);
+          }}
+          title="Deels betaald: vul in wat er nog openstaat"
+          aria-label="Openstaand bedrag bijstellen"
+          className="rounded p-1 text-ink-faint transition hover:bg-sunk hover:text-ink-soft"
+        >
+          <Pencil size={12} strokeWidth={2} />
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col items-end gap-1">
+      <div className="flex items-center justify-end gap-1">
+        <span className="text-xs text-ink-faint">€</span>
+        <input
+          type="number"
+          step="0.01"
+          min="0"
+          autoFocus
+          value={bedrag}
+          onChange={(e) => setBedrag(e.target.value)}
+          className="w-24 rounded border border-line px-2 py-1 text-right text-xs tabular-nums outline-none focus:border-accent"
+        />
+        <button
+          type="button"
+          disabled={busy || bedrag.trim() === ''}
+          onClick={() => bewaar(Number(bedrag))}
+          title="Opslaan"
+          className="rounded bg-accent p-1 text-white transition hover:bg-accent/90 disabled:opacity-40"
+        >
+          <Check size={12} strokeWidth={2.4} />
+        </button>
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => (bijgesteld ? bewaar(null) : setOpen(false))}
+          title={bijgesteld ? 'Terug naar het bedrag uit Teamleader' : 'Annuleren'}
+          className="rounded p-1 text-ink-faint transition hover:bg-sunk hover:text-ink-soft"
+        >
+          <X size={12} strokeWidth={2.4} />
+        </button>
+      </div>
+      {fout && <span className="text-[11px] text-crit">{fout}</span>}
     </div>
   );
 }

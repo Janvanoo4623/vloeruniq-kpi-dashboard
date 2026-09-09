@@ -5,6 +5,7 @@ import { dateOnly, round } from './dates';
 import { formatProduct } from '../format';
 import type {
   AgingBucket,
+  InvoiceAdjustment,
   InvoiceRow,
   InvoicingSummary,
   OverdueInvoice,
@@ -156,11 +157,19 @@ function matchQuotation(
   return best;
 }
 
-/** Bucket outstanding (unpaid, non-draft) invoices by days past due, as of `asOf`. */
+/**
+ * Bucket outstanding (unpaid, non-draft) invoices by days past due, as of `asOf`.
+ *
+ * `adjustments` bevat handmatig ingevulde openstaande bedragen voor facturen die
+ * deels zijn betaald. Teamleader kent alleen betaald of niet betaald, dus zonder
+ * die correctie staat een factuur waarvan de helft is aanbetaald hier voor het
+ * volle bedrag. Een correctie van nul betekent: helemaal voldaan.
+ */
 export function computeAging(
   invoices: InvoiceRow[],
   asOf: string,
   quotations: QuotationRow[] = [],
+  adjustments: Record<string, InvoiceAdjustment> = {},
 ): { buckets: AgingBucket[]; overdue: OverdueInvoice[]; totalOutstanding: number } {
   const asOfMs = Date.parse(asOf);
   const DAY = 86400000;
@@ -179,8 +188,12 @@ export function computeAging(
     if (CASHFLOW_EXCLUDE.test(inv.customerName)) continue;
     const ref = inv.dueOn || inv.invoiceDate;
     if (!ref) continue;
+    const correctie = adjustments[inv.id];
+    const openstaand = correctie ? correctie.openIncl : inv.dueIncl;
+    if (openstaand <= 0) continue; // handmatig op nul gezet = voldaan
+    const origineel = correctie ? inv.dueIncl : undefined;
     const daysOverdue = Math.floor((asOfMs - Date.parse(ref)) / DAY);
-    totalOutstanding += inv.dueIncl;
+    totalOutstanding += openstaand;
 
     const q = matchQuotation(inv, byCustomer);
     const vloer =
@@ -190,14 +203,15 @@ export function computeAging(
 
     const bi = BUCKETS.findIndex((b) => daysOverdue >= b.min && daysOverdue <= b.max);
     if (bi >= 0) {
-      buckets[bi].amount += inv.dueIncl;
+      buckets[bi].amount += openstaand;
       buckets[bi].count += 1;
       buckets[bi].invoices.push({
         id: inv.id,
         customerName: inv.customerName || inv.customerId || '—',
         invoiceDate: inv.invoiceDate,
         dueOn: inv.dueOn,
-        amount: inv.dueIncl,
+        amount: openstaand,
+        ...(origineel != null ? { originalAmount: origineel } : {}),
         daysOverdue,
         vloer,
         m2: q ? q.totalM2 : null,
@@ -210,7 +224,8 @@ export function computeAging(
         customerName: inv.customerName || inv.customerId || '—',
         invoiceDate: inv.invoiceDate,
         dueOn: inv.dueOn,
-        amount: inv.dueIncl,
+        amount: openstaand,
+        ...(origineel != null ? { originalAmount: origineel } : {}),
         daysOverdue,
         quotation: q,
       });

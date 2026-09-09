@@ -196,13 +196,27 @@ export interface InvoiceRow {
   paidAt: string; // payment date YYYY-MM-DD ('' if unpaid / unknown)
 }
 
+/**
+ * Handmatig ingevuld openstaand bedrag op een factuur die deels is betaald.
+ * Teamleader kent alleen betaald of niet betaald; een aanbetaling van de helft
+ * blijft daar voor het volle bedrag openstaan. Zie lib/db.ts.
+ */
+export interface InvoiceAdjustment {
+  /** Wat er nog openstaat, incl btw. */
+  openIncl: number;
+  note?: string;
+  updatedAt: string;
+}
+
 /** One outstanding invoice within an aging bucket (drives the drill-down modal). */
 export interface AgingInvoice {
   id: string;
   customerName: string;
   invoiceDate: string;
   dueOn: string;
-  amount: number; // due incl VAT
+  amount: number; // openstaand incl btw (handmatig bedrag gaat vóór)
+  /** Het bedrag uit Teamleader, als een mens het handmatig heeft bijgesteld. */
+  originalAmount?: number;
   daysOverdue: number;
   vloer: string | null; // matched floor product(s) from the customer's quotation
   m2: number | null; // matched quotation m²
@@ -221,7 +235,8 @@ export interface OverdueInvoice {
   customerName: string;
   invoiceDate: string;
   dueOn: string;
-  amount: number; // due incl VAT
+  amount: number; // openstaand incl btw (handmatig bedrag gaat vóór)
+  originalAmount?: number;
   daysOverdue: number;
   quotation: QuotationRow | null; // matched quotation (drives the drill-down modal)
 }

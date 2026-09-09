@@ -6,6 +6,7 @@ import {
   getExclusions,
   getResolveInput,
   getAllDeals,
+  getInvoiceAdjustments,
 } from '@/lib/db';
 import { computeAging, summarizeInvoices } from '@/lib/teamleader/invoices';
 import { snapshotForRange } from '@/lib/range';
@@ -25,15 +26,17 @@ export const dynamic = 'force-dynamic';
  * Alle zware berekeningen blijven server-side; de client krijgt alleen resultaat.
  */
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const [meta, invoices, quotations, prices, exclusions, resolveInput, deals] = await Promise.all([
-    getMeta(),
-    getAllInvoices(),
-    getAllQuotations(),
-    getCurrentPrices(),
-    getExclusions(),
-    getResolveInput(),
-    getAllDeals(),
-  ]);
+  const [meta, invoices, quotations, prices, exclusions, resolveInput, deals, adjustments] =
+    await Promise.all([
+      getMeta(),
+      getAllInvoices(),
+      getAllQuotations(),
+      getCurrentPrices(),
+      getExclusions(),
+      getResolveInput(),
+      getAllDeals(),
+      getInvoiceAdjustments(),
+    ]);
 
   const today = new Date().toISOString().split('T')[0];
   // Marges worden bij het lezen berekend uit de prijslijst en de kosten die op
@@ -56,7 +59,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
     new Date().toISOString(),
   );
 
-  const aging = computeAging(invoices, today, resolvedQuotations);
+  const aging = computeAging(invoices, today, resolvedQuotations, adjustments);
   const pipeline = computePipeline(resolvedQuotations, exclusions, today);
   const payments = computePaymentStats(invoices, today);
   const pricedCodes = prices.map((p) => p.code.toLowerCase());

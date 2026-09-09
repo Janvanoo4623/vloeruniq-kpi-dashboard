@@ -4,6 +4,7 @@ import { supabase } from './supabase';
 import { deriveDateParts } from './teamleader/dates';
 import type { PriceRow, CostRow } from './pricing';
 import type {
+  InvoiceAdjustment,
   InvoiceRow,
   QuotationLine,
   QuotationOverride,
@@ -706,4 +707,33 @@ export async function getResolveInput(): Promise<import('./resolve').ResolveInpu
     getOverrides(),
   ]);
   return { prices, costs, overrides };
+}
+
+// ── Handmatig openstaand bedrag per factuur ─────────────────────────────
+/**
+ * Teamleader kent een factuur alleen als betaald of niet betaald. Een klant die
+ * de helft aanbetaalt laat dus het volle bedrag openstaan, en de cashflow
+ * overdrijft. Jan vult daarom zelf in wat er nog openstaat.
+ *
+ * Bewust in `app_settings` en niet in een eigen tabel: het gaat om een handvol
+ * facturen, de tabel bestaat al, en zo is er geen migratie nodig die met de hand
+ * in Supabase moet worden geplakt vóór de functie werkt.
+ */
+const OPENSTAAND_KEY = 'invoice_open_amounts';
+
+export async function getInvoiceAdjustments(): Promise<Record<string, InvoiceAdjustment>> {
+  return getAppSetting<Record<string, InvoiceAdjustment>>(OPENSTAAND_KEY, {});
+}
+
+/** `openIncl === null` wist de correctie en zet de factuur terug op Teamleader. */
+export async function setInvoiceAdjustment(
+  id: string,
+  openIncl: number | null,
+  note?: string,
+): Promise<Record<string, InvoiceAdjustment>> {
+  const huidig = await getInvoiceAdjustments();
+  if (openIncl === null) delete huidig[id];
+  else huidig[id] = { openIncl, note: note?.trim() || undefined, updatedAt: new Date().toISOString() };
+  await setAppSetting(OPENSTAAND_KEY, huidig);
+  return huidig;
 }
