@@ -3,7 +3,9 @@
 import { useMemo, useState } from 'react';
 import type { RegionInsight } from '@/lib/insights';
 import type { MarketShareOverview } from '@/lib/market-share';
+import type { NieuwbouwOverview } from '@/lib/nieuwbouw';
 import MarktaandeelPanel from './MarktaandeelPanel';
+import NieuwbouwPanel from './NieuwbouwPanel';
 import { formatEuro, formatNumber, formatPercent } from '@/lib/format';
 import { Empty, Panel, SectionLabel, cn } from '@/components/ui';
 import { Pagination, usePaged } from '@/components/ui/Pagination';
@@ -23,10 +25,12 @@ export default function RegioView({
   regions,
   minSample,
   marketShare,
+  nieuwbouw,
 }: {
   regions: RegionInsight[];
   minSample: number;
   marketShare: MarketShareOverview;
+  nieuwbouw: NieuwbouwOverview;
 }) {
   const [sort, setSort] = useState<SortKey>('revenue');
   // Hooks vóór elke early return: React eist dezelfde volgorde bij elke render.
@@ -90,6 +94,8 @@ export default function RegioView({
       </section>
 
       <MarktaandeelPanel data={marketShare} />
+
+      <NieuwbouwPanel data={nieuwbouw} />
 
       <Panel
         title="Winkans en marge per plaats"

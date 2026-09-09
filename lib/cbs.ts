@@ -170,3 +170,81 @@ export async function fetchAllMoves(fromPeriod = '2025MM01'): Promise<Record<str
   );
   return Object.fromEntries(paren);
 }
+
+// ── Nieuwbouw: vergunde woningen per gemeente (tabel 83671NED) ───────────
+//
+// Waarom deze bron erbij. Verhuizingen zijn de vraag van vandaag; een verleende
+// bouwvergunning is de vraag van over anderhalf tot twee jaar. Voor een
+// vloerenbedrijf is dat het bruikbaarste vooruitzicht dat open data biedt: elke
+// vergunde woning krijgt een vloer, en de gemeente staat erbij.
+//
+// Tabel 83671NED, "Bouwvergunningen woonruimten; type, opdrachtgever, eigendom,
+// gemeente", per kwartaal vanaf 2012. Dezelfde GM-codes als de verhuiscijfers,
+// dus de bestaande vertaaltabel plaats → gemeente werkt ook hier.
+//
+// Geverifieerd op 2026-09-09: Hellendoorn (GM0163) geeft tien kwartalen vanaf
+// 2024, laatste meting 2026 kwartaal 2 — de reeks loopt dus ongeveer een
+// kwartaal achter.
+const NIEUWBOUW_BASE = 'https://opendata.cbs.nl/ODataApi/OData/83671NED';
+const ALLE_OPDRACHTGEVERS = 'T001209';
+const ALLE_EIGENDOM = 'T001258';
+
+export interface CbsNieuwbouw {
+  /** "2026-K2" */
+  period: string;
+  /** Vergunde nieuwbouwwoningen in dat kwartaal. */
+  permits: number;
+}
+
+/** "2026KW02" → "2026-K2"; jaar- en maandrijen geven null. */
+function toQuarter(perioden: string): string | null {
+  const m = perioden.trim().match(/^(\d{4})KW(\d{2})$/);
+  return m ? `${m[1]}-K${Number(m[2])}` : null;
+}
+
+/** Vergunde nieuwbouwwoningen per kwartaal voor één gemeente. Faalt zacht. */
+export async function fetchNieuwbouw(
+  gemeenteCode: string,
+  fromPeriod = '2024KW01',
+): Promise<CbsNieuwbouw[]> {
+  const filter = [
+    `RegioS eq '${gemeenteCode}'`,
+    `Opdrachtgever eq '${ALLE_OPDRACHTGEVERS}'`,
+    `Eigendom eq '${ALLE_EIGENDOM}'`,
+    `Perioden ge '${fromPeriod}'`,
+  ].join(' and ');
+  const url =
+    `${NIEUWBOUW_BASE}/TypedDataSet?$select=Perioden,Woningen_2` +
+    `&$filter=${encodeURIComponent(filter)}`;
+
+  try {
+    const res = await fetch(url, {
+      next: { revalidate: 86400 },
+      headers: { Accept: 'application/json' },
+    });
+    if (!res.ok) return [];
+    const body = (await res.json()) as {
+      value?: { Perioden?: string; Woningen_2?: number | null }[];
+    };
+    const uit: CbsNieuwbouw[] = [];
+    for (const r of body.value ?? []) {
+      const period = toQuarter(r.Perioden ?? '');
+      if (!period) continue; // jaartotalen zouden dubbel tellen
+      uit.push({ period, permits: r.Woningen_2 ?? 0 });
+    }
+    return uit.sort((a, b) => a.period.localeCompare(b.period));
+  } catch {
+    return [];
+  }
+}
+
+/** De kwartaalreeksen voor alle gemeenten in de vertaaltabel, parallel. */
+export async function fetchAllNieuwbouw(
+  fromPeriod = '2024KW01',
+): Promise<Record<string, CbsNieuwbouw[]>> {
+  const codes = [...new Set(Object.values(PLAATS_NAAR_GEMEENTE))];
+  const paren = await Promise.all(
+    codes.map(async (code) => [code, await fetchNieuwbouw(code, fromPeriod)] as const),
+  );
+  return Object.fromEntries(paren);
+}

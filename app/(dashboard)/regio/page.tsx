@@ -2,7 +2,8 @@ import { getAllQuotations, getResolveInput, getAppSetting } from '@/lib/db';
 import { resolveQuotations } from '@/lib/resolve';
 import { regionInsights } from '@/lib/insights';
 import { buildMarketShare } from '@/lib/market-share';
-import { fetchAllMoves, fetchRegionNames } from '@/lib/cbs';
+import { buildNieuwbouw } from '@/lib/nieuwbouw';
+import { fetchAllMoves, fetchAllNieuwbouw, fetchRegionNames } from '@/lib/cbs';
 import { DEFAULT_KPI_SETTINGS, parseKpiSettings } from '@/lib/kpi-settings';
 import RegioView from '@/components/pages/RegioView';
 
@@ -15,12 +16,13 @@ export const dynamic = 'force-dynamic';
  */
 export default async function RegioPage() {
   const asOf = new Date().toISOString().split('T')[0];
-  const [quotations, resolveInput, rawSettings, moves, namen] = await Promise.all([
+  const [quotations, resolveInput, rawSettings, moves, namen, permits] = await Promise.all([
     getAllQuotations(),
     getResolveInput(),
     getAppSetting('kpi', DEFAULT_KPI_SETTINGS),
     fetchAllMoves(),
     fetchRegionNames(),
+    fetchAllNieuwbouw(),
   ]);
   const settings = parseKpiSettings(rawSettings);
   const resolved = resolveQuotations(quotations, resolveInput);
@@ -30,6 +32,7 @@ export default async function RegioPage() {
       regions={regionInsights(resolved, asOf, settings)}
       minSample={settings.minSample}
       marketShare={buildMarketShare(resolved, moves, namen, asOf, settings)}
+      nieuwbouw={buildNieuwbouw(resolved, permits, namen)}
     />
   );
 }
