@@ -91,6 +91,46 @@ export interface QuotationOverride {
   noLabor: boolean;
   prices: Record<string, number>; // line code (lowercased) -> purchase €/m²
   note?: string;
+  /** Handmatig overschreven velden op de offerte zelf — zie QuotationFields. */
+  fields?: QuotationFields;
+}
+
+/** Eén handmatig aangepaste vloerregel. Alleen ingevulde velden overschrijven. */
+export interface QuotationLineOverride {
+  code?: string;
+  m2?: number;
+  revenue?: number;
+  underlayPerM2?: number;
+  laborPerM2?: number;
+}
+
+/**
+ * Velden die een mens op een offerte kan overschrijven omdat Teamleader ze
+ * verkeerd of niet levert (feedback 2026-08-27: "ieder veld moet aangepast
+ * kunnen worden").
+ *
+ * Bewust NIET: klantnaam, plaats en postcode. Daar hangen de klant- en
+ * regioanalyses aan, en een handmatige naam laat die stilletjes uiteenlopen met
+ * Teamleader.
+ *
+ * De inkoopprijs per regel staat hier ook niet in: die blijft in het bestaande
+ * prijs-override-mechanisme (per product), zodat er één plek is waar een
+ * afwijkende inkoopprijs vandaan komt en de pagina Uitzonderingen hem blijft
+ * tonen.
+ *
+ * Regels worden op volgnummer bewaard. Verandert het aantal regels — de offerte
+ * is in Teamleader herzien — dan slaan de regelcorrecties nergens meer op en
+ * worden ze genegeerd in plaats van op de verkeerde regel toegepast.
+ */
+export interface QuotationFields {
+  revenueExVat?: number;
+  omzetVloer?: number;
+  status?: QuotationStatus;
+  dateCreated?: string;
+  dateAccepted?: string;
+  lines?: Record<string, QuotationLineOverride>;
+  /** Aantal regels op het moment van corrigeren. */
+  lineCount?: number;
 }
 
 /** One row of the Run Time table (per won deal). */

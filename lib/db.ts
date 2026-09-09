@@ -6,6 +6,7 @@ import type { PriceRow, CostRow } from './pricing';
 import type {
   InvoiceAdjustment,
   InvoiceRow,
+  QuotationFields,
   QuotationLine,
   QuotationOverride,
   QuotationRow,
@@ -445,11 +446,33 @@ export async function setReviewed(
 }
 
 // ── Per-quotation overrides (special price / no-labour) ─────────────────
+/**
+ * Ontbreekt een kolom (migratie nog niet gedraaid), dan komt dat in twee
+ * gedaanten binnen: Postgres zegt 42703 "column ... does not exist", PostgREST
+ * zegt PGRST204 "Could not find the 'x' column of 'y' in the schema cache".
+ * Precies dezelfde valkuil als bij een ontbrekende tabel — alleen op de eerste
+ * vorm controleren betekent dat de gebruiker een databasefout in beeld krijgt in
+ * plaats van te horen dat er een migratie klaarstaat.
+ */
+function isMissingColumn(error: { code?: string; message?: string } | null): boolean {
+  if (!error) return false;
+  return (
+    error.code === '42703' ||
+    error.code === 'PGRST204' ||
+    /column .* does not exist|could not find the .* column/i.test(error.message ?? '')
+  );
+}
+
 /** All overrides keyed by quotation id. line_code '' carries the offerte-level flag. */
 export async function getOverrides(): Promise<Record<string, QuotationOverride>> {
-  const { data, error } = await supabase()
-    .from('quotation_overrides')
-    .select('quotation_id, line_code, purchase_per_m2, no_labor, note');
+  const KOLOMMEN = 'quotation_id, line_code, purchase_per_m2, no_labor, note, fields';
+  let { data, error } = await supabase().from('quotation_overrides').select(KOLOMMEN);
+  if (error && isMissingColumn(error)) {
+    // De 'fields'-migratie is nog niet gedraaid: lees de rest gewoon.
+    ({ data, error } = await supabase()
+      .from('quotation_overrides')
+      .select('quotation_id, line_code, purchase_per_m2, no_labor, note'));
+  }
   if (error) {
     // Table not created yet (migration pending): degrade gracefully so the
     // dashboard keeps working with no corrections applied.
@@ -464,6 +487,8 @@ export async function getOverrides(): Promise<Record<string, QuotationOverride>>
     if (code === '') {
       ov.noLabor = Boolean(r.no_labor);
       if (r.note) ov.note = r.note as string;
+      const f = (r as { fields?: QuotationFields }).fields;
+      if (f && Object.keys(f).length > 0) ov.fields = f;
     } else if (r.purchase_per_m2 != null) {
       ov.prices[code.toLowerCase()] = num(r.purchase_per_m2);
     }
@@ -510,6 +535,39 @@ export async function setOverrideNoLabor(
       { onConflict: 'quotation_id,line_code' },
     );
   if (error) throw new Error(`db.setOverrideNoLabor: ${error.message}`);
+}
+
+/**
+ * Handmatig overschreven velden op een offerte (line_code ''). `null` wist ze.
+ *
+ * Ontbreekt de kolom nog, dan krijgt de gebruiker een leesbare melding in plaats
+ * van een stacktrace: dit is het enige stuk van de app dat een migratie nodig
+ * heeft die niet vanzelf meekomt.
+ */
+export async function setOverrideFields(
+  quotationId: string,
+  fields: QuotationFields | null,
+): Promise<void> {
+  const { error } = await supabase()
+    .from('quotation_overrides')
+    .upsert(
+      {
+        quotation_id: quotationId,
+        line_code: '',
+        fields: fields && Object.keys(fields).length > 0 ? fields : null,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'quotation_id,line_code' },
+    );
+  if (error) {
+    if (isMissingColumn(error)) {
+      throw new Error(
+        'De kolom quotation_overrides.fields bestaat nog niet. Draai de migratie uit ' +
+          'supabase/schema.sql in de Supabase SQL-editor en probeer het opnieuw.',
+      );
+    }
+    throw new Error(`db.setOverrideFields: ${error.message}`);
+  }
 }
 
 // ── Read all quotations / deals (for date-range aggregation) ────────────

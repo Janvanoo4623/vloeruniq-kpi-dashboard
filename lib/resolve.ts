@@ -24,7 +24,15 @@ import { costsForDate, priceConfigForDate, type CostRow, type PriceRow } from '.
 import type { PriceConfig } from './teamleader/price-map';
 import { buildSnapshot } from './teamleader/aggregate';
 import type { AggLine } from './teamleader/quotations';
-import type { QuotationLine, QuotationOverride, QuotationRow, Snapshot } from './types';
+import { deriveDateParts } from './teamleader/dates';
+import type {
+  QuotationFields,
+  QuotationLine,
+  QuotationLineOverride,
+  QuotationOverride,
+  QuotationRow,
+  Snapshot,
+} from './types';
 
 const round2 = (v: number) => Math.round(v * 100) / 100;
 const round1 = (v: number) => Math.round(v * 10) / 10;
@@ -98,6 +106,83 @@ function ratesForLine(
   return { underlay, labor };
 }
 
+/**
+ * Handmatig overschreven offertevelden toepassen vóór er iets wordt gerekend.
+ * Status en datums horen hier: ze bepalen in welke periode de offerte valt en
+ * hoe de maand/kwartaal-indeling uitvalt, dus die moeten kloppen vóór de
+ * aggregatie eroverheen loopt.
+ *
+ * Regelcorrecties gaan op volgnummer. Is het aantal regels sinds het corrigeren
+ * veranderd, dan is de offerte in Teamleader herzien en slaan ze nergens meer
+ * op; ze worden dan genegeerd in plaats van op een andere regel toegepast.
+ */
+function applyFields(q: QuotationRow, fields: QuotationFields): QuotationRow {
+  const lines = q.lines ?? [];
+  const regelCorrecties: Record<string, QuotationLineOverride> =
+    fields.lines && (fields.lineCount == null || fields.lineCount === lines.length)
+      ? fields.lines
+      : {};
+
+  let deltaM2 = 0;
+  let deltaOmzet = 0;
+  const nieuweRegels = lines.map((l, i) => {
+    const c = regelCorrecties[String(i)];
+    if (!c) return l;
+    const m2 = c.m2 ?? l.m2;
+    const revenue = c.revenue ?? l.revenue;
+    deltaM2 += m2 - l.m2;
+    deltaOmzet += revenue - l.revenue;
+    return {
+      ...l,
+      code: c.code?.trim() || l.code,
+      m2,
+      revenue,
+      ...(c.underlayPerM2 != null ? { underlayPerM2: c.underlayPerM2 } : {}),
+      ...(c.laborPerM2 != null ? { laborPerM2: c.laborPerM2 } : {}),
+    };
+  });
+
+  const status = fields.status ?? q.status;
+  const dateCreated = fields.dateCreated ?? q.dateCreated;
+  const dateAccepted = fields.dateAccepted ?? q.dateAccepted;
+  const relevant = status !== 'open' && dateAccepted ? dateAccepted : dateCreated;
+  const { month, quarter, year } = deriveDateParts(relevant);
+
+  const totalM2 = Math.round((q.totalM2 + deltaM2) * 100) / 100;
+  const omzetVloer = fields.omzetVloer ?? round2(q.omzetVloer + deltaOmzet);
+
+  return {
+    ...q,
+    status,
+    dateCreated,
+    dateAccepted,
+    month,
+    quarter,
+    year,
+    lines: nieuweRegels,
+    totalM2,
+    omzetVloer,
+    revenueExVat: fields.revenueExVat ?? q.revenueExVat,
+    prijsPerM2: totalM2 > 0 ? round2(omzetVloer / totalM2) : 0,
+  };
+}
+
+/**
+ * Welke velden een mens heeft aangepast, zodat de modal ze kan merken als
+ * handmatig. Puur afgeleid, staat nergens opgeslagen.
+ */
+export function overriddenFieldKeys(fields: QuotationFields | undefined): Set<string> {
+  const keys = new Set<string>();
+  if (!fields) return keys;
+  for (const k of ['revenueExVat', 'omzetVloer', 'status', 'dateCreated', 'dateAccepted'] as const) {
+    if (fields[k] != null) keys.add(k);
+  }
+  for (const [i, c] of Object.entries(fields.lines ?? {})) {
+    for (const k of Object.keys(c)) keys.add(`lines.${i}.${k}`);
+  }
+  return keys;
+}
+
 /** Eén offerte doorrekenen tegen de prijzen en kosten van zijn eigen datum. */
 function recompute(
   q: QuotationRow,
@@ -105,8 +190,9 @@ function recompute(
   costs: { alwaysPerM2: number; gluedPerM2: number; selfAdhesivePerM2: number },
   override: QuotationOverride | undefined,
 ): QuotationRow {
-  const lines = q.lines ?? [];
-  if (lines.length === 0) return q;
+  const basis = override?.fields ? applyFields(q, override.fields) : q;
+  const lines = basis.lines ?? [];
+  if (lines.length === 0) return basis;
 
   let material = 0;
   let laborTotal = 0;
@@ -138,15 +224,15 @@ function recompute(
   });
 
   if (!hasMatch || m2WithMatch <= 0) {
-    return { ...q, lines: newLines, cost: null, margin: null, marginPct: null, verified: false };
+    return { ...basis, lines: newLines, cost: null, margin: null, marginPct: null, verified: false };
   }
 
   const cost = material + laborTotal;
-  const margin = round2(q.omzetVloer - cost);
-  const marginPct = q.omzetVloer > 0 ? round1((margin / q.omzetVloer) * 100) : null;
-  const matchCoverage = q.totalM2 > 0 ? round1((m2WithMatch / q.totalM2) * 100) : null;
+  const margin = round2(basis.omzetVloer - cost);
+  const marginPct = basis.omzetVloer > 0 ? round1((margin / basis.omzetVloer) * 100) : null;
+  const matchCoverage = basis.totalM2 > 0 ? round1((m2WithMatch / basis.totalM2) * 100) : null;
   return {
-    ...q,
+    ...basis,
     lines: newLines,
     cost: round2(cost),
     margin,

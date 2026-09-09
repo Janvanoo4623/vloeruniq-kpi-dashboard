@@ -134,6 +134,9 @@ create table if not exists quotation_overrides (
   updated_at timestamptz default now(),
   primary key (quotation_id, line_code)
 );
+-- Handmatig overschreven velden (m², omzet, status, datums, tarieven per regel).
+-- Staat op de offerte-niveau rij (line_code ''). Zie lib/types.ts QuotationFields.
+alter table quotation_overrides add column if not exists fields jsonb;
 
 -- Cached computed snapshot (single row) for fast dashboard reads.
 create table if not exists snapshot_cache (

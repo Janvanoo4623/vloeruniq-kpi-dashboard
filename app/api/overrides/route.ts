@@ -4,6 +4,7 @@
 import { NextResponse } from 'next/server';
 import {
   getOverrides,
+  setOverrideFields,
   setOverridePrice,
   setOverrideNoLabor,
   setReviewed,
@@ -11,6 +12,7 @@ import {
   removeExclusion,
   type ReviewScope,
 } from '@/lib/db';
+import type { QuotationFields } from '@/lib/types';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -39,6 +41,13 @@ export async function POST(request: Request) {
         const price = Number(body.price);
         if (!Number.isFinite(price) || price < 0) return bad('Ongeldige inkoopprijs.');
         await setOverridePrice(quotationId, lineCode, price);
+        break;
+      }
+      case 'fields': {
+        // Handmatig overschreven velden op de offerte zelf (m², omzet, status,
+        // datums, tarieven per regel). null wist ze allemaal.
+        const fields = body.fields == null ? null : (body.fields as QuotationFields);
+        await setOverrideFields(quotationId, fields);
         break;
       }
       case 'no-labor': {
