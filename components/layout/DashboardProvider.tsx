@@ -5,6 +5,7 @@ import type { Snapshot, SyncMeta, RevenueTotals, AgingBucket, OverdueInvoice } f
 import type { PipelineStats } from '@/lib/pipeline';
 import type { PaymentStats } from '@/lib/payments';
 import { weeklySeries, type WeeklyPoint } from '@/lib/series';
+import type { PerM2Stats } from '@/lib/insights';
 import { presetRange, type RangeState } from '@/components/DateRangePicker';
 import { DEFAULT_PRESET } from '@/lib/default-range';
 
@@ -19,6 +20,8 @@ export interface Comparison {
   to: string;
   revenue: RevenueTotals;
   runTime: { avgRunTimeDays: number; dealsTracked: number };
+  /** Omzet/kostprijs/marge per m² over de vergelijkingsperiode. */
+  perM2?: PerM2Stats;
 }
 
 export interface DashboardData {

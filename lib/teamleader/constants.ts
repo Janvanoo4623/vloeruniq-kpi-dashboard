@@ -23,3 +23,16 @@ export const PAGE_SIZE = 20;
 
 /** Concurrency cap for per-record detail fetches (rate-limit friendly). */
 export const FETCH_CONCURRENCY = 4;
+
+/**
+ * Ingebouwde tarieven waarop wordt teruggevallen zolang `cost_settings` nog geen
+ * rij voor een sleutel heeft. Staat hier zodat het synchroniseren en het
+ * herberekenen bij het lezen (lib/resolve.ts) dezelfde bodem gebruiken.
+ */
+export const COST_FALLBACK: Record<string, number> = {
+  labor: LABOR_COST_PER_M2,
+  primer: PRIMER_COST_PER_M2,
+  glue: GLUE_COST_PER_M2,
+  leveling: LEVELING_COST_PER_M2,
+  selfadhesive: SELF_ADHESIVE_COST_PER_M2,
+};

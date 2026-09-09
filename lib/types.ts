@@ -68,10 +68,10 @@ export interface QuotationLine {
   m2: number;
   margin: number | null;
   desc?: string; // raw line description (for modal transparency; populated at sync time)
-  // Cost components (€/m²) resolved at sync time, so per-quotation corrections
-  // (special purchase price / no-labour) can be recomputed instantly at read
-  // time. Absent on rows synced before this was added — the override recompute
-  // falls back to the default constant rates. See lib/overrides.ts.
+  // Kostcomponenten (€/m²) zoals ze bij de sync golden. Sinds lib/resolve.ts
+  // worden ze bij élke render opnieuw bepaald uit de prijslijst en de kosten van
+  // de offertedatum; deze opgeslagen waarden zijn nog de bodem voor regels die
+  // van vóór installMode/laborRule dateren.
   purchasePerM2?: number; // matched purchase price (absent = unpriced line)
   underlayPerM2?: number; // glued or self-adhesive surcharge (0 for click)
   gluedPerM2?: number; // legacy name for underlayPerM2 (rows synced before 2026-08)

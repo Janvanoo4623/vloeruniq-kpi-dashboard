@@ -101,8 +101,20 @@ export async function setMeta(m: SyncMeta): Promise<void> {
 }
 
 // ── Prices / costs / exclusions ─────────────────────────────────────────
+/**
+ * Alle prijsrijen, oplopend op ingangsdatum en daarbinnen op invoegvolgorde.
+ * Die volgorde is niet cosmetisch: twee rijen kunnen dezelfde ingangsdatum
+ * hebben (twee keer achter elkaar 'met terugwerkende kracht' opslaan), en dan
+ * moet de laatste invoer winnen. Zonder expliciete sortering bepaalt de database
+ * de uitkomst en kan hetzelfde dashboard bij twee bezoeken een ander bedrag
+ * tonen.
+ */
 export async function getPriceRows(): Promise<PriceRow[]> {
-  const { data, error } = await supabase().from('product_prices').select('code, price, effective_from');
+  const { data, error } = await supabase()
+    .from('product_prices')
+    .select('code, price, effective_from')
+    .order('effective_from', { ascending: true })
+    .order('id', { ascending: true });
   if (error) throw new Error(`db.getPriceRows: ${error.message}`);
   return (data ?? []).map((r) => ({
     code: r.code,
@@ -111,8 +123,13 @@ export async function getPriceRows(): Promise<PriceRow[]> {
   }));
 }
 
+/** Alle kostenrijen, in dezelfde volgorde en om dezelfde reden als getPriceRows(). */
 export async function getCostRows(): Promise<CostRow[]> {
-  const { data, error } = await supabase().from('cost_settings').select('key, value, effective_from');
+  const { data, error } = await supabase()
+    .from('cost_settings')
+    .select('key, value, effective_from')
+    .order('effective_from', { ascending: true })
+    .order('id', { ascending: true });
   if (error) throw new Error(`db.getCostRows: ${error.message}`);
   return (data ?? []).map((r) => ({
     key: r.key,
@@ -207,7 +224,9 @@ export async function getCurrentPrices(): Promise<CurrentPrice[]> {
   for (const r of rows) {
     if (r.effectiveFrom > d) continue; // not yet effective
     const cur = byCode.get(r.code);
-    if (!cur || r.effectiveFrom > cur.effectiveFrom) {
+    // >= : bij een gelijke ingangsdatum wint de laatst ingevoerde rij (de rijen
+    // komen op invoegvolgorde binnen).
+    if (!cur || r.effectiveFrom >= cur.effectiveFrom) {
       byCode.set(r.code, { price: r.price, effectiveFrom: r.effectiveFrom });
     }
   }
@@ -232,7 +251,7 @@ export async function getCurrentCosts(): Promise<CurrentCost[]> {
   for (const r of rows) {
     if (r.effectiveFrom > d) continue;
     const cur = byKey.get(r.key);
-    if (!cur || r.effectiveFrom > cur.effectiveFrom) {
+    if (!cur || r.effectiveFrom >= cur.effectiveFrom) {
       byKey.set(r.key, { value: r.value, effectiveFrom: r.effectiveFrom });
     }
   }
@@ -673,3 +692,18 @@ export async function getAllInvoices(): Promise<InvoiceRow[]> {
 
 // Re-export the numeric coercers for callers that read raw rows.
 export { num as _num, numOrNull as _numOrNull };
+
+// ── Invoer voor het herberekenen van marges bij het lezen ───────────────
+/**
+ * Prijzen, kosten en handmatige correcties in één keer, in de vorm die
+ * `resolveQuotations()` verwacht. Elke pagina die offertes toont haalt dit op,
+ * zodat een prijswijziging overal tegelijk doorwerkt. Zie lib/resolve.ts.
+ */
+export async function getResolveInput(): Promise<import('./resolve').ResolveInput> {
+  const [prices, costs, overrides] = await Promise.all([
+    getPriceRows(),
+    getCostRows(),
+    getOverrides(),
+  ]);
+  return { prices, costs, overrides };
+}

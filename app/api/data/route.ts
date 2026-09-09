@@ -1,10 +1,11 @@
 // GET /api/data?from&to&compare — aggregate stored quotations/deals/invoices for
 // a date range, with optional period comparison. Session-gated by proxy.ts.
 import { NextResponse } from 'next/server';
-import { getAllQuotations, getAllDeals, getExclusions, getAllInvoices, getOverrides } from '@/lib/db';
+import { getAllQuotations, getAllDeals, getExclusions, getAllInvoices, getResolveInput } from '@/lib/db';
 import { summarizeInvoices } from '@/lib/teamleader/invoices';
 import { snapshotForRange } from '@/lib/range';
-import { applyOverrides } from '@/lib/overrides';
+import { resolveQuotations } from '@/lib/resolve';
+import { perM2Stats } from '@/lib/insights';
 import type { InvoiceRow, InvoicingSummary } from '@/lib/types';
 
 export const runtime = 'nodejs';
@@ -38,15 +39,16 @@ export async function GET(request: Request) {
   const from = url.searchParams.get('from') || iso(Date.now() - 89 * DAY);
   const compare = url.searchParams.get('compare') || 'none'; // none | previous | year
 
-  const [allQuotations, deals, exclusions, invoices, overrides] = await Promise.all([
+  const [allQuotations, deals, exclusions, invoices, resolveInput] = await Promise.all([
     getAllQuotations(),
     getAllDeals(),
     getExclusions(),
     getAllInvoices(),
-    getOverrides(),
+    getResolveInput(),
   ]);
-  // Apply per-quotation corrections at read time (instant + retroactive).
-  const quotations = applyOverrides(allQuotations, overrides);
+  // Marges worden hier berekend, niet bij het synchroniseren: prijzen en kosten
+  // gelden per offertedatum, plus eventuele handmatige correcties.
+  const quotations = resolveQuotations(allQuotations, resolveInput);
   const generatedAt = new Date().toISOString();
 
   const snapshot = snapshotForRange(
@@ -78,6 +80,9 @@ export async function GET(request: Request) {
       revenue: prev.revenue.totals,
       runTime: prev.runTime.totals,
       invoicing: invoicingForRange(invoices, prevFrom, prevTo),
+      // Per-m²-cijfers komen uit de vloerregels, dus die kan de client niet uit
+      // de totalen afleiden — ze gaan hier mee zodat de vergelijking klopt.
+      perM2: perM2Stats(prev.quotations),
     };
   }
 

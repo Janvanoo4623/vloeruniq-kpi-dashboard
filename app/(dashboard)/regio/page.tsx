@@ -1,5 +1,5 @@
-import { getAllQuotations, getOverrides, getAppSetting } from '@/lib/db';
-import { applyOverrides } from '@/lib/overrides';
+import { getAllQuotations, getResolveInput, getAppSetting } from '@/lib/db';
+import { resolveQuotations } from '@/lib/resolve';
 import { regionInsights } from '@/lib/insights';
 import { buildMarketShare } from '@/lib/market-share';
 import { fetchAllMoves, fetchRegionNames } from '@/lib/cbs';
@@ -15,15 +15,15 @@ export const dynamic = 'force-dynamic';
  */
 export default async function RegioPage() {
   const asOf = new Date().toISOString().split('T')[0];
-  const [quotations, overrides, rawSettings, moves, namen] = await Promise.all([
+  const [quotations, resolveInput, rawSettings, moves, namen] = await Promise.all([
     getAllQuotations(),
-    getOverrides(),
+    getResolveInput(),
     getAppSetting('kpi', DEFAULT_KPI_SETTINGS),
     fetchAllMoves(),
     fetchRegionNames(),
   ]);
   const settings = parseKpiSettings(rawSettings);
-  const resolved = applyOverrides(quotations, overrides);
+  const resolved = resolveQuotations(quotations, resolveInput);
 
   return (
     <RegioView

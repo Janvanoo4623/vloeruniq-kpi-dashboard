@@ -40,7 +40,7 @@ export default function Settings({ initial }: { initial: State }) {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
-  async function post(payload: Record<string, unknown>): Promise<boolean> {
+  async function post(payload: Record<string, unknown>, okMessage?: string): Promise<boolean> {
     setBusy(true);
     setMessage(null);
     try {
@@ -58,7 +58,7 @@ export default function Settings({ initial }: { initial: State }) {
           kpi: data.kpi ?? state.kpi,
           quality: state.quality,
         });
-        setMessage('Opgeslagen. Geldt vanaf vandaag voor nieuwe offertes (zichtbaar na de volgende sync).');
+        setMessage(okMessage ?? 'Opgeslagen.');
         return true;
       }
       setMessage(data.error || 'Opslaan mislukt.');
@@ -86,10 +86,11 @@ export default function Settings({ initial }: { initial: State }) {
         </Link>
       </header>
 
-      <div className="mt-4 rounded-lg border border-warn/25 bg-warn-soft px-4 py-2 text-xs text-warn">
-        Wijzigingen zijn <strong>niet met terugwerkende kracht</strong>: ze gelden vanaf vandaag voor
-        nieuwe offertes. Bestaande offertes behouden hun prijs. Het effect wordt zichtbaar na de
-        volgende synchronisatie.
+      <div className="mt-4 rounded-lg border border-line bg-canvas px-4 py-2.5 text-xs leading-relaxed text-ink-mute">
+        Bij elke prijs- of kostenwijziging kies je zelf vanaf wanneer hij geldt. <strong>Vanaf
+        vandaag</strong> laat oude offertes met hun eigen prijs staan; <strong>met terugwerkende
+        kracht</strong> rekent de hele historie opnieuw door. Het effect is meteen zichtbaar, een
+        synchronisatie is er niet meer voor nodig.
       </div>
 
       <div className="mt-4 flex rounded-lg border border-line p-0.5 text-sm w-fit">
@@ -133,10 +134,84 @@ export default function Settings({ initial }: { initial: State }) {
   );
 }
 
-type Post = (payload: Record<string, unknown>) => Promise<boolean>;
+const vandaag = () => new Date().toISOString().split('T')[0];
+
+type Post = (payload: Record<string, unknown>, okMessage?: string) => Promise<boolean>;
 
 function Card({ children }: { children: React.ReactNode }) {
   return <div className="rounded-2xl border border-line bg-white p-5 shadow-sm">{children}</div>;
+}
+
+// ── Vanaf wanneer geldt een wijziging ────────────────────────────────────
+/**
+ * Eén keuze per scherm in plaats van per regel: je verandert zelden de ene prijs
+ * met terugwerkende kracht en de volgende niet. De keuze staat boven de tabel,
+ * zodat je hem ziet vóór je opslaat en niet erna.
+ *
+ * 'terugwerkend' zet de ingangsdatum op 2000-01-01, ver vóór de oudste offerte
+ * (november 2024). Dat is dezelfde datum die de snelinvoer op Controleren
+ * gebruikt: een inkoopprijs die ontbrak was er altijd al, alleen niet vastgelegd.
+ */
+type Ingang = 'terugwerkend' | 'vandaag' | 'datum';
+
+const BEGIN_DER_TIJDEN = '2000-01-01';
+
+function ingangsdatum(keuze: Ingang, datum: string): string | undefined {
+  if (keuze === 'terugwerkend') return BEGIN_DER_TIJDEN;
+  if (keuze === 'datum') return datum || undefined;
+  return undefined; // de server vult vandaag in
+}
+
+function ingangTekst(keuze: Ingang, datum: string): string {
+  if (keuze === 'terugwerkend') return 'Opgeslagen met terugwerkende kracht. Alle marges zijn opnieuw berekend.';
+  if (keuze === 'datum') return `Opgeslagen. Geldt voor offertes vanaf ${datum}.`;
+  return 'Opgeslagen. Geldt vanaf vandaag; oudere offertes houden hun eigen prijs.';
+}
+
+function IngangKiezer({
+  keuze,
+  setKeuze,
+  datum,
+  setDatum,
+}: {
+  keuze: Ingang;
+  setKeuze: (k: Ingang) => void;
+  datum: string;
+  setDatum: (d: string) => void;
+}) {
+  const opties: { key: Ingang; label: string; titel: string }[] = [
+    { key: 'terugwerkend', label: 'Met terugwerkende kracht', titel: 'Geldt voor alle offertes, ook de oudste' },
+    { key: 'vandaag', label: 'Vanaf vandaag', titel: 'Alleen offertes van vandaag en later' },
+    { key: 'datum', label: 'Vanaf datum', titel: 'Zelf een ingangsdatum kiezen' },
+  ];
+  return (
+    <div className="mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-hair bg-sunk/50 px-3 py-2">
+      <span className="text-xs font-medium text-ink-soft">Wijziging geldt</span>
+      <div className="flex rounded-md border border-line bg-white p-0.5">
+        {opties.map((o) => (
+          <button
+            key={o.key}
+            type="button"
+            title={o.titel}
+            onClick={() => setKeuze(o.key)}
+            className={`rounded px-2.5 py-1 text-xs font-medium transition ${
+              keuze === o.key ? 'bg-ink text-white' : 'text-ink-mute hover:text-ink'
+            }`}
+          >
+            {o.label}
+          </button>
+        ))}
+      </div>
+      {keuze === 'datum' && (
+        <input
+          type="date"
+          value={datum}
+          onChange={(e) => setDatum(e.target.value)}
+          className="rounded border border-line px-2 py-1 text-xs tabular-nums outline-none focus:border-accent"
+        />
+      )}
+    </div>
+  );
 }
 
 // ── Prijzen ──────────────────────────────────────────────────────────────
@@ -145,11 +220,15 @@ function PricesTab({ prices, post, busy }: { prices: CurrentPrice[]; post: Post;
   const [query, setQuery] = useState('');
   const [newCode, setNewCode] = useState('');
   const [newPrice, setNewPrice] = useState('');
+  const [keuze, setKeuze] = useState<Ingang>('vandaag');
+  const [datum, setDatum] = useState(vandaag);
 
   const filtered = prices.filter((p) => p.code.toLowerCase().includes(query.toLowerCase()));
 
   return (
     <Card>
+      <IngangKiezer keuze={keuze} setKeuze={setKeuze} datum={datum} setDatum={setDatum} />
+
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <input
           value={query}
@@ -198,7 +277,15 @@ function PricesTab({ prices, post, busy }: { prices: CurrentPrice[]; post: Post;
                     <button
                       disabled={busy || !changed}
                       onClick={async () => {
-                        const ok = await post({ type: 'price', code: p.code, price: Number(val) });
+                        const ok = await post(
+                          {
+                            type: 'price',
+                            code: p.code,
+                            price: Number(val),
+                            effectiveFrom: ingangsdatum(keuze, datum),
+                          },
+                          ingangTekst(keuze, datum),
+                        );
                         if (ok) setEdits((s) => ({ ...s, [p.code]: '' }));
                       }}
                       className="rounded-md bg-accent px-2.5 py-1 text-xs font-medium text-white transition hover:bg-accent/90 disabled:opacity-40"
@@ -237,7 +324,15 @@ function PricesTab({ prices, post, busy }: { prices: CurrentPrice[]; post: Post;
         <button
           disabled={busy || !newCode.trim() || !newPrice.trim()}
           onClick={async () => {
-            const ok = await post({ type: 'price', code: newCode, price: Number(newPrice) });
+            const ok = await post(
+              {
+                type: 'price',
+                code: newCode,
+                price: Number(newPrice),
+                effectiveFrom: ingangsdatum(keuze, datum),
+              },
+              ingangTekst(keuze, datum),
+            );
             if (ok) {
               setNewCode('');
               setNewPrice('');
@@ -265,6 +360,8 @@ function CostsTab({ costs, post, busy }: { costs: CurrentCost[]; post: Post; bus
   const [edits, setEdits] = useState<Record<string, string>>({});
   const [newName, setNewName] = useState('');
   const [newValue, setNewValue] = useState('');
+  const [keuze, setKeuze] = useState<Ingang>('vandaag');
+  const [datum, setDatum] = useState(vandaag);
 
   const byKey = new Map(costs.map((c) => [c.key, c]));
   const extraKeys = costs.map((c) => c.key).filter((k) => !BUILTIN_COSTS.includes(k)).sort();
@@ -272,6 +369,8 @@ function CostsTab({ costs, post, busy }: { costs: CurrentCost[]; post: Post; bus
 
   return (
     <Card>
+      <IngangKiezer keuze={keuze} setKeuze={setKeuze} datum={datum} setDatum={setDatum} />
+
       <p className="mb-3 text-sm text-ink-mute">
         Kosten per m². <strong>Arbeid</strong> en <strong>extra kosten</strong> gelden voor élke
         gelegde vloer — behalve waar de offerte het leggen uitsluit.
@@ -308,7 +407,10 @@ function CostsTab({ costs, post, busy }: { costs: CurrentCost[]; post: Post; bus
               <button
                 disabled={busy || !changed}
                 onClick={async () => {
-                  const ok = await post({ type: 'cost', key, value: Number(val) });
+                  const ok = await post(
+                    { type: 'cost', key, value: Number(val), effectiveFrom: ingangsdatum(keuze, datum) },
+                    ingangTekst(keuze, datum),
+                  );
                   if (ok) setEdits((s) => ({ ...s, [key]: '' }));
                 }}
                 className="ml-auto rounded-md bg-accent px-2.5 py-1 text-xs font-medium text-white transition hover:bg-accent/90 disabled:opacity-40"
@@ -344,7 +446,15 @@ function CostsTab({ costs, post, busy }: { costs: CurrentCost[]; post: Post; bus
         <button
           disabled={busy || !newName.trim() || !newValue.trim()}
           onClick={async () => {
-            const ok = await post({ type: 'cost', key: newName.trim().toLowerCase(), value: Number(newValue) });
+            const ok = await post(
+              {
+                type: 'cost',
+                key: newName.trim().toLowerCase(),
+                value: Number(newValue),
+                effectiveFrom: ingangsdatum(keuze, datum),
+              },
+              ingangTekst(keuze, datum),
+            );
             if (ok) {
               setNewName('');
               setNewValue('');
@@ -355,7 +465,8 @@ function CostsTab({ costs, post, busy }: { costs: CurrentCost[]; post: Post; bus
           Toevoegen
         </button>
         <p className="w-full text-xs text-ink-faint">
-          Extra kosten gelden per m² op alle gematchte vloer, vanaf vandaag (niet met terugwerkende kracht).
+          Extra kosten gelden per m² op alle gematchte vloer, vanaf de ingangsdatum die je hierboven
+          kiest.
         </p>
       </div>
     </Card>

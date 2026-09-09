@@ -1,5 +1,5 @@
-import { getAllQuotations, getOverrides, getAppSetting } from '@/lib/db';
-import { applyOverrides } from '@/lib/overrides';
+import { getAllQuotations, getResolveInput, getAppSetting } from '@/lib/db';
+import { resolveQuotations } from '@/lib/resolve';
 import { computeLost } from '@/lib/lost';
 import { DEFAULT_KPI_SETTINGS, parseKpiSettings } from '@/lib/kpi-settings';
 import VerlorenView from '@/components/pages/VerlorenView';
@@ -8,13 +8,13 @@ export const dynamic = 'force-dynamic';
 
 export default async function VerlorenPage() {
   const asOf = new Date().toISOString().split('T')[0];
-  const [quotations, overrides, rawSettings] = await Promise.all([
+  const [quotations, resolveInput, rawSettings] = await Promise.all([
     getAllQuotations(),
-    getOverrides(),
+    getResolveInput(),
     getAppSetting('kpi', DEFAULT_KPI_SETTINGS),
   ]);
   const settings = parseKpiSettings(rawSettings);
-  const resolved = applyOverrides(quotations, overrides);
+  const resolved = resolveQuotations(quotations, resolveInput);
 
   // Afgeleid van asOf, niet van Date.now(): zo levert deze render altijd
   // hetzelfde op als de berekening eronder, en blijft de functie zuiver.

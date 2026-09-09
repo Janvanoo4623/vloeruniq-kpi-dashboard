@@ -11,6 +11,7 @@ import LeadSourceDonut from '@/components/charts/LeadSourceDonut';
 import RegionList from '@/components/charts/RegionList';
 import EmptyState from '@/components/pages/EmptyState';
 import { Empty, SectionLabel } from '@/components/ui';
+import { perM2Stats } from '@/lib/insights';
 
 function deltaPct(cur: number, prev: number | undefined | null): number | null {
   if (prev == null || prev === 0) return null;
@@ -30,8 +31,11 @@ export default function OverzichtPage() {
   const cmp = comparison?.revenue;
   const show = comparison != null;
   const deltaLabel = range.compare === 'year' ? 'vs vorig jaar' : 'vs vorige periode';
-  const marginPerM2 = totals.m2Sold > 0 ? totals.totalMargin / totals.m2Sold : null;
-  const prevMarginPerM2 = cmp && cmp.m2Sold > 0 ? cmp.totalMargin / cmp.m2Sold : null;
+  // Marge per m² komt uit de vloerregels zelf. Uit de totalen delen ging mis:
+  // de marge telt alleen offertes mét inkoopprijs, de m² tellen ze allemaal.
+  const perM2 = perM2Stats(snap.quotations);
+  const marginPerM2 = perM2.marginPerM2;
+  const prevMarginPerM2 = comparison?.perM2?.marginPerM2 ?? null;
 
   return (
     <div className="space-y-6">
@@ -55,7 +59,7 @@ export default function OverzichtPage() {
           <KpiCard
             label="Marge / m²"
             value={formatEuro(marginPerM2, true)}
-            sub="per verkochte m²"
+            sub="op vloerregels, ex btw"
             deltaPct={show ? deltaPct(marginPerM2 ?? 0, prevMarginPerM2) : null}
             deltaLabel={deltaLabel}
           />

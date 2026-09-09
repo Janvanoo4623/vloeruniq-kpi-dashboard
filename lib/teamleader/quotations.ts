@@ -3,16 +3,8 @@
 import { apiCall, mapLimit } from './client';
 import { dateOnly } from './dates';
 import { parseQuotation } from './matching';
-import {
-  FETCH_CONCURRENCY,
-  PAGE_SIZE,
-  LABOR_COST_PER_M2,
-  PRIMER_COST_PER_M2,
-  GLUE_COST_PER_M2,
-  LEVELING_COST_PER_M2,
-  SELF_ADHESIVE_COST_PER_M2,
-} from './constants';
-import { priceConfigForDate, resolveCost, type PriceRow, type CostRow } from '../pricing';
+import { COST_FALLBACK, FETCH_CONCURRENCY, PAGE_SIZE } from './constants';
+import { costsForDate, priceConfigForDate, type PriceRow, type CostRow } from '../pricing';
 import type { CustomerInfo, QuotationRow, QuotationStatus } from '../types';
 import type { TLQuotationSummary, TLQuotationDetail } from './tl-types';
 
@@ -93,44 +85,14 @@ export async function fetchQuotations(
 
   const today = new Date().toISOString().split('T')[0];
 
-  // Three cost buckets. 'primer'/'glue'/'leveling' apply only to glued PVC and
-  // 'selfadhesive' only to self-adhesive PVC — the two are mutually exclusive per
-  // line (see matching.ts). Everything else (labor + custom extras) applies to
-  // every installed m².
-  const GLUED_KEYS = new Set(['primer', 'glue', 'leveling']);
-  const SELF_ADHESIVE_KEY = 'selfadhesive';
-  const FALLBACK: Record<string, number> = {
-    labor: LABOR_COST_PER_M2,
-    primer: PRIMER_COST_PER_M2,
-    glue: GLUE_COST_PER_M2,
-    leveling: LEVELING_COST_PER_M2,
-    selfadhesive: SELF_ADHESIVE_COST_PER_M2,
-  };
-  // Union with the built-ins, so a rate still applies at its constant default
-  // when cost_settings has no row for it yet (e.g. a newly added key).
-  const costKeys = [...new Set([...Object.keys(FALLBACK), ...costRows.map((r) => r.key)])];
-
   const results = await mapLimit(summaries, FETCH_CONCURRENCY, async (q) => {
     try {
       const detail = await fetchQuotationDetail(q.id);
       const date = dateOnly(q.created_at) || dateOnly(q.updated_at) || today;
       const priceConfig = priceConfigForDate(priceRows, date);
+      const costs = costsForDate(costRows, date, COST_FALLBACK);
 
-      let alwaysPerM2 = 0;
-      let gluedPerM2 = 0;
-      let selfAdhesivePerM2 = 0;
-      for (const key of costKeys) {
-        const v = resolveCost(costRows, key, date, FALLBACK[key] ?? 0);
-        if (key === SELF_ADHESIVE_KEY) selfAdhesivePerM2 = v;
-        else if (GLUED_KEYS.has(key)) gluedPerM2 += v;
-        else alwaysPerM2 += v;
-      }
-
-      return parseQuotation(q, detail, customerLookup, priceConfig, {
-        alwaysPerM2,
-        gluedPerM2,
-        selfAdhesivePerM2,
-      });
+      return parseQuotation(q, detail, customerLookup, priceConfig, costs);
     } catch {
       // Mirror the script: skip quotations whose detail fetch fails.
       return null;

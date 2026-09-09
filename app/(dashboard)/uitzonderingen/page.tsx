@@ -1,5 +1,5 @@
-import { getAllQuotations, getOverrides, listExclusions } from '@/lib/db';
-import { applyOverrides } from '@/lib/overrides';
+import { getAllQuotations, getResolveInput, listExclusions } from '@/lib/db';
+import { resolveQuotations } from '@/lib/resolve';
 import { computeExceptions } from '@/lib/exceptions';
 import UitzonderingenView from '@/components/pages/UitzonderingenView';
 
@@ -7,14 +7,21 @@ export const dynamic = 'force-dynamic';
 
 /**
  * Het effect per correctie is een écht verschil: we rekenen dezelfde offertes
- * één keer mét en één keer zónder overrides door, en trekken die van elkaar af.
+ * twee keer door — één keer mét de handmatige correcties en één keer zonder —
+ * en trekken die van elkaar af. Allebei de keren tegen dezelfde prijzen en
+ * kosten, anders zou een prijswijziging als correctie-effect worden geteld.
  */
 export default async function UitzonderingenPage() {
-  const [raw, overrides, exclusions] = await Promise.all([
+  const [raw, resolveInput, exclusions] = await Promise.all([
     getAllQuotations(),
-    getOverrides(),
+    getResolveInput(),
     listExclusions(),
   ]);
-  const corrected = applyOverrides(raw, overrides);
-  return <UitzonderingenView data={computeExceptions(corrected, raw, overrides, exclusions)} />;
+  const corrected = resolveQuotations(raw, resolveInput);
+  const zonder = resolveQuotations(raw, { ...resolveInput, overrides: {} });
+  return (
+    <UitzonderingenView
+      data={computeExceptions(corrected, zonder, resolveInput.overrides, exclusions)}
+    />
+  );
 }

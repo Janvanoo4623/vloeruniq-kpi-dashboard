@@ -9,6 +9,7 @@ import ProductsTable from '@/components/ProductsTable';
 import AttentionTable from '@/components/AttentionTable';
 import EmptyState from '@/components/pages/EmptyState';
 import InstallMixPanel from '@/components/pages/InstallMixPanel';
+import { perM2Stats } from '@/lib/insights';
 import type { InstallMixPoint, InstallModeStat, ProductSpread } from '@/lib/insights';
 import ProductSpreadPanel from '@/components/pages/ProductSpreadPanel';
 import { SectionLabel } from '@/components/ui';
@@ -27,20 +28,47 @@ export default function MargeView({
   const totals = snap?.revenue.totals;
   if (!snap || !totals) return <EmptyState />;
 
-  const marginPerM2 = totals.m2Sold > 0 ? totals.totalMargin / totals.m2Sold : null;
-  const revPerM2 = totals.m2Sold > 0 ? totals.acceptedRevenue / totals.m2Sold : null;
-  const kostPerM2 = revPerM2 != null && marginPerM2 != null ? revPerM2 - marginPerM2 : null;
+  // Alles per m² komt uit de vloerregels van de gekozen periode, niet uit de
+  // snapshot-totalen: die deelden de héle offerte-omzet door alleen vloer-m².
+  const perM2 = perM2Stats(snap.quotations);
+  const dekking = perM2.m2Total > 0 ? (perM2.m2Priced / perM2.m2Total) * 100 : null;
 
   return (
     <div className="space-y-6">
       <section>
-        <SectionLabel>Per verkochte m²</SectionLabel>
+        <SectionLabel>Per verkochte m² — vloerregels, ex btw</SectionLabel>
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          <KpiCard label="Totale marge" value={formatEuro(totals.totalMargin)} sub={`${formatPercent(totals.avgMarginPct)} gemiddeld`} />
-          <KpiCard label="Omzet / m²" value={formatEuro(revPerM2, true)} sub="geaccepteerd" />
-          <KpiCard label="Kostprijs / m²" value={formatEuro(kostPerM2, true)} sub="inkoop + ondervloer + arbeid" higherIsBetter={false} />
-          <KpiCard label="Marge / m²" value={formatEuro(marginPerM2, true)} sub={`over ${formatNumber(totals.m2Sold)} m²`} />
+          <KpiCard
+            label="Totale marge"
+            value={formatEuro(totals.totalMargin)}
+            sub={`${formatPercent(totals.avgMarginPct)} gemiddeld`}
+          />
+          <KpiCard
+            label="Omzet / m²"
+            value={formatEuro(perM2.revenuePerM2, true)}
+            sub="wat de vloer opbrengt"
+          />
+          <KpiCard
+            label="Kostprijs / m²"
+            value={formatEuro(perM2.costPerM2, true)}
+            sub={`${formatEuro(perM2.purchasePerM2, true)} inkoop + ${formatEuro(perM2.underlayPerM2, true)} ondervloer + ${formatEuro(perM2.laborPerM2, true)} arbeid`}
+            higherIsBetter={false}
+          />
+          <KpiCard
+            label="Marge / m²"
+            value={formatEuro(perM2.marginPerM2, true)}
+            sub={`${formatPercent(perM2.marginPct)} van de vloeromzet`}
+          />
         </div>
+        <p className="mt-2 text-[11.5px] leading-relaxed text-ink-faint">
+          Gerekend over {formatNumber(perM2.m2Priced)} van de {formatNumber(perM2.m2Total)} verkochte m²
+          {dekking != null && ` (${formatPercent(dekking)})`} — de rest heeft nog geen inkoopprijs en
+          telt hier dus niet mee. Vul die aan op{' '}
+          <a href="/controleren" className="underline decoration-hair underline-offset-2 hover:text-ink-soft">
+            Controleren
+          </a>
+          .
+        </p>
       </section>
 
       <ChartCard title="Marge per week" subtitle="Marge in € (staven) en % (lijn)">

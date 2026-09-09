@@ -1,5 +1,5 @@
-import { getAllQuotations, getAllDeals, getOverrides } from '@/lib/db';
-import { applyOverrides } from '@/lib/overrides';
+import { getAllQuotations, getAllDeals, getResolveInput } from '@/lib/db';
+import { resolveQuotations } from '@/lib/resolve';
 import { leadSourceTrend } from '@/lib/insights';
 import LeadbronnenView from '@/components/pages/LeadbronnenView';
 
@@ -10,11 +10,11 @@ export const dynamic = 'force-dynamic';
  * je geen verschuiving maar alleen het laatste kwartaal.
  */
 export default async function LeadbronnenPage() {
-  const [quotations, deals, overrides] = await Promise.all([
+  const [quotations, deals, resolveInput] = await Promise.all([
     getAllQuotations(),
     getAllDeals(),
-    getOverrides(),
+    getResolveInput(),
   ]);
-  const resolved = applyOverrides(quotations, overrides);
+  const resolved = resolveQuotations(quotations, resolveInput);
   return <LeadbronnenView trend={leadSourceTrend(resolved, deals)} />;
 }

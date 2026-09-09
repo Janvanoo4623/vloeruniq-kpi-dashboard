@@ -1,5 +1,5 @@
-import { getAllQuotations, getOverrides, getAppSetting } from '@/lib/db';
-import { applyOverrides } from '@/lib/overrides';
+import { getAllQuotations, getResolveInput, getAppSetting } from '@/lib/db';
+import { resolveQuotations } from '@/lib/resolve';
 import { decisionTimes, winRateBySize, winRateByMonth } from '@/lib/insights';
 import { DEFAULT_KPI_SETTINGS, definitionLabel, parseKpiSettings } from '@/lib/kpi-settings';
 import PijplijnView from '@/components/pages/PijplijnView';
@@ -12,13 +12,13 @@ export const dynamic = 'force-dynamic';
  */
 export default async function PijplijnPage() {
   const asOf = new Date().toISOString().split('T')[0];
-  const [quotations, overrides, rawSettings] = await Promise.all([
+  const [quotations, resolveInput, rawSettings] = await Promise.all([
     getAllQuotations(),
-    getOverrides(),
+    getResolveInput(),
     getAppSetting('kpi', DEFAULT_KPI_SETTINGS),
   ]);
   const settings = parseKpiSettings(rawSettings);
-  const resolved = applyOverrides(quotations, overrides);
+  const resolved = resolveQuotations(quotations, resolveInput);
 
   return (
     <PijplijnView

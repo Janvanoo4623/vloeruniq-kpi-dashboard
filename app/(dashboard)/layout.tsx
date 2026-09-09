@@ -4,7 +4,7 @@ import {
   getAllQuotations,
   getCurrentPrices,
   getExclusions,
-  getOverrides,
+  getResolveInput,
   getAllDeals,
 } from '@/lib/db';
 import { computeAging, summarizeInvoices } from '@/lib/teamleader/invoices';
@@ -12,7 +12,7 @@ import { snapshotForRange } from '@/lib/range';
 import { DEFAULT_PRESET, presetRangeServer } from '@/lib/default-range';
 import { computePipeline } from '@/lib/pipeline';
 import { computePaymentStats } from '@/lib/payments';
-import { applyOverrides } from '@/lib/overrides';
+import { resolveQuotations } from '@/lib/resolve';
 import DashboardProvider from '@/components/layout/DashboardProvider';
 import AppShell from '@/components/layout/AppShell';
 
@@ -24,20 +24,20 @@ export const dynamic = 'force-dynamic';
  * Alle zware berekeningen blijven server-side; de client krijgt alleen resultaat.
  */
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const [meta, invoices, quotations, prices, exclusions, overrides, deals] = await Promise.all([
+  const [meta, invoices, quotations, prices, exclusions, resolveInput, deals] = await Promise.all([
     getMeta(),
     getAllInvoices(),
     getAllQuotations(),
     getCurrentPrices(),
     getExclusions(),
-    getOverrides(),
+    getResolveInput(),
     getAllDeals(),
   ]);
 
   const today = new Date().toISOString().split('T')[0];
-  // Per-offerte correcties worden bij het lezen toegepast (direct + met
-  // terugwerkende kracht) — zie lib/overrides.ts.
-  const resolvedQuotations = applyOverrides(quotations, overrides);
+  // Marges worden bij het lezen berekend uit de prijslijst en de kosten die op
+  // de offertedatum golden, plus de handmatige correcties — zie lib/resolve.ts.
+  const resolvedQuotations = resolveQuotations(quotations, resolveInput);
 
   // De eerste weergave wordt hier voor de standaardperiode berekend in plaats van
   // uit de gecachete snapshot te komen. Die snapshot dekt altijd het vaste

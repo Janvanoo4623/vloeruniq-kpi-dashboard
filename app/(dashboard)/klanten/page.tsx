@@ -1,5 +1,5 @@
-import { getAllInvoices, getAllQuotations, getOverrides } from '@/lib/db';
-import { applyOverrides } from '@/lib/overrides';
+import { getAllInvoices, getAllQuotations, getResolveInput } from '@/lib/db';
+import { resolveQuotations } from '@/lib/resolve';
 import {
   customerConcentration,
   paymentDistribution,
@@ -10,12 +10,12 @@ import KlantenView from '@/components/pages/KlantenView';
 export const dynamic = 'force-dynamic';
 
 export default async function KlantenPage() {
-  const [invoices, quotations, overrides] = await Promise.all([
+  const [invoices, quotations, resolveInput] = await Promise.all([
     getAllInvoices(),
     getAllQuotations(),
-    getOverrides(),
+    getResolveInput(),
   ]);
-  const resolved = applyOverrides(quotations, overrides);
+  const resolved = resolveQuotations(quotations, resolveInput);
   const concentration = customerConcentration(invoices);
 
   return (

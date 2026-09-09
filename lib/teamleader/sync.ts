@@ -125,16 +125,16 @@ export async function syncAndStore(
 async function recordQuality(): Promise<void> {
   try {
     const today = new Date().toISOString().split('T')[0];
-    const [quotations, deals, invoices, priceRows, prices, overrides] = await Promise.all([
+    const [quotations, deals, invoices, priceRows, prices, resolveInput] = await Promise.all([
       db.getAllQuotations(),
       db.getAllDeals(),
       db.getAllInvoices(),
       db.getPriceRows(),
       db.getCurrentPrices(),
-      db.getOverrides(),
+      db.getResolveInput(),
     ]);
-    const { applyOverrides } = await import('../overrides');
-    const resolved = applyOverrides(quotations, overrides);
+    const { resolveQuotations } = await import('../resolve');
+    const resolved = resolveQuotations(quotations, resolveInput);
     const pricedCodes = new Set(prices.map((p) => p.code.toLowerCase()));
     const report = computeQuality(resolved, deals, invoices, priceRows, pricedCodes, today);
 

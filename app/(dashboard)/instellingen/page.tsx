@@ -7,10 +7,10 @@ import {
   getAllDeals,
   getAllInvoices,
   getPriceRows,
-  getOverrides,
+  getResolveInput,
 } from '@/lib/db';
 import { DEFAULT_KPI_SETTINGS, parseKpiSettings } from '@/lib/kpi-settings';
-import { applyOverrides } from '@/lib/overrides';
+import { resolveQuotations } from '@/lib/resolve';
 import { computeQuality, type QualitySnapshot } from '@/lib/data-quality';
 import Settings from '@/components/Settings';
 
@@ -18,7 +18,7 @@ export const dynamic = 'force-dynamic';
 
 export default async function InstellingenPage() {
   const today = new Date().toISOString().split('T')[0];
-  const [prices, costs, exclusions, kpiRaw, quotations, deals, invoices, priceRows, overrides, history] =
+  const [prices, costs, exclusions, kpiRaw, quotations, deals, invoices, priceRows, resolveInput, history] =
     await Promise.all([
       getCurrentPrices(),
       getCurrentCosts(),
@@ -28,11 +28,11 @@ export default async function InstellingenPage() {
       getAllDeals(),
       getAllInvoices(),
       getPriceRows(),
-      getOverrides(),
+      getResolveInput(),
       getAppSetting<QualitySnapshot[]>('quality_history', []),
     ]);
 
-  const resolved = applyOverrides(quotations, overrides);
+  const resolved = resolveQuotations(quotations, resolveInput);
   const pricedCodes = new Set(prices.map((p) => p.code.toLowerCase()));
   const quality = computeQuality(resolved, deals, invoices, priceRows, pricedCodes, today);
 

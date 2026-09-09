@@ -37,18 +37,20 @@ export async function POST(request: Request) {
   const bad = (msg: string) => NextResponse.json({ ok: false, error: msg }, { status: 400 });
 
   try {
+    // Ingangsdatum: leeg = vandaag (de server vult hem in). De keuze staat in
+    // Instellingen boven de tabel; 2000-01-01 betekent 'met terugwerkende
+    // kracht', want dat ligt ruim vóór de oudste offerte.
+    let effectiveFrom: string | undefined;
+    if (body.effectiveFrom != null) {
+      effectiveFrom = String(body.effectiveFrom).trim();
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(effectiveFrom)) return bad('Ongeldige ingangsdatum.');
+    }
+
     switch (body.type) {
       case 'price': {
         const code = String(body.code ?? '').trim();
         const price = Number(body.price);
         if (!code || !Number.isFinite(price) || price < 0) return bad('Ongeldige prijs of code.');
-        // A missing price (never configured) is backdated so it applies to older
-        // quotations too; a normal price edit stays non-retroactive (today).
-        let effectiveFrom: string | undefined;
-        if (body.effectiveFrom != null) {
-          effectiveFrom = String(body.effectiveFrom).trim();
-          if (!/^\d{4}-\d{2}-\d{2}$/.test(effectiveFrom)) return bad('Ongeldige ingangsdatum.');
-        }
         await addPrice(code, price, effectiveFrom);
         break;
       }
@@ -56,7 +58,7 @@ export async function POST(request: Request) {
         const key = String(body.key ?? '').trim();
         const value = Number(body.value);
         if (!key || !Number.isFinite(value) || value < 0) return bad('Ongeldige waarde.');
-        await addCost(key, value);
+        await addCost(key, value, effectiveFrom);
         break;
       }
       case 'kpi': {

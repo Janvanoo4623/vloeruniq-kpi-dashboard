@@ -578,3 +578,88 @@ export function productSpread(
     })
     .sort((a, b) => a.medianMarginPerM2 - b.medianMarginPerM2);
 }
+
+// ── Per verkochte m² ──────────────────────────────────────────────────────
+
+export interface PerM2Stats {
+  /** m² vloer waarvoor een inkoopprijs bekend is — de noemer van alles hieronder. */
+  m2Priced: number;
+  /** Alle verkochte vloer-m², inclusief de regels zonder inkoopprijs. */
+  m2Total: number;
+  revenuePerM2: number | null;
+  purchasePerM2: number | null;
+  underlayPerM2: number | null;
+  laborPerM2: number | null;
+  costPerM2: number | null;
+  marginPerM2: number | null;
+  marginPct: number | null;
+}
+
+/**
+ * Omzet, kostprijs en marge per verkochte m², berekend uit de vloerregels zelf.
+ *
+ * Dit verving een berekening die de vier kaarten uit de snapshot-totalen haalde,
+ * en die klopte niet. Twee fouten stapelden op elkaar:
+ *
+ *  1. de teller was de héle offerte-omzet (traprenovatie, egaliseren, plinten,
+ *     meerwerk) terwijl de noemer alleen vloer-m² telde. Omzet per m² kwam
+ *     daardoor op EUR 68,96 uit in plaats van EUR 50,46;
+ *  2. de marge telde alleen offertes mét inkoopprijs, maar werd gedeeld door
+ *     álle verkochte m². Kostprijs werd daarna berekend als omzet/m² min
+ *     marge/m², dus die erfde allebei de fouten en kwam op EUR 49,30 uit,
+ *     terwijl de werkelijke kostprijs EUR 33,59 was.
+ *
+ * Vandaar dat hier alles over dezelfde regels loopt: één noemer (de beprijsde
+ * m²), en een kostprijs die uit zijn eigen onderdelen wordt opgeteld in plaats
+ * van als restpost te worden afgeleid. `m2Total` staat er los bij, zodat
+ * zichtbaar blijft over welk deel van de verkochte vloer dit gaat.
+ */
+export function perM2Stats(quotations: QuotationRow[]): PerM2Stats {
+  let m2Priced = 0;
+  let m2Total = 0;
+  let revenue = 0;
+  let purchase = 0;
+  let underlay = 0;
+  let labor = 0;
+
+  for (const q of quotations) {
+    if (q.status !== 'accepted') continue;
+    m2Total += q.totalM2;
+    for (const l of q.lines ?? []) {
+      if (l.purchasePerM2 == null || l.margin == null) continue;
+      m2Priced += l.m2;
+      revenue += l.revenue;
+      purchase += l.purchasePerM2 * l.m2;
+      underlay += (l.underlayPerM2 ?? l.gluedPerM2 ?? 0) * l.m2;
+      labor += (l.laborPerM2 ?? 0) * l.m2;
+    }
+  }
+
+  if (m2Priced <= 0) {
+    return {
+      m2Priced: 0,
+      m2Total: Math.round(m2Total * 10) / 10,
+      revenuePerM2: null,
+      purchasePerM2: null,
+      underlayPerM2: null,
+      laborPerM2: null,
+      costPerM2: null,
+      marginPerM2: null,
+      marginPct: null,
+    };
+  }
+
+  const per = (v: number) => Math.round((v / m2Priced) * 100) / 100;
+  const cost = purchase + underlay + labor;
+  return {
+    m2Priced: Math.round(m2Priced * 10) / 10,
+    m2Total: Math.round(m2Total * 10) / 10,
+    revenuePerM2: per(revenue),
+    purchasePerM2: per(purchase),
+    underlayPerM2: per(underlay),
+    laborPerM2: per(labor),
+    costPerM2: per(cost),
+    marginPerM2: per(revenue - cost),
+    marginPct: revenue > 0 ? Math.round(((revenue - cost) / revenue) * 1000) / 10 : null,
+  };
+}
