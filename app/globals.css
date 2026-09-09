@@ -92,3 +92,42 @@ body {
 .recharts-wrapper:focus {
   outline: none;
 }
+
+/* ── Afdrukken ────────────────────────────────────────────────────────────
+   Het rapport op /export: één tabblad per pagina, en alles wat alleen op het
+   scherm nut heeft (knoppen, links) verdwijnt.
+
+   Let op de vorm: @page hoort op het hoogste niveau te staan en niet binnen
+   @media print. Genest werd het hele blok stilzwijgend uit de gebundelde CSS
+   gelaten — geen foutmelding, alleen een rapport dat als één lange lap uit de
+   printer kwam. */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+
+  .print-blad {
+    break-before: page;
+  }
+
+  .print-blad:first-of-type {
+    break-before: auto;
+  }
+
+  /* Een tabel die over de paginarand valt neemt zijn kopregel mee. */
+  thead {
+    display: table-header-group;
+  }
+
+  tr {
+    break-inside: avoid;
+  }
+
+  body {
+    background: #fff;
+  }
+}
+
+@page {
+  margin: 14mm;
+}

@@ -1,7 +1,8 @@
 'use client';
 
 import { usePathname, useRouter } from 'next/navigation';
-import { LogOut, Menu, RefreshCw } from 'lucide-react';
+import Link from 'next/link';
+import { FileDown, LogOut, Menu, RefreshCw } from 'lucide-react';
 import { navItemFor } from '@/lib/nav';
 import { formatDateTime, timeAgo } from '@/lib/format';
 import DateRangePicker from '@/components/DateRangePicker';
@@ -61,6 +62,19 @@ export default function TopBar({ onMenu }: { onMenu?: () => void }) {
               {timeAgo(meta?.lastSyncAt)}
             </p>
           </div>
+
+          {/* Het rapport opent in een eigen tabblad met de gekozen periode erin,
+              zodat je terugkomt op de pagina waar je was. */}
+          <Link
+            href={`/export?from=${range.from}&to=${range.to}&compare=${range.compare}`}
+            target="_blank"
+            title="Exporteren: alle tabbladen als printbaar rapport"
+            aria-label="Exporteren"
+            className="flex shrink-0 items-center gap-1.5 rounded-lg border border-line px-2.5 py-2 text-[13px] font-medium text-ink-mute transition hover:text-ink"
+          >
+            <FileDown size={14} strokeWidth={2} />
+            <span className="hidden xl:inline">Export</span>
+          </Link>
 
           <Button variant="primary" onClick={refresh} disabled={refreshing}>
             <RefreshCw size={14} strokeWidth={2.2} className={refreshing ? 'animate-spin' : ''} />
