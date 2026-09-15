@@ -11,11 +11,21 @@ import { syncAndStore } from '../lib/teamleader/sync';
 
 async function main() {
   const writeback = process.env.TEAMLEADER_WRITEBACK !== 'false';
+  // Standaard claimt deze run de lock, net als de cron. Tot 2026-09-15 gaf dit
+  // script altijd force mee en sloeg het de lock dus over; samen met de cron van
+  // twaalf uur trok Teamleader daardoor het refresh-token in. Wil je een blijven
+  // hangen run overnemen, dan moet je dat voortaan expliciet zeggen.
+  const force = process.argv.includes('--force');
   console.log(`[sync] backend=${store.backend()}  writeback=${writeback}`);
   if (!writeback) console.log('[sync] write-back to Teamleader is DISABLED for this run.');
+  if (force) {
+    console.log('[sync] --force: een lopende sync wordt overgenomen. Doe dit alleen als je');
+    console.log('[sync]          zeker weet dat er niets anders draait — twee processen');
+    console.log('[sync]          maken elkaars Teamleader-token ongeldig.');
+  }
 
   const t0 = Date.now();
-  const { snapshot, meta } = await syncAndStore({ force: true });
+  const { snapshot, meta } = await syncAndStore({ force, owner: 'npm run sync' });
   const seconds = ((Date.now() - t0) / 1000).toFixed(1);
 
   const r = snapshot.revenue.totals;
@@ -44,6 +54,16 @@ async function main() {
 }
 
 main().catch((err) => {
-  console.error('\n[sync] FAILED:', err);
+  const bericht = err instanceof Error ? err.message : String(err);
+  console.error('\n[sync] MISLUKT:', bericht);
+  if (bericht.startsWith('Er loopt al een synchronisatie')) {
+    console.error('\n[sync] Weet je zeker dat er niets draait? Dan: npm run sync -- --force\n');
+  }
+  if (/refresh token is invalid|Token has been revoked/i.test(bericht)) {
+    console.error(
+      '\n[sync] Het Teamleader-refreshtoken is ingetrokken. Dat gebeurt zodra twee\n' +
+        '[sync] processen het token verversen. Haal een nieuw token op met: npm run oauth\n',
+    );
+  }
   process.exit(1);
 });

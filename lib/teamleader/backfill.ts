@@ -23,10 +23,11 @@ export async function backfillAll(
   // Dezelfde lock als de gewone sync. Een backfill duurt ~10 minuten en praat
   // die hele tijd met Teamleader; loopt de cron er tegelijk doorheen, dan
   // verversen ze allebei de refresh token en trekken ze elkaars token in.
-  if (!force) {
-    const lock = await db.acquireSyncLock('backfill');
-    if (!lock.ok) throw new Error(db.lockBusyMessage(lock));
-  }
+  // Ook hier betekent force OVERNEMEN en niet overslaan: de lock wordt geclaimd,
+  // alleen zonder te wachten tot de vorige als verlopen geldt. Zie sync.ts voor
+  // wat overslaan op 2026-09-12 kostte.
+  const lock = await db.acquireSyncLock('backfill', force ? 0 : undefined);
+  if (!lock.ok) throw new Error(db.lockBusyMessage(lock));
 
   try {
     return await runBackfill(cutoff);

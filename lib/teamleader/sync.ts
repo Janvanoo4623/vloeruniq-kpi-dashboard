@@ -69,23 +69,19 @@ export async function syncAndStore(
   // gelijktijdige pogingen slaagt er precies één. Dat moet ook, want twee
   // processen die tegelijk het Teamleader-token verversen maken elkaars token
   // ongeldig — zie db.acquireSyncLock.
-  if (!force) {
-    const lock = await db.acquireSyncLock(owner);
-    if (!lock.ok) throw new Error(db.lockBusyMessage(lock));
-  }
+  //
+  // `force` betekent OVERNEMEN, niet overslaan. Dat onderscheid kostte op
+  // 2026-09-12 het refresh-token: `npm run sync` gaf force mee, sloeg de lock
+  // daarmee helemaal over, en liep naast de cron van twaalf uur. Teamleader
+  // rouleert het refresh-token bij elke verversing en trekt de hele keten in
+  // zodra een al gebruikt token nog eens langskomt. Sindsdien werkte geen enkele
+  // sync meer. Met een staleMs van nul is de lock altijd claimbaar, maar hij
+  // wórdt geclaimd — dus een cron die er tegelijk in wil, krijgt netjes een 409.
+  const lock = await db.acquireSyncLock(owner, force ? 0 : undefined);
+  if (!lock.ok) throw new Error(db.lockBusyMessage(lock));
 
   const startIso = new Date().toISOString();
   const start = Date.now();
-  if (force) {
-    await db.setMeta({
-      status: 'running',
-      startedAt: startIso,
-      lastSyncAt: existing?.lastSyncAt ?? null,
-      durationMs: null,
-      counts: null,
-      error: null,
-    });
-  }
 
   try {
     const { snapshot, pushed } = await runSync();

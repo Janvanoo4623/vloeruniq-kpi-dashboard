@@ -42,6 +42,11 @@ a live web dashboard the business owner and his client can view on any device.
   will revoke each other's token. Every process that talks to Teamleader must claim the lock
   (`db.acquireSyncLock`) — see `docs/ARCHITECTURE.md`. Before starting a sync or backfill by
   hand, verify nothing else is running; do not rely on a single `pgrep` check.
+  **`force` means TAKE OVER the lock, never skip it.** `npm run sync` used to pass `force: true`
+  and bypass locking entirely; on 2026-09-12 it ran alongside the 12:00 cron and Teamleader
+  revoked the refresh token, which stopped every sync until a new token was fetched with
+  `npm run oauth`. A revoked token always means two processes refreshed it — look for the second
+  one, do not just re-authorise and move on.
 - **Never block page render on Teamleader.** The full sync takes ~3 minutes and is rate-limited.
   It runs only in `/api/sync` (cron / manual). The UI reads the precomputed snapshot.
 - **Secrets live in `.env.local`** (gitignored) and Vercel env vars. Never hardcode the client
