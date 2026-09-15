@@ -1,13 +1,14 @@
 // Local sync runner — `npm run sync`. Runs the full Teamleader pipeline without
-// serverless time limits and writes the snapshot to the datastore (.data/ locally).
+// serverless time limits. Schrijft naar dezelfde opslag als de cron: Supabase
+// zodra SUPABASE_URL en de service-role key in .env.local staan, anders .data/.
 import { loadEnvConfig } from '@next/env';
 
 // Load .env.local the same way Next does (lib modules read process.env lazily,
 // so this runs before any of them are invoked).
 loadEnvConfig(process.cwd());
 
-import { store } from '../lib/store';
 import { syncAndStore } from '../lib/teamleader/sync';
+import { hasSupabase } from '../lib/supabase';
 
 async function main() {
   const writeback = process.env.TEAMLEADER_WRITEBACK !== 'false';
@@ -16,7 +17,10 @@ async function main() {
   // twaalf uur trok Teamleader daardoor het refresh-token in. Wil je een blijven
   // hangen run overnemen, dan moet je dat voortaan expliciet zeggen.
   const force = process.argv.includes('--force');
-  console.log(`[sync] backend=${store.backend()}  writeback=${writeback}`);
+  // Bewust niet store.backend(): dat rapporteert de oude bestand/Upstash-opslag,
+  // terwijl de sync allang via lib/db naar Supabase schrijft. Tijdens een storing
+  // las je dan "backend=file" en dacht je even dat productie niet was bijgewerkt.
+  console.log(`[sync] opslag=${hasSupabase() ? 'supabase' : 'lokaal bestand'}  writeback=${writeback}`);
   if (!writeback) console.log('[sync] write-back to Teamleader is DISABLED for this run.');
   if (force) {
     console.log('[sync] --force: een lopende sync wordt overgenomen. Doe dit alleen als je');
