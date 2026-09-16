@@ -54,6 +54,7 @@ Phased build. Status updated as we go.
 - [x] Tabblad Marketing: kosten/klikken/CTR/CPC/conversies met periodefilter en vergelijking, per week, per campagne, maandbudget, marge na Google Ads. Ook in het exportrapport.
 - [x] Migratie gedraaid en historie geïmporteerd (2024-11-01 t/m 2026-09-15, 3.001 rijen).
 - [x] Vernieuwen-knop en cron verversen Google Ads mee (GAQL.app REST, `lib/ads-sync.ts`).
-- [ ] `GAQL_TOKEN` op Vercel en in `.env.local` zetten (token van gaql.app); tot die tijd slaat de verversing Ads stil over.
+- [x] `GAQL_TOKEN` lokaal (de MCP-URL van GAQL.app); 3-daagse test geslaagd op 2026-09-16.
+- [ ] `GAQL_TOKEN` op Vercel zetten en Vernieuwen op productie proberen.
 - [ ] Later: andere marketingkosten (social, drukwerk) als handmatige maandpost naast Google Ads.
 

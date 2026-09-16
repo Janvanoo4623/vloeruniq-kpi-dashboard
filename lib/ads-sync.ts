@@ -72,16 +72,114 @@ export function adsConfigured(): boolean {
   return Boolean(process.env.GAQL_TOKEN);
 }
 
-/** Haal het rapport op bij GAQL.app. Gooit een leesbare fout bij alles wat misgaat. */
+// ── Twee transporten, één env-variabele ──────────────────────────────────
+// GAQL_TOKEN is óf de volledige URL van de gehoste GAQL-MCP
+// (https://mcp.gaql.app/mcp/google-ads/<token>, zoals hij in een MCP-config
+// staat) óf een los token voor de REST-API (api.gaql.app?gptToken=). Jasper
+// plakte de URL; die vorm is wat TrueClicks uitdeelt, dus dat is de eerste
+// keus. Het losse token blijft werken voor wie dat heeft.
+
+/** Streamable-HTTP MCP: JSON-RPC over POST, met sessie-header en SSE-antwoorden. */
+class McpClient {
+  private id = 0;
+  private session: string | null = null;
+  constructor(private url: string) {}
+
+  private async post(body: unknown): Promise<unknown> {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      Accept: 'application/json, text/event-stream',
+    };
+    if (this.session) headers['Mcp-Session-Id'] = this.session;
+    const res = await fetch(this.url, { method: 'POST', headers, body: JSON.stringify(body), signal: AbortSignal.timeout(60000) });
+    const sid = res.headers.get('mcp-session-id');
+    if (sid) this.session = sid;
+    if (res.status === 202 || res.status === 204) return null;
+    const text = await res.text();
+    if (!res.ok) {
+      if (res.status === 401 || res.status === 403 || res.status === 404) {
+        throw new Error(`GAQL-MCP weigert de koppeling (${res.status}). Klopt de URL in GAQL_TOKEN nog?`);
+      }
+      throw new Error(`GAQL-MCP ${res.status}: ${text.slice(0, 200)}`);
+    }
+    if ((res.headers.get('content-type') ?? '').includes('text/event-stream')) {
+      let last: unknown = null;
+      for (const line of text.split('\n')) {
+        if (!line.startsWith('data:')) continue;
+        try {
+          const msg = JSON.parse(line.slice(5).trim());
+          if (msg && (msg.result !== undefined || msg.error !== undefined)) last = msg;
+        } catch {
+          /* geen JSON-regel */
+        }
+      }
+      return last;
+    }
+    return text ? JSON.parse(text) : null;
+  }
+
+  private async rpc(method: string, params: unknown): Promise<unknown> {
+    const msg = (await this.post({ jsonrpc: '2.0', id: ++this.id, method, params })) as {
+      result?: unknown;
+      error?: { message?: string };
+    } | null;
+    if (!msg) throw new Error(`GAQL-MCP ${method}: leeg antwoord`);
+    if (msg.error) throw new Error(`GAQL-MCP ${method}: ${msg.error.message ?? JSON.stringify(msg.error)}`);
+    return msg.result;
+  }
+
+  async init(): Promise<void> {
+    await this.rpc('initialize', {
+      protocolVersion: '2025-03-26',
+      capabilities: {},
+      clientInfo: { name: 'vloeruniq-kpi-dashboard', version: '1.0' },
+    });
+    await this.post({ jsonrpc: '2.0', method: 'notifications/initialized' });
+  }
+
+  async callTool(name: string, args: Record<string, unknown>): Promise<string> {
+    const result = (await this.rpc('tools/call', { name, arguments: args })) as {
+      content?: { type: string; text?: string }[];
+      isError?: boolean;
+    };
+    const text = result?.content?.find((c) => c.type === 'text')?.text ?? '';
+    if (result?.isError) throw new Error(`GAQL-MCP ${name}: ${text.slice(0, 200)}`);
+    return text;
+  }
+}
+
+function parseReport(json: {
+  isSuccessful?: boolean;
+  result?: AdsReport;
+  columns?: string[];
+  data?: string[][];
+  notification?: { errors?: unknown[] };
+}): AdsReport {
+  const report = json.result ?? (json.columns && json.data ? { columns: json.columns, data: json.data } : null);
+  if (json.isSuccessful === false || !report) {
+    throw new Error(`Google Ads-rapport mislukt: ${JSON.stringify(json.notification ?? json).slice(0, 200)}`);
+  }
+  return report;
+}
+
+/** Haal het rapport op. Gooit een leesbare fout bij alles wat misgaat. */
 export async function fetchAdsReport(from: string, to: string): Promise<AdsReport> {
-  const token = process.env.GAQL_TOKEN;
-  if (!token) throw new Error('GAQL_TOKEN ontbreekt (Google Ads-token van gaql.app).');
+  const token = (process.env.GAQL_TOKEN ?? '').trim();
+  if (!token) throw new Error('GAQL_TOKEN ontbreekt (URL of token van GAQL.app / TrueClicks).');
   const customerId = Number(process.env.GOOGLE_ADS_CUSTOMER_ID || '2259199560');
+  const query = gaql(from, to);
+
+  if (/^https?:\/\//.test(token)) {
+    const mcp = new McpClient(token);
+    await mcp.init();
+    const text = await mcp.callTool('google-ads-download-report', { query, customerId, loginCustomerId: customerId });
+    return parseReport(JSON.parse(text));
+  }
 
   const res = await fetch(`${API_BASE}/api/gpt/google-ads/execute-query?gptToken=${encodeURIComponent(token)}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'User-Agent': 'vloeruniq-kpi-dashboard/1.0' },
-    body: JSON.stringify({ query: gaql(from, to), customerId, loginCustomerId: customerId, reportAggregation: '' }),
+    body: JSON.stringify({ query, customerId, loginCustomerId: customerId, reportAggregation: '' }),
     signal: AbortSignal.timeout(60000),
   });
   if (!res.ok) {
@@ -89,18 +187,7 @@ export async function fetchAdsReport(from: string, to: string): Promise<AdsRepor
     if (res.status === 401 || res.status === 403) throw new Error(`GAQL.app weigert het token (${res.status}). Maak een nieuw token op gaql.app.`);
     throw new Error(`GAQL.app ${res.status}: ${text.slice(0, 200)}`);
   }
-  const json = (await res.json()) as {
-    isSuccessful?: boolean;
-    result?: AdsReport;
-    columns?: string[];
-    data?: string[][];
-    notification?: { errors?: unknown[] };
-  };
-  const report = json.result ?? (json.columns && json.data ? { columns: json.columns, data: json.data } : null);
-  if (json.isSuccessful === false || !report) {
-    throw new Error(`Google Ads-rapport mislukt: ${JSON.stringify(json.notification ?? json).slice(0, 200)}`);
-  }
-  return report;
+  return parseReport(await res.json());
 }
 
 /** Schrijf dagregels weg en werk de meta bij. Gedeeld door script en API. */

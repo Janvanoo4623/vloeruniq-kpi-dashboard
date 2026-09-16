@@ -61,7 +61,7 @@ async function main() {
     const days = Number(arg('days') || 90);
     from = isDate(arg('from')) ? (arg('from') as string) : iso(Date.parse(to) - (days - 1) * DAY);
     source = 'gaql';
-    console.log(`[ads] ophalen via GAQL.app: ${from} t/m ${to}`);
+    console.log(`[ads] ophalen via GAQL: ${from} t/m ${to}`);
     rows = reportToRows(await fetchAdsReport(from, to));
     console.log(`[ads] ${rows.length} dagregels ontvangen`);
   }
