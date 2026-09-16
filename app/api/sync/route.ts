@@ -4,7 +4,7 @@
 // cron (which has no session cookie) can reach it.
 import { NextResponse } from 'next/server';
 import { syncAndStore } from '@/lib/teamleader/sync';
-import { syncAds, adsConfigured } from '@/lib/ads-sync';
+import { syncAds } from '@/lib/ads-sync';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -25,7 +25,7 @@ export async function POST(request: Request) {
   }
 
   // Google Ads parallel mee (zie /api/refresh): eigen bron, geen Teamleader-lock.
-  const adsRun = adsConfigured() ? syncAds() : Promise.resolve(null);
+  const adsRun = syncAds();
   try {
     const [{ meta }, ads] = await Promise.all([
       syncAndStore({ force: false, owner: 'cron/api-sync' }),

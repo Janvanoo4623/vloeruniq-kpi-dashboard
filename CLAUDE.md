@@ -68,6 +68,7 @@ a live web dashboard the business owner and his client can view on any device.
 npm run dev        # local dev server (reads snapshot from .data/)
 npm run sync       # run the Teamleader sync locally (no timeout limits) -> writes .data/snapshot.json
 npm run sync:ads   # Google Ads dagcijfers -> Supabase ads_daily, verder terug dan de 90 dagen van Vernieuwen (--days, --from-json)
+npm run ads:token  # test de GAQL-koppeling uit .env.local en zet hem in Supabase (app_settings.ads_gaql) voor Vernieuwen/cron op Vercel
 npm run build      # production build
 npm run lint       # eslint
 ```

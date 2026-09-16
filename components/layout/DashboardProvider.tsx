@@ -130,7 +130,7 @@ export default function DashboardProvider({
       if (res.ok && data.dispatched) {
         setMessage('Synchronisatie gestart op de achtergrond (~1–2 min). Ververs daarna de pagina.');
       } else if (res.ok && data.ok) {
-        setMessage(data.ads && data.ads.ok === false ? `Data bijgewerkt. Google Ads niet: ${data.ads.error}` : 'Data bijgewerkt.');
+        setMessage(data.ads && data.ads.ok === false && !data.ads.skipped ? `Data bijgewerkt. Google Ads niet: ${data.ads.error}` : 'Data bijgewerkt.');
         await setRange(range);
         setRefreshCount((n) => n + 1);
       } else if (res.status === 409) {

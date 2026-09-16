@@ -55,6 +55,7 @@ Phased build. Status updated as we go.
 - [x] Migratie gedraaid en historie geïmporteerd (2024-11-01 t/m 2026-09-15, 3.001 rijen).
 - [x] Vernieuwen-knop en cron verversen Google Ads mee (GAQL.app REST, `lib/ads-sync.ts`).
 - [x] `GAQL_TOKEN` lokaal (de MCP-URL van GAQL.app); 3-daagse test geslaagd op 2026-09-16.
-- [ ] `GAQL_TOKEN` op Vercel zetten en Vernieuwen op productie proberen.
+- [x] Koppeling in Supabase gezet met `npm run ads:token` (geen Vercel-rechten nodig).
+- [ ] Vernieuwen op productie proberen en `ads_sync_meta` controleren.
 - [ ] Later: andere marketingkosten (social, drukwerk) als handmatige maandpost naast Google Ads.
 

@@ -14,7 +14,8 @@
     "oauth": "tsx scripts/oauth.ts",
     "backfill": "tsx scripts/backfill.ts",
     "import:prices": "tsx scripts/import-prices.ts",
-    "sync:ads": "tsx scripts/ads-sync.ts"
+    "sync:ads": "tsx scripts/ads-sync.ts",
+    "ads:token": "tsx scripts/ads-token.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.110.2",

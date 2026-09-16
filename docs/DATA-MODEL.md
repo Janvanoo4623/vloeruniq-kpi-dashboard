@@ -286,7 +286,11 @@ Drie bronnen, bewust uit elkaar gehouden:
 (TrueClicks) en upsert dat in `ads_daily`. `GAQL_TOKEN` is óf de volledige URL van hun gehoste
 MCP (`https://mcp.gaql.app/mcp/google-ads/<token>`, JSON-RPC over streamable HTTP — dit is wat
 Jasper heeft, via het Loavies-account met het Vloeruniq-klantnummer) óf een los gptToken voor de
-REST-API (`api.gaql.app`, wat hun npm-pakket onder water doet). Het rapport wordt geüpsert (`FROM campaign`, per `segments.date`, alleen
+REST-API (`api.gaql.app`, wat hun npm-pakket onder water doet). De koppeling staat in
+`app_settings.ads_gaql` (via `npm run ads:token`, dat hem eerst test) omdat Jasper geen rechten
+heeft op de productie-omgevingsvariabelen van Vercel; de env-variabele gaat vóór als hij er is.
+Dezelfde keuze als voor het Teamleader-token: server-side opslag, nooit naar de browser. Het
+rapport wordt geüpsert (`FROM campaign`, per `segments.date`, alleen
 rijen met vertoningen). Dat gebeurt bij **Vernieuwen** (`/api/refresh`) en bij de **cron**
 (`/api/sync`), parallel aan de Teamleader-sync: eigen bron, eigen tabel, géén Teamleader-lock.
 Een Ads-fout staat in `ads_sync_meta.error` en in het antwoord, maar houdt Teamleader niet tegen.

@@ -10,7 +10,7 @@
 // Dit raakt Teamleader niet aan en hoeft dus níet de Teamleader-sync-lock te
 // claimen. Twee Ads-syncs tegelijk zijn ongevaarlijk: dezelfde rijen, dezelfde
 // waarden, upsert.
-import { upsertAdsRows, deleteStaleAdsRows, setAdsMeta, getAdsMeta, type AdsMeta } from './db';
+import { upsertAdsRows, deleteStaleAdsRows, setAdsMeta, getAdsMeta, getAppSetting, setAppSetting, type AdsMeta } from './db';
 import type { AdsDailyRow } from './ads';
 
 const API_BASE = 'https://api.gaql.app';
@@ -68,8 +68,23 @@ export function reportToRows(report: AdsReport): AdsDailyRow[] {
   }));
 }
 
-export function adsConfigured(): boolean {
-  return Boolean(process.env.GAQL_TOKEN);
+// ── Waar de koppeling vandaan komt ───────────────────────────────────────
+// Eerst de env (lokaal, of Vercel als iemand daar de rechten voor heeft), anders
+// app_settings in Supabase. Dat laatste is dezelfde keuze als voor het
+// Teamleader-token: de opslag is alleen server-side bereikbaar, en Jasper kan
+// er zonder Vercel-rechten bij. `npm run ads:token` zet hem erin.
+const ADS_SOURCE_KEY = 'ads_gaql';
+
+export async function getGaqlToken(): Promise<string | null> {
+  const env = (process.env.GAQL_TOKEN ?? '').trim();
+  if (env) return env;
+  const stored = await getAppSetting<{ token?: string } | null>(ADS_SOURCE_KEY, null).catch(() => null);
+  const token = stored?.token?.trim();
+  return token || null;
+}
+
+export async function storeGaqlToken(token: string): Promise<void> {
+  await setAppSetting(ADS_SOURCE_KEY, { token: token.trim(), updatedAt: new Date().toISOString() });
 }
 
 // ── Twee transporten, één env-variabele ──────────────────────────────────
@@ -164,8 +179,8 @@ function parseReport(json: {
 
 /** Haal het rapport op. Gooit een leesbare fout bij alles wat misgaat. */
 export async function fetchAdsReport(from: string, to: string): Promise<AdsReport> {
-  const token = (process.env.GAQL_TOKEN ?? '').trim();
-  if (!token) throw new Error('GAQL_TOKEN ontbreekt (URL of token van GAQL.app / TrueClicks).');
+  const token = await getGaqlToken();
+  if (!token) throw new Error('Geen GAQL-koppeling: zet GAQL_TOKEN in .env.local of draai npm run ads:token.');
   const customerId = Number(process.env.GOOGLE_ADS_CUSTOMER_ID || '2259199560');
   const query = gaql(from, to);
 
@@ -216,9 +231,12 @@ export async function storeAdsRows(
  * Een fout wordt in ads_sync_meta gezet en teruggegeven, nooit gegooid: de
  * Teamleader-sync mag er niet op stuklopen.
  */
-export async function syncAds({ days = 90 }: { days?: number } = {}): Promise<{ ok: boolean; error?: string; rows?: number }> {
+export async function syncAds({ days = 90 }: { days?: number } = {}): Promise<{ ok: boolean; skipped?: boolean; error?: string; rows?: number }> {
   const to = iso(Date.now() - DAY);
   const from = iso(Date.parse(to) - (days - 1) * DAY);
+  // Zonder koppeling stil overslaan — geen fout in de meta, want er is niets
+  // misgegaan; er is alleen nog niets ingesteld.
+  if (!(await getGaqlToken())) return { ok: false, skipped: true };
   try {
     const rows = reportToRows(await fetchAdsReport(from, to));
     const r = await storeAdsRows(rows, from, to, 'gaql');
