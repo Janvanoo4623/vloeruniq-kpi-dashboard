@@ -51,12 +51,12 @@ export default function AdsFunnel({
       facts: [[formatPercent(ads.ctr), 'CTR'], [formatEuro(ads.cpc, true), 'per klik']],
     },
     {
-      label: 'Conversies',
+      label: 'Alle conversies',
       value: formatNumber(Math.round(ads.conversions)),
       delta: deltaPct(ads.conversions, prev?.conversions),
       spark: weeks.map((w) => w.conversions),
       color: CHART.adsCost,
-      facts: [[formatEuro(ads.cpa), 'per conversie'], ['formulier of telefoontje', '']],
+      facts: [[formatEuro(ads.cpa), 'per conversie'], ['alle conversieacties van Google', '']],
     },
     {
       label: 'Gewonnen',
@@ -73,7 +73,7 @@ export default function AdsFunnel({
       <div className="flex items-baseline justify-between gap-4 px-5 pt-4">
         <div>
           <h3 className="text-[13px] font-semibold tracking-tight text-ink">Van inzet tot gewonnen deal</h3>
-          <p className="mt-0.5 text-xs text-ink-mute">Per week in de lijntjes; Google telt de conversie, Teamleader de gewonnen offerte</p>
+          <p className="mt-0.5 text-xs text-ink-mute">Per week in de lijntjes; Google telt alle conversies, Teamleader de gewonnen offerte</p>
         </div>
       </div>
       <div className="grid grid-cols-2 gap-3 p-5 lg:grid-cols-[1fr_auto_1fr_auto_1fr_auto_1fr] lg:gap-2">

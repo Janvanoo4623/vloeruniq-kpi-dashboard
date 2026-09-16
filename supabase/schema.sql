@@ -171,8 +171,8 @@ create table if not exists ads_daily (
   impressions int not null default 0,
   clicks int not null default 0,
   cost numeric not null default 0,
-  conversions numeric not null default 0,
-  conversion_value numeric not null default 0,
+  conversions numeric not null default 0,       -- 'Alle conversies' (metrics.all_conversions)
+  conversion_value numeric not null default 0,  -- metrics.all_conversions_value
   synced_at timestamptz default now(),
   primary key (date, campaign_id)
 );

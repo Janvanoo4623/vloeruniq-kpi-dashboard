@@ -278,7 +278,7 @@ Drie bronnen, bewust uit elkaar gehouden:
 
 | Wat | Bron | Waar |
 | --- | --- | --- |
-| Kosten, klikken, vertoningen, conversies | Google Ads, per dag per campagne | tabel `ads_daily` |
+| Kosten, klikken, vertoningen, **alle conversies** (`metrics.all_conversions`, op verzoek van Jan 2026-09-16: niet de hoofdkolom 'Conversies' maar alle conversieacties, ~5× zoveel) | Google Ads, per dag per campagne | tabel `ads_daily` (kolom `conversions`) |
 | Omzet en marge "uit Google" | Teamleader: geaccepteerde offertes waarvan de deal leadbron **Google** heeft | `snapshot.quotations` + `runTimeRows`, `lib/ads.ts` `googleLeadStats` |
 | Maandbudget | handmatig, tabblad Marketing | `app_settings.ads_budgets` (`{ default, 'YYYY-MM' }`) |
 
@@ -300,7 +300,7 @@ Gecontroleerd op 2026-09-16: de maandtotalen uit `ads_daily` zijn cent-gelijk aa
 klantniveau-rapport van Google voor alle 23 maanden.
 
 **Kengetallen.** CTR = klikken / vertoningen; CPC = kosten / klikken; kosten per conversie =
-kosten / conversies (Google's eigen conversietelling: formulier of telefoontje).
+kosten / alle conversies (`metrics.cost_per_all_conversions` in Google).
 
 **Wat het oplevert.** Dezelfde koppeling als de leadbron-tabel: offerte → deal → leadbron.
 Een deal met "Google, Mond op mond reclame" telt mee. Marge = som van de offertemarges (alleen

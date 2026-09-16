@@ -26,7 +26,7 @@ export interface AdsReport {
 export function gaql(from: string, to: string): string {
   return (
     'SELECT segments.date, campaign.id, campaign.name, campaign.status, campaign.advertising_channel_type, ' +
-    'metrics.impressions, metrics.clicks, metrics.cost_micros, metrics.conversions, metrics.conversions_value ' +
+    'metrics.impressions, metrics.clicks, metrics.cost_micros, metrics.all_conversions, metrics.all_conversions_value ' +
     `FROM campaign WHERE segments.date BETWEEN '${from}' AND '${to}' AND metrics.impressions > 0 ` +
     'ORDER BY segments.date'
   );
@@ -47,8 +47,10 @@ export function reportToRows(report: AdsReport): AdsDailyRow[] {
   const cImp = col('metrics.impressions');
   const cClicks = col('metrics.clicks');
   const cCost = col('metrics.costMicros');
-  const cConv = col('metrics.conversions');
-  const cConvVal = col('metrics.conversionsValue');
+  // 'Alle conversies' (metrics.all_conversions), niet de hoofdkolom 'Conversies':
+  // Jan telt alle conversieacties mee, ook de secundaire (bellen, route).
+  const cConv = col('metrics.allConversions');
+  const cConvVal = col('metrics.allConversionsValue');
   return report.data.map((r) => ({
     date: r[cDate],
     campaignId: String(r[cId]),

@@ -140,7 +140,7 @@ export default function MarketingView({ initial }: { initial: AdsPayload }) {
         />
       </div>
 
-      <ChartCard title="Kosten en conversies per week" subtitle="Wat er per week is uitgegeven en hoeveel conversies Google daarvoor telde">
+      <ChartCard title="Kosten en conversies per week" subtitle="Wat er per week is uitgegeven en hoeveel conversies (alle) Google daarvoor telde">
         <AdsWeekChart data={ads.byWeek} />
       </ChartCard>
 

@@ -29,7 +29,7 @@ export default function AdsCampaignTable({ rows }: { rows: AdsCampaignStat[] }) 
             <th className="px-3 py-2 text-right font-medium">Klikken</th>
             <th className="px-3 py-2 text-right font-medium">CTR</th>
             <th className="px-3 py-2 text-right font-medium">CPC</th>
-            <th className="px-3 py-2 text-right font-medium">Conversies</th>
+            <th className="px-3 py-2 text-right font-medium">Alle conversies</th>
             <th className="px-3 py-2 text-right font-medium">Per conversie</th>
           </tr>
         </thead>

@@ -26,7 +26,7 @@ export default function AdsWeekChart({ data }: { data: AdsWeekPoint[] }) {
       <ChartLegend
         items={[
           { label: 'Kosten', color: CHART.adsCost },
-          { label: 'Conversies', color: CHART.adsConversions, dashed: true },
+          { label: 'Alle conversies', color: CHART.adsConversions, dashed: true },
         ]}
       />
       <ResponsiveContainer width="100%" height={286}>
@@ -80,7 +80,7 @@ export default function AdsWeekChart({ data }: { data: AdsWeekPoint[] }) {
             yAxisId="n"
             type="monotone"
             dataKey="conversions"
-            name="Conversies"
+            name="Alle conversies"
             stroke={CHART.adsConversions}
             strokeWidth={2.2}
             strokeDasharray="5 4"

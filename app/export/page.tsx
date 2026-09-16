@@ -384,8 +384,8 @@ export default async function ExportPage({
               ['Klikken', formatNumber(ads.totals.clicks), adsVorig && formatNumber(adsVorig.clicks)],
               ['CTR', formatPercent(ads.totals.ctr), adsVorig && formatPercent(adsVorig.ctr)],
               ['CPC', formatEuro(ads.totals.cpc, true), adsVorig && formatEuro(adsVorig.cpc, true)],
-              ['Conversies (Google)', formatNumber(Math.round(ads.totals.conversions)), adsVorig && formatNumber(Math.round(adsVorig.conversions))],
-              ['Kosten per conversie', formatEuro(ads.totals.cpa), adsVorig && formatEuro(adsVorig.cpa)],
+              ['Alle conversies (Google)', formatNumber(Math.round(ads.totals.conversions)), adsVorig && formatNumber(Math.round(adsVorig.conversions))],
+              ['Kosten per alle conversies', formatEuro(ads.totals.cpa), adsVorig && formatEuro(adsVorig.cpa)],
               ['Omzet uit Google-leads', formatEuro(google.revenue), null],
               ['Gewonnen Google-offertes', formatNumber(google.count), null],
               ['Marge uit Google-leads', formatEuro(google.margin), null],
@@ -398,7 +398,7 @@ export default async function ExportPage({
           />
           <Tabel
             titel="Per campagne"
-            kop={['Campagne', 'Kosten', 'Klikken', 'CTR', 'CPC', 'Conversies']}
+            kop={['Campagne', 'Kosten', 'Klikken', 'CTR', 'CPC', 'Alle conversies']}
             rechts={[false, true, true, true, true, true]}
             rijen={ads.byCampaign.map((c) => [
               c.name,
@@ -419,7 +419,7 @@ export default async function ExportPage({
               formatEuro(m.spent),
               formatPercent(m.pct),
             ])}
-            voetnoot={`Google Ads-cijfers t/m ${ads.meta?.toDate ?? '—'}. Conversies volgens Google; omzet en marge uit Teamleader op leadbron "Google". Die twee vallen zelden in dezelfde periode.`}
+            voetnoot={`Google Ads-cijfers t/m ${ads.meta?.toDate ?? '—'}. Alle conversies volgens Google; omzet en marge uit Teamleader op leadbron "Google". Die twee vallen zelden in dezelfde periode.`}
           />
         </Blad>
       )}

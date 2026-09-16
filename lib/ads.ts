@@ -19,6 +19,7 @@ export interface AdsDailyRow {
   impressions: number;
   clicks: number;
   cost: number; // €
+  /** 'Alle conversies' van Google (metrics.all_conversions), niet alleen de hoofdconversies. */
   conversions: number;
   conversionValue: number;
 }
@@ -33,7 +34,7 @@ export interface AdsTotals {
   ctr: number | null;
   /** Kosten per klik. Null zonder klikken. */
   cpc: number | null;
-  /** Kosten per conversie. Null zonder conversies. */
+  /** Kosten per (alle) conversie. Null zonder conversies. */
   cpa: number | null;
   /** Dagen met tenminste één vertoning — zegt of een periode wel gevuld is. */
   activeDays: number;
