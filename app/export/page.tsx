@@ -17,6 +17,8 @@ import { customerAnalysis } from '@/lib/customers';
 import { computeLost } from '@/lib/lost';
 import { perM2Stats, planningOverview } from '@/lib/insights';
 import { DEFAULT_KPI_SETTINGS, parseKpiSettings } from '@/lib/kpi-settings';
+import { buildAdsPayload } from '@/lib/ads-payload';
+import { googleLeadStats, marginAfterAds } from '@/lib/ads';
 import { formatDateTime, formatEuro, formatNumber, formatPercent, formatProduct } from '@/lib/format';
 import type { InvoicingSummary, QuotationRow } from '@/lib/types';
 import { STATUS_LABEL } from '@/components/QuotationModal';
@@ -125,6 +127,13 @@ export default async function ExportPage({
   const klanten = customerAnalysis(invoices, quotations, from, to);
   const verloren = computeLost(quotations, vandaag, settings);
   const planning = planningOverview(deals, quotations, vandaag);
+
+  // Marketing: Google Ads-kosten uit ads_daily, omzet en marge uit Teamleader
+  // (leadbron Google) — dezelfde functies als het tabblad Marketing.
+  const ads = await buildAdsPayload(from, to, compare);
+  const google = googleLeadStats(snap.quotations, snap.runTimeRows);
+  const naAds = marginAfterAds(t.totalMargin, ads.totals, google);
+  const adsVorig = ads.comparison?.totals ?? null;
 
   const periode = `${from} t/m ${to}`;
   const inPeriode = [...snap.quotations].sort((a, b) => b.revenueExVat - a.revenueExVat);
@@ -366,6 +375,54 @@ export default async function ExportPage({
           voetnoot="Leadbron staat op de deal in Teamleader en is lang niet altijd ingevuld; lees dit als een deel van het beeld."
         />
       </Blad>
+
+      {ads.available && (
+        <Blad titel="Marketing" ondertitel="Google Ads: wat het kost, wat het oplevert en wat er van de marge overblijft">
+          <Kpis
+            rijen={[
+              ['Google Ads-kosten', formatEuro(ads.totals.cost), adsVorig && formatEuro(adsVorig.cost)],
+              ['Klikken', formatNumber(ads.totals.clicks), adsVorig && formatNumber(adsVorig.clicks)],
+              ['CTR', formatPercent(ads.totals.ctr), adsVorig && formatPercent(adsVorig.ctr)],
+              ['CPC', formatEuro(ads.totals.cpc, true), adsVorig && formatEuro(adsVorig.cpc, true)],
+              ['Conversies (Google)', formatNumber(Math.round(ads.totals.conversions)), adsVorig && formatNumber(Math.round(adsVorig.conversions))],
+              ['Kosten per conversie', formatEuro(ads.totals.cpa), adsVorig && formatEuro(adsVorig.cpa)],
+              ['Omzet uit Google-leads', formatEuro(google.revenue), null],
+              ['Gewonnen Google-offertes', formatNumber(google.count), null],
+              ['Marge uit Google-leads', formatEuro(google.margin), null],
+              ['Kosten per gewonnen deal', formatEuro(naAds.costPerWonDeal), null],
+              ['Rendement Google Ads', formatEuro(naAds.googleNet), null],
+              ['Totale marge', formatEuro(t.totalMargin), v && formatEuro(v.totalMargin)],
+              ['Marge na Google Ads', formatEuro(naAds.net), v && adsVorig && formatEuro(v.totalMargin - adsVorig.cost)],
+            ]}
+            vergelijking={vorige != null}
+          />
+          <Tabel
+            titel="Per campagne"
+            kop={['Campagne', 'Kosten', 'Klikken', 'CTR', 'CPC', 'Conversies']}
+            rechts={[false, true, true, true, true, true]}
+            rijen={ads.byCampaign.map((c) => [
+              c.name,
+              formatEuro(c.cost),
+              formatNumber(c.clicks),
+              formatPercent(c.ctr),
+              formatEuro(c.cpc, true),
+              formatNumber(Math.round(c.conversions * 10) / 10),
+            ])}
+          />
+          <Tabel
+            titel="Maandbudget"
+            kop={['Maand', 'Budget', 'Uitgegeven', 'Benut']}
+            rechts={[false, true, true, true]}
+            rijen={[...ads.budgets].reverse().map((m) => [
+              m.label,
+              m.budget != null ? formatEuro(m.budget) : '—',
+              formatEuro(m.spent),
+              formatPercent(m.pct),
+            ])}
+            voetnoot={`Google Ads-cijfers t/m ${ads.meta?.toDate ?? '—'}. Conversies volgens Google; omzet en marge uit Teamleader op leadbron "Google". Die twee vallen zelden in dezelfde periode.`}
+          />
+        </Blad>
+      )}
 
       <Blad titel="Klanten" ondertitel="Gefactureerd in deze periode, ex btw">
         <Kpis

@@ -272,6 +272,47 @@ run-time data (`dealId → leadSource`); unknown → `Onbekend`. A deal can list
 
 ---
 
+## Marketing (Google Ads) — sinds 2026-09-16
+
+Drie bronnen, bewust uit elkaar gehouden:
+
+| Wat | Bron | Waar |
+| --- | --- | --- |
+| Kosten, klikken, vertoningen, conversies | Google Ads, per dag per campagne | tabel `ads_daily` |
+| Omzet en marge "uit Google" | Teamleader: geaccepteerde offertes waarvan de deal leadbron **Google** heeft | `snapshot.quotations` + `runTimeRows`, `lib/ads.ts` `googleLeadStats` |
+| Maandbudget | handmatig, tabblad Marketing | `app_settings.ads_budgets` (`{ default, 'YYYY-MM' }`) |
+
+**Hoe de cijfers binnenkomen.** `npm run sync:ads` (`scripts/ads-sync.ts`) haalt via de
+TrueClicks Google Ads MCP een GAQL-rapport op (`FROM campaign`, per `segments.date`, alleen
+rijen met vertoningen) en upsert dat in `ads_daily`. Standaard de laatste 90 dagen t/m gisteren,
+want Google corrigeert achteraf (ongeldige klikken, late conversies); rijen in het venster die
+de run niet opnieuw aanleverde worden verwijderd. Het script draait lokaal en raakt Teamleader
+niet aan (geen sync-lock nodig). Er staat bewust geen Google-token op Vercel: de app leest
+alleen de tabel. Zonder token kan het script ook een eerder opgehaald rapport importeren
+(`--from-json`); zo is de historie vanaf 2024-11-01 geladen.
+
+**Kosten** = `cost_micros / 1e6`, onafgerond opgeslagen; afronden gebeurt bij het optellen.
+Gecontroleerd op 2026-09-16: de maandtotalen uit `ads_daily` zijn cent-gelijk aan het
+klantniveau-rapport van Google voor alle 23 maanden.
+
+**Kengetallen.** CTR = klikken / vertoningen; CPC = kosten / klikken; kosten per conversie =
+kosten / conversies (Google's eigen conversietelling: formulier of telefoontje).
+
+**Wat het oplevert.** Dezelfde koppeling als de leadbron-tabel: offerte → deal → leadbron.
+Een deal met "Google, Mond op mond reclame" telt mee. Marge = som van de offertemarges (alleen
+offertes mét marge; het aantal zonder inkoopprijs staat ernaast). Kosten per gewonnen deal =
+Ads-kosten / gewonnen Google-offertes. **Rendement Google Ads** = marge uit Google-leads − kosten.
+
+**Marge na marketing** = totale marge van de periode − Google Ads-kosten van dezelfde periode.
+Google telt een conversie op de dag van het contact, Teamleader een gewonnen offerte op de
+beslisdatum; die vallen zelden in dezelfde periode, dus over korte periodes is dit een indicatie.
+
+**Budget.** Per maand, met een standaard voor maanden zonder eigen bedrag. Voor de lopende
+maand wordt het tempo doorgetrokken (uitgegeven / dagen verstreken × dagen in de maand);
+signaal: >110% van budget = boven budget, >100% = net erboven, anders binnen budget.
+
+---
+
 ## Reference values (must match — from the current Sheet `Overview`)
 
 Use these to validate `npm run sync` output. (They reflect a 90-day window as of mid-June 2026

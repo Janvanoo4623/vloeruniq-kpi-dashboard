@@ -16,6 +16,7 @@ import {
   MapPin,
   Users2,
   TrendingDown,
+  Megaphone,
 } from 'lucide-react';
 
 export interface NavItem {
@@ -107,6 +108,13 @@ export const NAV: NavGroup[] = [
         title: 'Leadbronnen',
         subtitle: 'Waar de omzet vandaan komt, en wat elke bron waard is',
         Icon: Users,
+      },
+      {
+        href: '/marketing',
+        label: 'Marketing',
+        title: 'Marketing',
+        subtitle: 'Wat Google Ads kost, wat het oplevert, en wat er van de marge overblijft',
+        Icon: Megaphone,
       },
       {
         href: '/klanten',

@@ -3,6 +3,7 @@
 import { supabase } from './supabase';
 import { deriveDateParts } from './teamleader/dates';
 import type { PriceRow, CostRow } from './pricing';
+import { parseAdsBudgets, type AdsBudgets, type AdsDailyRow } from './ads';
 import type {
   InvoiceAdjustment,
   InvoiceRow,
@@ -793,5 +794,152 @@ export async function setInvoiceAdjustment(
   if (openIncl === null) delete huidig[id];
   else huidig[id] = { openIncl, note: note?.trim() || undefined, updatedAt: new Date().toISOString() };
   await setAppSetting(OPENSTAAND_KEY, huidig);
+  return huidig;
+}
+
+// ── Google Ads (marketingkosten) ─────────────────────────────────────────
+// Gevuld door scripts/ads-sync.ts; gelezen door /api/ads en het tabblad
+// Marketing. Praat nooit met Google zelf — zie lib/ads.ts.
+
+export interface AdsMeta {
+  lastSyncAt: string | null;
+  fromDate: string | null;
+  toDate: string | null;
+  rows: number | null;
+  source: string | null;
+  error: string | null;
+}
+
+function rowToAds(r: Row): AdsDailyRow {
+  return {
+    date: r.date as string,
+    campaignId: String(r.campaign_id),
+    campaignName: (r.campaign_name as string) ?? '',
+    campaignStatus: (r.campaign_status as string) ?? '',
+    channel: (r.channel as string) ?? '',
+    impressions: num(r.impressions),
+    clicks: num(r.clicks),
+    cost: num(r.cost),
+    conversions: num(r.conversions),
+    conversionValue: num(r.conversion_value),
+  };
+}
+
+/**
+ * Dagcijfers in de periode. `null` betekent: de tabel bestaat nog niet (de
+ * migratie uit supabase/schema.sql is niet gedraaid) — de pagina legt dat dan
+ * uit in plaats van een lege grafiek te tonen.
+ */
+export async function getAdsRows(from: string, to: string): Promise<AdsDailyRow[] | null> {
+  const out: AdsDailyRow[] = [];
+  const size = 1000;
+  for (let start = 0; ; start += size) {
+    const { data, error } = await supabase()
+      .from('ads_daily')
+      .select('*')
+      .gte('date', from)
+      .lte('date', to)
+      .order('date', { ascending: true })
+      .order('campaign_id', { ascending: true })
+      .range(start, start + size - 1);
+    if (error) {
+      if (isMissingTable(error)) return null;
+      throw new Error(`db.getAdsRows: ${error.message}`);
+    }
+    const rows = (data ?? []) as Row[];
+    out.push(...rows.map(rowToAds));
+    if (rows.length < size) break;
+  }
+  return out;
+}
+
+export async function upsertAdsRows(rows: AdsDailyRow[]): Promise<void> {
+  const syncedAt = new Date().toISOString();
+  const payload = rows.map((r) => ({
+    date: r.date,
+    campaign_id: r.campaignId,
+    campaign_name: r.campaignName,
+    campaign_status: r.campaignStatus,
+    channel: r.channel,
+    impressions: r.impressions,
+    clicks: r.clicks,
+    cost: r.cost,
+    conversions: r.conversions,
+    conversion_value: r.conversionValue,
+    synced_at: syncedAt,
+  }));
+  for (let i = 0; i < payload.length; i += 500) {
+    const { error } = await supabase().from('ads_daily').upsert(payload.slice(i, i + 500));
+    if (error) {
+      if (isMissingTable(error)) {
+        throw new Error(
+          'De tabel ads_daily bestaat nog niet. Draai supabase/schema.sql in de Supabase SQL editor.',
+        );
+      }
+      throw new Error(`db.upsertAdsRows: ${error.message}`);
+    }
+  }
+}
+
+/**
+ * Rijen in het venster die deze run níet opnieuw heeft aangeleverd. Google kan
+ * cijfers achteraf corrigeren (ongeldige klikken), en een campagne die op een
+ * dag geen vertoning meer heeft komt niet terug in het rapport — de oude rij
+ * zou dan blijven staan en meetellen.
+ */
+export async function deleteStaleAdsRows(from: string, to: string, olderThanIso: string): Promise<number> {
+  const { data, error } = await supabase()
+    .from('ads_daily')
+    .delete()
+    .gte('date', from)
+    .lte('date', to)
+    .lt('synced_at', olderThanIso)
+    .select('date');
+  if (error) throw new Error(`db.deleteStaleAdsRows: ${error.message}`);
+  return data?.length ?? 0;
+}
+
+export async function getAdsMeta(): Promise<AdsMeta | null> {
+  const { data, error } = await supabase().from('ads_sync_meta').select('*').eq('id', 1).maybeSingle();
+  if (error) {
+    if (isMissingTable(error)) return null;
+    throw new Error(`db.getAdsMeta: ${error.message}`);
+  }
+  if (!data) return null;
+  return {
+    lastSyncAt: (data.last_sync_at as string) ?? null,
+    fromDate: (data.from_date as string) ?? null,
+    toDate: (data.to_date as string) ?? null,
+    rows: numOrNull(data.rows),
+    source: (data.source as string) ?? null,
+    error: (data.error as string) ?? null,
+  };
+}
+
+export async function setAdsMeta(m: AdsMeta): Promise<void> {
+  const { error } = await supabase().from('ads_sync_meta').upsert({
+    id: 1,
+    last_sync_at: m.lastSyncAt,
+    from_date: m.fromDate,
+    to_date: m.toDate,
+    rows: m.rows,
+    source: m.source,
+    error: m.error,
+  });
+  if (error) throw new Error(`db.setAdsMeta: ${error.message}`);
+}
+
+const ADS_BUDGETS_KEY = 'ads_budgets';
+
+export async function getAdsBudgets(): Promise<AdsBudgets> {
+  return parseAdsBudgets(await getAppSetting<unknown>(ADS_BUDGETS_KEY, {}));
+}
+
+/** `amount === null` haalt het budget voor die maand (of de standaard) weg. */
+export async function setAdsBudget(month: string, amount: number | null): Promise<AdsBudgets> {
+  const huidig = await getAdsBudgets();
+  if (amount === null) delete huidig[month];
+  else huidig[month] = amount;
+  await setAppSetting(ADS_BUDGETS_KEY, huidig);
   return huidig;
 }

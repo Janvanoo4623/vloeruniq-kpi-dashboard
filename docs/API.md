@@ -62,6 +62,8 @@ is now invalid — persist the new one immediately. See the token-ownership rule
 | `/api/snapshot` | `GET` | session cookie | Return the latest computed snapshot + meta for the dashboard. |
 | `/api/login` | `POST` | none | Compare password to `DASHBOARD_PASSWORD`; set auth cookie. |
 | `/api/logout` | `POST` | session cookie | Clear auth cookie. |
+| `/api/ads` | `GET` | session cookie | Google Ads-cijfers voor `?from&to&compare`: totalen, per week, per campagne, budgetstand per maand, laatste import. Leest alleen `ads_daily`. |
+| `/api/ads` | `POST` | session cookie | Maandbudget zetten: `{ month: 'YYYY-MM' \| 'default', amount: number \| null }` → `app_settings.ads_budgets`. |
 
 ### `/api/sync` behaviour
 

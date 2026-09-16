@@ -48,3 +48,11 @@ Phased build. Status updated as we go.
 - [ ] Per-quotation drill-down (line items + which lines matched).
 - [ ] Sync history / error log surfaced in the UI.
 - [ ] CSV export.
+
+## Marketing (Google Ads) — 2026-09-16
+- [x] `ads_daily` + `ads_sync_meta` in `supabase/schema.sql`; `npm run sync:ads` (TrueClicks MCP of `--from-json`).
+- [x] Tabblad Marketing: kosten/klikken/CTR/CPC/conversies met periodefilter en vergelijking, per week, per campagne, maandbudget, marge na Google Ads. Ook in het exportrapport.
+- [ ] Migratie draaien in Supabase en historie importeren (`.data/ads/backfill_2024-11-01_2026-09-15.json`).
+- [ ] `TRUECLICKS_MCP_TOKEN` in `.env.local` zodat `npm run sync:ads` zelf kan ophalen; daarna wekelijks draaien.
+- [ ] Later: andere marketingkosten (social, drukwerk) als handmatige maandpost naast Google Ads.
+

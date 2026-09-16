@@ -155,3 +155,39 @@ create table if not exists app_settings (
   value jsonb not null,
   updated_at timestamptz default now()
 );
+
+
+-- ── Google Ads (marketingkosten) ─────────────────────────────────────────
+-- Dagcijfers per campagne, gevuld door `npm run sync:ads` (lokaal script via de
+-- TrueClicks MCP-koppeling; zie docs/DATA-MODEL.md "Marketing"). De app leest
+-- alleen; niets hierin praat met Google Ads tijdens een paginaweergave.
+-- Bedragen in euro's (cost_micros / 1e6), ex btw zoals Google ze rapporteert.
+create table if not exists ads_daily (
+  date date not null,
+  campaign_id text not null,
+  campaign_name text,
+  campaign_status text,        -- ENABLED | PAUSED | REMOVED
+  channel text,                -- SEARCH | PERFORMANCE_MAX | DISPLAY | ...
+  impressions int not null default 0,
+  clicks int not null default 0,
+  cost numeric not null default 0,
+  conversions numeric not null default 0,
+  conversion_value numeric not null default 0,
+  synced_at timestamptz default now(),
+  primary key (date, campaign_id)
+);
+create index if not exists ads_daily_date on ads_daily (date);
+
+-- Laatste Ads-import (één rij), los van sync_meta: die is van Teamleader.
+create table if not exists ads_sync_meta (
+  id int primary key default 1,
+  last_sync_at timestamptz,
+  from_date date,
+  to_date date,
+  rows int,
+  source text,                 -- 'mcp' | 'json'
+  error text,
+  constraint ads_sync_meta_singleton check (id = 1)
+);
+-- Maandbudgetten staan in app_settings onder de sleutel 'ads_budgets'
+-- ({ "default": 4000, "2026-09": 4500 }) — dat zijn keuzes, geen metingen.

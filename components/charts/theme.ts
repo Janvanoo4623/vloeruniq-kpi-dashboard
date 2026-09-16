@@ -20,6 +20,11 @@ export const CHART = {
   marginPct: '#a8761b', // warn — marge in procenten
   runTime: '#0e6b63', // accent — doorlooptijd
   deals: '#e7e2da', // line — achtergrondstaven
+
+  // Marketing: kosten zijn geld dat weggaat, dus geen accent en geen rood —
+  // leisteen, neutraal. Conversies krijgen het accent: dat is wat binnenkomt.
+  adsCost: '#6b7f8e',
+  adsConversions: '#0e6b63',
 } as const;
 
 /**
