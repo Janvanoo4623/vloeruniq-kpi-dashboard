@@ -3,15 +3,15 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AlertTriangle } from 'lucide-react';
 import { useDashboard } from '@/components/layout/DashboardProvider';
-import KpiCard from '@/components/KpiCard';
 import ChartCard from '@/components/ChartCard';
 import AdsWeekChart from '@/components/charts/AdsWeekChart';
 import AdsCampaignTable from '@/components/AdsCampaignTable';
 import AdsBudgetPanel from '@/components/AdsBudgetPanel';
+import AdsFunnel from '@/components/AdsFunnel';
 import EmptyState from '@/components/pages/EmptyState';
-import { Panel, SectionLabel } from '@/components/ui';
-import { formatDateTime, formatEuro, formatNumber, formatPercent, timeAgo } from '@/lib/format';
-import { deltaPct, googleLeadStats, marginAfterAds } from '@/lib/ads';
+import { Panel } from '@/components/ui';
+import { formatDateTime, timeAgo } from '@/lib/format';
+import { googleLeadStats, marginAfterAds } from '@/lib/ads';
 import type { AdsPayload } from '@/lib/ads-payload';
 
 const DAY = 86400000;
@@ -117,119 +117,17 @@ export default function MarketingView({ initial }: { initial: AdsPayload }) {
         </p>
       )}
 
-      <section className={laden ? 'opacity-60 transition' : 'transition'}>
-        <SectionLabel>Google Ads — deze periode</SectionLabel>
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
-          <KpiCard
-            label="Kosten"
-            value={formatEuro(a.cost)}
-            sub={`${formatNumber(a.impressions)} vertoningen`}
-            deltaPct={deltaPct(a.cost, v?.cost)}
-            higherIsBetter={false}
-          />
-          <KpiCard
-            label="Klikken"
-            value={formatNumber(a.clicks)}
-            sub={a.activeDays > 0 ? `${formatNumber(Math.round(a.clicks / a.activeDays))} per dag` : undefined}
-            deltaPct={deltaPct(a.clicks, v?.clicks)}
-          />
-          <KpiCard
-            label="CTR"
-            value={formatPercent(a.ctr)}
-            sub="klikken per vertoning"
-            deltaPct={deltaPct(a.ctr, v?.ctr)}
-          />
-          <KpiCard
-            label="CPC"
-            value={formatEuro(a.cpc, true)}
-            sub="kosten per klik"
-            deltaPct={deltaPct(a.cpc, v?.cpc)}
-            higherIsBetter={false}
-          />
-          <KpiCard
-            label="Conversies"
-            value={formatNumber(Math.round(a.conversions * 10) / 10)}
-            sub="volgens Google: formulier of telefoontje"
-            deltaPct={deltaPct(a.conversions, v?.conversions)}
-          />
-          <KpiCard
-            label="Per conversie"
-            value={formatEuro(a.cpa)}
-            sub="kosten per conversie"
-            deltaPct={deltaPct(a.cpa, v?.cpa)}
-            higherIsBetter={false}
-          />
-        </div>
-      </section>
-
-      <section>
-        <SectionLabel>Wat het oplevert — uit Teamleader, leadbron “Google”</SectionLabel>
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          <KpiCard
-            label="Omzet uit Google-leads"
-            value={formatEuro(google.revenue)}
-            sub={`${google.count} gewonnen ${google.count === 1 ? 'offerte' : 'offertes'}${rekensom.roas != null ? ` · ${formatNumber(Math.round(rekensom.roas * 10) / 10).replace('.', ',')}× de kosten` : ''}`}
-          />
-          <KpiCard
-            label="Marge uit Google-leads"
-            value={formatEuro(google.margin)}
-            sub={
-              google.unpricedCount > 0
-                ? `${google.unpricedCount} zonder inkoopprijs tellen niet mee`
-                : google.marginRevenue > 0
-                  ? `${formatPercent((google.margin / google.marginRevenue) * 100)} van de omzet`
-                  : 'geen gewonnen offertes met marge'
-            }
-          />
-          <KpiCard
-            label="Kosten per gewonnen deal"
-            value={formatEuro(rekensom.costPerWonDeal)}
-            sub="advertentiekosten gedeeld door gewonnen Google-offertes"
-            higherIsBetter={false}
-          />
-          <KpiCard
-            label="Rendement Google Ads"
-            value={formatEuro(rekensom.googleNet)}
-            sub="marge uit Google-leads min de advertentiekosten"
-            signal={rekensom.googleNet < 0 ? 'crit' : a.cost > 0 ? 'good' : undefined}
-          />
-        </div>
-        <p className="mt-2 text-[11.5px] leading-relaxed text-ink-faint">
-          Google telt een conversie op het moment van het formulier of telefoontje; Teamleader telt een
-          gewonnen offerte op de beslisdatum. Die twee vallen zelden in dezelfde periode, dus vergelijk ze
-          over langere periodes. Een deal met meerdere leadbronnen (“Google, Mond op mond”) telt hier mee,
-          net als op Leadbronnen.
-        </p>
-      </section>
-
-      <Panel
-        title="Marge na marketing"
-        subtitle="De totale marge van de periode, min wat Google Ads in diezelfde periode kostte"
-      >
-        <div className="grid grid-cols-1 items-center gap-3 sm:grid-cols-[1fr_auto_1fr_auto_1.2fr]">
-          <Som label="Totale marge" waarde={formatEuro(totals.totalMargin)} sub={`${formatPercent(totals.avgMarginPct)} gemiddeld`} />
-          <Teken>−</Teken>
-          <Som label="Google Ads" waarde={formatEuro(a.cost)} sub={rekensom.costShareOfMargin != null ? `${formatPercent(rekensom.costShareOfMargin)} van de marge` : undefined} />
-          <Teken>=</Teken>
-          <Som
-            label="Marge na Google Ads"
-            waarde={formatEuro(rekensom.net)}
-            sub={
-              vorigeNet != null && ads.comparison
-                ? `vorige periode ${formatEuro(vorigeNet)}`
-                : totals.acceptedRevenue > 0
-                  ? `${formatPercent((rekensom.net / totals.acceptedRevenue) * 100)} van de geaccepteerde omzet`
-                  : undefined
-            }
-            accent={rekensom.net < 0 ? 'crit' : 'good'}
-            deltaPct={vorigeNet != null ? deltaPct(rekensom.net, vorigeNet) : null}
-          />
-        </div>
-        <p className="mt-3 text-[11.5px] leading-relaxed text-ink-faint">
-          Marge is omzet min inkoop, ondervloer en arbeid van de vloerregels, zoals op Marge. Andere
-          marketingkosten (social, drukwerk) zitten hier niet in; alleen wat Google Ads factureert.
-        </p>
-      </Panel>
+      <div className={laden ? 'opacity-60 transition' : 'transition'}>
+        <AdsFunnel
+          ads={a}
+          prev={v}
+          google={google}
+          som={rekensom}
+          totalMargin={totals.totalMargin}
+          avgMarginPct={totals.avgMarginPct}
+          prevNet={ads.comparison ? vorigeNet : null}
+        />
+      </div>
 
       <ChartCard title="Kosten en conversies per week" subtitle="Wat er per week is uitgegeven en hoeveel conversies Google daarvoor telde">
         <AdsWeekChart data={ads.byWeek} />
@@ -254,38 +152,5 @@ export default function MarketingView({ initial }: { initial: AdsPayload }) {
         opnieuw op.
       </p>
     </div>
-  );
-}
-
-function Som({
-  label,
-  waarde,
-  sub,
-  accent,
-  deltaPct: d,
-}: {
-  label: string;
-  waarde: string;
-  sub?: string;
-  accent?: 'good' | 'crit';
-  deltaPct?: number | null;
-}) {
-  return (
-    <KpiCard
-      label={label}
-      value={waarde}
-      sub={sub}
-      signal={accent}
-      deltaPct={d}
-      deltaLabel="vs vorige periode"
-    />
-  );
-}
-
-function Teken({ children }: { children: string }) {
-  return (
-    <span className="hidden text-center text-[22px] font-semibold text-ink-faint sm:block" aria-hidden>
-      {children}
-    </span>
   );
 }
