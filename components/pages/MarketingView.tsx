@@ -235,18 +235,16 @@ export default function MarketingView({ initial }: { initial: AdsPayload }) {
         <AdsWeekChart data={ads.byWeek} />
       </ChartCard>
 
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-5">
-        <ChartCard
-          title="Maandbudget"
-          subtitle="Afgesproken bedrag tegenover de werkelijke uitgaven; de lopende maand doorgetrokken op het huidige tempo"
-          className="xl:col-span-2"
-        >
-          <AdsBudgetPanel months={ads.budgets} budgets={ads.rawBudgets} onSaved={herladen} />
-        </ChartCard>
-        <ChartCard title="Per campagne" subtitle="Waar het geld naartoe gaat en wat elke campagne daarvoor doet" className="xl:col-span-3">
-          <AdsCampaignTable rows={ads.byCampaign} />
-        </ChartCard>
-      </div>
+      <ChartCard
+        title="Maandbudget"
+        subtitle="Afgesproken bedrag tegenover de werkelijke uitgaven; de lopende maand doorgetrokken op het huidige tempo"
+      >
+        <AdsBudgetPanel months={ads.budgets} budgets={ads.rawBudgets} onSaved={herladen} />
+      </ChartCard>
+
+      <ChartCard title="Per campagne" subtitle="Waar het geld naartoe gaat en wat elke campagne daarvoor doet">
+        <AdsCampaignTable rows={ads.byCampaign} />
+      </ChartCard>
 
       <p className="text-[11.5px] text-ink-faint">
         Google Ads-cijfers{ads.meta?.fromDate ? ` van ${ads.meta.fromDate} t/m ${ads.meta.toDate}` : ''}, laatst
