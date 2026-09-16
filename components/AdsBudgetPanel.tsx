@@ -6,6 +6,7 @@ import type { AdsBudgets, MonthBudgetStatus } from '@/lib/ads';
 import { monthLabel } from '@/lib/ads';
 import { formatEuro, formatPercent } from '@/lib/format';
 import { Badge, Button } from './ui';
+import { CHART } from './charts/theme';
 
 /**
  * Budget per maand tegenover de werkelijke uitgaven. Eén beslissing per rij:
@@ -25,6 +26,9 @@ export default function AdsBudgetPanel({
 }) {
   const [bewerk, setBewerk] = useState<string | null>(null);
   const rijen = [...months].reverse();
+  // Zonder budget is de balk relatief aan de duurste maand, zodat maanden
+  // onderling toch te vergelijken zijn.
+  const maxRef = Math.max(1, ...months.map((m) => Math.max(m.budget ?? 0, m.spent, m.projected ?? 0)));
 
   return (
     <div>
@@ -47,7 +51,7 @@ export default function AdsBudgetPanel({
                 <th className="px-3 py-2 text-left font-medium">Maand</th>
                 <th className="px-3 py-2 text-right font-medium">Budget</th>
                 <th className="px-3 py-2 text-right font-medium">Uitgegeven</th>
-                <th className="px-3 py-2 text-right font-medium">Benut</th>
+                <th className="w-[34%] px-3 py-2 text-left font-medium">Benut</th>
                 <th className="px-3 py-2 text-right font-medium">Verwacht</th>
                 <th className="px-3 py-2 text-right font-medium"></th>
               </tr>
@@ -69,7 +73,9 @@ export default function AdsBudgetPanel({
                     {m.budgetIsDefault && m.budget != null && <span className="ml-1 text-[10.5px] text-ink-faint">std</span>}
                   </td>
                   <td className="px-3 py-2 text-right tabular-nums text-ink">{formatEuro(m.spent)}</td>
-                  <td className="px-3 py-2 text-right tabular-nums text-ink-soft">{formatPercent(m.pct)}</td>
+                  <td className="px-3 py-2">
+                    <Meter m={m} maxRef={maxRef} />
+                  </td>
                   <td className="px-3 py-2 text-right tabular-nums text-ink-soft">
                     {m.isCurrent && m.projected != null ? formatEuro(m.projected) : '—'}
                   </td>
@@ -97,6 +103,30 @@ export default function AdsBudgetPanel({
           }}
         />
       )}
+    </div>
+  );
+}
+
+/**
+ * De meter: uitgegeven als gevulde balk op een spoor dat het budget is. Voor
+ * de lopende maand een streepje waar het tempo uitkomt. Zonder budget is het
+ * spoor de duurste maand in beeld — dan vergelijk je maanden met elkaar.
+ */
+function Meter({ m, maxRef }: { m: MonthBudgetStatus; maxRef: number }) {
+  const ref = m.budget != null && m.budget > 0 ? m.budget : maxRef;
+  const spentPct = Math.min(100, (m.spent / ref) * 100);
+  const projPct = m.projected != null ? Math.min(100, (m.projected / ref) * 100) : null;
+  const over = m.budget != null && m.spent > m.budget;
+  const kleur = over ? CHART.refused : m.signal === 'warn' ? CHART.marginPct : CHART.adsCost;
+  return (
+    <div className="flex items-center gap-2.5">
+      <div className="relative h-2.5 flex-1 overflow-hidden rounded-full bg-sunk" title={m.pct != null ? `${formatPercent(m.pct)} van het budget` : 'geen budget'}>
+        <div className="h-full rounded-full" style={{ width: `${spentPct}%`, background: kleur }} />
+        {projPct != null && projPct > spentPct && (
+          <div className="absolute top-0 h-full w-[2px] bg-ink/40" style={{ left: `${projPct}%` }} title={`verwacht ${formatEuro(m.projected)}`} />
+        )}
+      </div>
+      {m.pct != null && <span className="w-12 shrink-0 text-right text-[12px] tabular-nums text-ink-soft">{formatPercent(m.pct)}</span>}
     </div>
   );
 }

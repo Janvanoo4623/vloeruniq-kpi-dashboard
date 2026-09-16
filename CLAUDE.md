@@ -20,7 +20,7 @@ a live web dashboard the business owner and his client can view on any device.
    load instantly and never block on the slow Teamleader fetch.
 5. **Writes back** run-time ("doorlooptijd") values to Teamleader, mirroring the original script.
 6. **Marketing** (since 2026-09-16): Google Ads day-level cost per campaign lands in `ads_daily`
-   via a local script; the Marketing tab shows cost, CTR/CPC, conversions, monthly budget and
+   on every Vernieuwen/cron (GAQL.app REST, `lib/ads-sync.ts`, no Teamleader lock); the Marketing tab shows cost, CTR/CPC, conversions, monthly budget and
    **margin after Google Ads**. See `docs/DATA-MODEL.md` "Marketing".
 
 ## Read these first
@@ -67,7 +67,7 @@ a live web dashboard the business owner and his client can view on any device.
 ```bash
 npm run dev        # local dev server (reads snapshot from .data/)
 npm run sync       # run the Teamleader sync locally (no timeout limits) -> writes .data/snapshot.json
-npm run sync:ads   # Google Ads dagcijfers -> Supabase ads_daily (lokaal, via TrueClicks MCP; --from-json voor een opgeslagen rapport)
+npm run sync:ads   # Google Ads dagcijfers -> Supabase ads_daily, verder terug dan de 90 dagen van Vernieuwen (--days, --from-json)
 npm run build      # production build
 npm run lint       # eslint
 ```

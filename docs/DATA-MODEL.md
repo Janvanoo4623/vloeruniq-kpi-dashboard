@@ -282,14 +282,18 @@ Drie bronnen, bewust uit elkaar gehouden:
 | Omzet en marge "uit Google" | Teamleader: geaccepteerde offertes waarvan de deal leadbron **Google** heeft | `snapshot.quotations` + `runTimeRows`, `lib/ads.ts` `googleLeadStats` |
 | Maandbudget | handmatig, tabblad Marketing | `app_settings.ads_budgets` (`{ default, 'YYYY-MM' }`) |
 
-**Hoe de cijfers binnenkomen.** `npm run sync:ads` (`scripts/ads-sync.ts`) haalt via de
-TrueClicks Google Ads MCP een GAQL-rapport op (`FROM campaign`, per `segments.date`, alleen
-rijen met vertoningen) en upsert dat in `ads_daily`. Standaard de laatste 90 dagen t/m gisteren,
-want Google corrigeert achteraf (ongeldige klikken, late conversies); rijen in het venster die
-de run niet opnieuw aanleverde worden verwijderd. Het script draait lokaal en raakt Teamleader
-niet aan (geen sync-lock nodig). Er staat bewust geen Google-token op Vercel: de app leest
-alleen de tabel. Zonder token kan het script ook een eerder opgehaald rapport importeren
-(`--from-json`); zo is de historie vanaf 2024-11-01 geladen.
+**Hoe de cijfers binnenkomen.** `lib/ads-sync.ts` haalt een GAQL-rapport op bij **GAQL.app**
+(TrueClicks) — een REST-API met een vast token (`GAQL_TOKEN`), dezelfde die hun MCP-pakket
+onder water aanroept — en upsert dat in `ads_daily` (`FROM campaign`, per `segments.date`, alleen
+rijen met vertoningen). Dat gebeurt bij **Vernieuwen** (`/api/refresh`) en bij de **cron**
+(`/api/sync`), parallel aan de Teamleader-sync: eigen bron, eigen tabel, géén Teamleader-lock.
+Een Ads-fout staat in `ads_sync_meta.error` en in het antwoord, maar houdt Teamleader niet tegen.
+Standaard de laatste 90 dagen t/m gisteren, want Google corrigeert achteraf (ongeldige klikken,
+late conversies); rijen in het venster die de run niet opnieuw aanleverde worden verwijderd.
+`npm run sync:ads` doet hetzelfde met de hand, verder terug (`--days`) of uit een opgeslagen
+rapport (`--from-json`); zo is de historie vanaf 2024-11-01 geladen. Let op: het token geeft
+toegang tot álle Google Ads-accounts van die TrueClicks-gebruiker; de app vraagt alleen
+`GOOGLE_ADS_CUSTOMER_ID` op.
 
 **Kosten** = `cost_micros / 1e6`, onafgerond opgeslagen; afronden gebeurt bij het optellen.
 Gecontroleerd op 2026-09-16: de maandtotalen uit `ads_daily` zijn cent-gelijk aan het

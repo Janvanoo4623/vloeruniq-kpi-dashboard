@@ -4,6 +4,7 @@
 // cron (which has no session cookie) can reach it.
 import { NextResponse } from 'next/server';
 import { syncAndStore } from '@/lib/teamleader/sync';
+import { syncAds, adsConfigured } from '@/lib/ads-sync';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -23,10 +24,16 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, error: 'Unauthorized' }, { status: 401 });
   }
 
+  // Google Ads parallel mee (zie /api/refresh): eigen bron, geen Teamleader-lock.
+  const adsRun = adsConfigured() ? syncAds() : Promise.resolve(null);
   try {
-    const { meta } = await syncAndStore({ force: false, owner: 'cron/api-sync' });
-    return NextResponse.json({ ok: true, meta });
+    const [{ meta }, ads] = await Promise.all([
+      syncAndStore({ force: false, owner: 'cron/api-sync' }),
+      adsRun,
+    ]);
+    return NextResponse.json({ ok: true, meta, ads });
   } catch (err) {
+    await adsRun;
     const message = err instanceof Error ? err.message : String(err);
     // 409 = de lock was bezet; dat is geen storing maar "kom straks terug".
     const status = message.startsWith('Er loopt al een synchronisatie') ? 409 : 500;

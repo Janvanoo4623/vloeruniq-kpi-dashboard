@@ -41,6 +41,8 @@ export interface DashboardData {
   comparison: Comparison | null;
   dataLoading: boolean;
   refreshing: boolean;
+  /** Loopt op na elke geslaagde verversing; pagina's met eigen data halen dan opnieuw op. */
+  refreshCount: number;
   message: string | null;
   setRange: (r: RangeState) => void;
   refresh: () => Promise<void>;
@@ -93,6 +95,7 @@ export default function DashboardProvider({
   const [comparison, setComparison] = useState<Comparison | null>(null);
   const [dataLoading, setDataLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [refreshCount, setRefreshCount] = useState(0);
   const [message, setMessage] = useState<string | null>(null);
 
   const pricedSet = useMemo(() => new Set(pricedCodes), [pricedCodes]);
@@ -127,8 +130,9 @@ export default function DashboardProvider({
       if (res.ok && data.dispatched) {
         setMessage('Synchronisatie gestart op de achtergrond (~1–2 min). Ververs daarna de pagina.');
       } else if (res.ok && data.ok) {
-        setMessage('Data bijgewerkt.');
+        setMessage(data.ads && data.ads.ok === false ? `Data bijgewerkt. Google Ads niet: ${data.ads.error}` : 'Data bijgewerkt.');
         await setRange(range);
+        setRefreshCount((n) => n + 1);
       } else if (res.status === 409) {
         setMessage('Er loopt al een synchronisatie.');
       } else {
@@ -155,6 +159,7 @@ export default function DashboardProvider({
       comparison,
       dataLoading,
       refreshing,
+      refreshCount,
       message,
       setRange,
       refresh,
@@ -162,7 +167,7 @@ export default function DashboardProvider({
     }),
     [
       snap, meta, aging, pipeline, payments, pricedSet, customers, series,
-      range, comparison, dataLoading, refreshing, message, setRange, refresh,
+      range, comparison, dataLoading, refreshing, refreshCount, message, setRange, refresh,
     ],
   );
 

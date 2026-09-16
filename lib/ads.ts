@@ -336,3 +336,38 @@ export function deltaPct(now: number | null | undefined, before: number | null |
   if (now == null || before == null || before === 0) return null;
   return Math.round(((now - before) / Math.abs(before)) * 1000) / 10;
 }
+
+// ── Google-leads per week (voor de sparkline naast de Ads-weken) ─────────
+export interface GoogleWeekPoint {
+  week: string;
+  count: number;
+  revenue: number;
+  margin: number;
+}
+
+/**
+ * Gewonnen offertes met leadbron Google per ISO-week, op dezelfde weken als
+ * adsByWeek zodat de sparklines naast elkaar kloppen. Beslisdatum als die er
+ * is (bij geaccepteerd altijd), anders aanmaakdatum — zoals overal.
+ */
+export function googleLeadsByWeek(
+  quotations: QuotationRow[],
+  runTimeRows: RunTimeRow[],
+  weeks: string[],
+): GoogleWeekPoint[] {
+  const dealSource: Record<string, string> = {};
+  for (const r of runTimeRows) if (r.dealId && r.leadSource) dealSource[r.dealId] = r.leadSource;
+  const byWeek = new Map<string, GoogleWeekPoint>(weeks.map((w) => [w, { week: w, count: 0, revenue: 0, margin: 0 }]));
+  for (const q of quotations) {
+    if (q.status !== 'accepted' || !isGoogle(dealSource[q.dealId] ?? '')) continue;
+    const d = q.dateAccepted || q.dateCreated;
+    if (!d) continue;
+    const w = getISOWeek(d);
+    const p = byWeek.get(w);
+    if (!p) continue;
+    p.count += 1;
+    p.revenue += q.revenueExVat;
+    if (q.margin !== null) p.margin += q.margin;
+  }
+  return weeks.map((w) => byWeek.get(w)!);
+}

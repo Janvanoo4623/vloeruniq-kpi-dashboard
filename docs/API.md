@@ -57,8 +57,8 @@ is now invalid — persist the new one immediately. See the token-ownership rule
 
 | Route | Method | Auth | Purpose |
 | --- | --- | --- | --- |
-| `/api/sync` | `POST` | `CRON_SECRET` (cron) or session (manual) | Run the full pipeline; write snapshot + meta. Long-running (`maxDuration` raised). |
-| `/api/refresh` | `POST` | session cookie | UI "Refresh" button. Kicks off a sync and returns immediately. |
+| `/api/sync` | `POST` | `CRON_SECRET` (cron) or session (manual) | Run the full pipeline; write snapshot + meta. Long-running (`maxDuration` raised). Ververst ook Google Ads (parallel, zonder lock). |
+| `/api/refresh` | `POST` | session cookie | UI "Vernieuwen". Teamleader-sync + Google Ads-verversing (`lib/ads-sync.ts`, 90 dagen) parallel; antwoord bevat `ads: { ok, rows | error }`. |
 | `/api/snapshot` | `GET` | session cookie | Return the latest computed snapshot + meta for the dashboard. |
 | `/api/login` | `POST` | none | Compare password to `DASHBOARD_PASSWORD`; set auth cookie. |
 | `/api/logout` | `POST` | session cookie | Clear auth cookie. |

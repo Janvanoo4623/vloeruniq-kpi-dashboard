@@ -8,10 +8,11 @@ import AdsWeekChart from '@/components/charts/AdsWeekChart';
 import AdsCampaignTable from '@/components/AdsCampaignTable';
 import AdsBudgetPanel from '@/components/AdsBudgetPanel';
 import AdsFunnel from '@/components/AdsFunnel';
+import AdsHero from '@/components/AdsHero';
 import EmptyState from '@/components/pages/EmptyState';
-import { Panel } from '@/components/ui';
+import { Panel, cn } from '@/components/ui';
 import { formatDateTime, timeAgo } from '@/lib/format';
-import { googleLeadStats, marginAfterAds } from '@/lib/ads';
+import { googleLeadStats, googleLeadsByWeek, marginAfterAds } from '@/lib/ads';
 import type { AdsPayload } from '@/lib/ads-payload';
 
 const DAY = 86400000;
@@ -25,7 +26,7 @@ const DAY = 86400000;
  * trekt de kosten van de marge af — dat is het getal waar het om gaat.
  */
 export default function MarketingView({ initial }: { initial: AdsPayload }) {
-  const { snap, comparison, range } = useDashboard();
+  const { snap, comparison, range, refreshCount } = useDashboard();
   // Per periode één opgehaald resultaat; de eerste weergave komt van de server.
   // Geen setState in de effect zelf en geen losse laad-vlag: welke payload we
   // tonen én of er nog iets onderweg is, volgt uit de periode plus wat er het
@@ -37,7 +38,7 @@ export default function MarketingView({ initial }: { initial: AdsPayload }) {
   const key = `${range.from}|${range.to}|${range.compare}`;
   const isInitial =
     range.from === initial.range.from && range.to === initial.range.to && range.compare === 'none';
-  const moetOphalen = !isInitial || versie > 0;
+  const moetOphalen = !isInitial || versie > 0 || refreshCount > 0;
   const ads: AdsPayload = fetched?.key === key && fetched.payload ? fetched.payload : initial;
   const laden = moetOphalen && fetched?.key !== key;
   const fout = fetched?.key === key ? fetched.fout : null;
@@ -63,7 +64,7 @@ export default function MarketingView({ initial }: { initial: AdsPayload }) {
     return () => {
       verlopen = true;
     };
-  }, [moetOphalen, key, versie, range.from, range.to, range.compare]);
+  }, [moetOphalen, key, versie, refreshCount, range.from, range.to, range.compare]);
 
   const herladen = useCallback(() => setVersie((v) => v + 1), []);
 
@@ -90,6 +91,8 @@ export default function MarketingView({ initial }: { initial: AdsPayload }) {
   const a = ads.totals;
   const v = ads.comparison?.totals ?? null;
   const rekensom = marginAfterAds(totals.totalMargin, a, google);
+  const googleWeeks = googleLeadsByWeek(snap.quotations, snap.runTimeRows, ads.byWeek.map((w) => w.week));
+  const deltaLabel = range.compare === 'year' ? 'vs vorig jaar' : 'vs vorige periode';
   const vorigeNet =
     v && comparison ? comparison.revenue.totalMargin - v.cost : null;
 
@@ -117,15 +120,23 @@ export default function MarketingView({ initial }: { initial: AdsPayload }) {
         </p>
       )}
 
-      <div className={laden ? 'opacity-60 transition' : 'transition'}>
+      <div className={cn('space-y-6', laden && 'opacity-60 transition')}>
+        <AdsHero
+          ads={a}
+          google={google}
+          som={rekensom}
+          totalMargin={totals.totalMargin}
+          prevNet={ads.comparison ? vorigeNet : null}
+          deltaLabel={deltaLabel}
+        />
         <AdsFunnel
           ads={a}
           prev={v}
           google={google}
           som={rekensom}
-          totalMargin={totals.totalMargin}
-          avgMarginPct={totals.avgMarginPct}
-          prevNet={ads.comparison ? vorigeNet : null}
+          weeks={ads.byWeek}
+          googleWeeks={googleWeeks}
+          deltaLabel={deltaLabel}
         />
       </div>
 

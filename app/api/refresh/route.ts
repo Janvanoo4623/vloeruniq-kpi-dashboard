@@ -7,6 +7,7 @@
 //  - Otherwise (local dev, or Vercel Pro), run the sync inline.
 import { NextResponse } from 'next/server';
 import { syncAndStore } from '@/lib/teamleader/sync';
+import { syncAds, adsConfigured } from '@/lib/ads-sync';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -45,15 +46,27 @@ async function dispatchGitHubWorkflow(): Promise<NextResponse | null> {
 }
 
 export async function POST() {
+  // Google Ads loopt parallel mee: eigen bron, eigen tabel, geen Teamleader-lock.
+  // Een fout daar staat in ads_sync_meta en in het antwoord, maar houdt de
+  // Teamleader-sync niet tegen. Zonder token slaan we het stil over.
+  const adsRun = adsConfigured() ? syncAds() : Promise.resolve(null);
+
   // Production (Hobby): hand off to GitHub Actions.
   const dispatched = await dispatchGitHubWorkflow();
-  if (dispatched) return dispatched;
+  if (dispatched) {
+    await adsRun;
+    return dispatched;
+  }
 
   // Local / Pro: run inline.
   try {
-    const { meta } = await syncAndStore({ force: false, owner: 'vernieuwknop' });
-    return NextResponse.json({ ok: true, meta });
+    const [{ meta }, ads] = await Promise.all([
+      syncAndStore({ force: false, owner: 'vernieuwknop' }),
+      adsRun,
+    ]);
+    return NextResponse.json({ ok: true, meta, ads });
   } catch (err) {
+    await adsRun;
     const message = err instanceof Error ? err.message : String(err);
     const status = message.includes('Er loopt al een synchronisatie') ? 409 : 500;
     return NextResponse.json({ ok: false, error: message }, { status });
