@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { Check } from 'lucide-react';
-import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { KPI_DEFS, type KpiPoint, type KpiUnit } from '@/lib/kpi-series';
 import { formatDays, formatEuro, formatNumber, formatPercent } from '@/lib/format';
 import { AXIS_TICK, CHART } from './theme';
@@ -79,7 +79,17 @@ export default function KpiTrendChart({ data }: { data: KpiPoint[] }) {
       </div>
 
       <ResponsiveContainer width="100%" height={300}>
-        <LineChart data={data} margin={{ top: 8, right: 8, left: 4, bottom: 0 }}>
+        <AreaChart data={data} margin={{ top: 8, right: 8, left: 4, bottom: 0 }}>
+          {/* Licht verloop onder elke lijn, in de kleur van de KPI. Bewust zacht:
+              met drie lijnen tegelijk moet de achtergrond niet gaan meedoen. */}
+          <defs>
+            {KPI_DEFS.map((d) => (
+              <linearGradient key={d.key} id={`kpi-${d.key}`} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={d.color} stopOpacity={0.18} />
+                <stop offset="100%" stopColor={d.color} stopOpacity={0} />
+              </linearGradient>
+            ))}
+          </defs>
           <CartesianGrid stroke={CHART.grid} strokeDasharray="2 5" vertical={false} />
           <XAxis dataKey="label" tick={AXIS_TICK} axisLine={{ stroke: CHART.grid }} tickLine={false} tickMargin={8} minTickGap={16} />
           {units.map((u) => (
@@ -105,7 +115,7 @@ export default function KpiTrendChart({ data }: { data: KpiPoint[] }) {
             }
           />
           {active.map((d) => (
-            <Line
+            <Area
               key={d.key}
               yAxisId={d.unit}
               type="monotone"
@@ -113,12 +123,13 @@ export default function KpiTrendChart({ data }: { data: KpiPoint[] }) {
               name={d.label}
               stroke={d.color}
               strokeWidth={2.2}
+              fill={`url(#kpi-${d.key})`}
               dot={false}
               activeDot={{ r: 4.5, strokeWidth: 2, stroke: '#fff' }}
               connectNulls
             />
           ))}
-        </LineChart>
+        </AreaChart>
       </ResponsiveContainer>
     </div>
   );

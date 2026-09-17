@@ -28,7 +28,7 @@ function deltaPct(cur: number, prev: number | undefined | null): number | null {
  * op één scherm passen.
  */
 export default function OverzichtPage() {
-  const { snap, comparison, previous, range, aging, pipeline, adsDaily } = useDashboard();
+  const { snap, comparison, previous, range, aging, pipeline, adsDaily, openAtEnd } = useDashboard();
   // Per week zolang het overzichtelijk blijft, anders per maand; omschakelbaar.
   const [gran, setGran] = useState<Granularity | null>(null);
   const granularity: Granularity = gran ?? ((snap?.weeks.length ?? 0) > 16 ? 'month' : 'week');
@@ -89,8 +89,10 @@ export default function OverzichtPage() {
             label="Omzet open"
             value={formatEuro(totals.openRevenue)}
             sub={`${totals.openCount} offertes in de pijplijn`}
-            deltaPct={show ? deltaPct(totals.openRevenue, cmp?.openRevenue) : null}
-            deltaLabel={deltaLabel}
+            // 'Open' is een momentopname: vergelijk de stapel aan het eind van
+            // de periode met die aan het eind van de periode ervoor.
+            deltaPct={show ? deltaPct(openAtEnd.value, ref?.openAtEnd?.value) : null}
+            deltaLabel={range.compare === 'year' ? 'stapel vs eind vorig jaar' : 'stapel vs eind periode ervoor'}
           />
           <KpiCard
             label="Gem. doorlooptijd"

@@ -23,6 +23,8 @@ export interface PeriodComparison {
   runTime: { avgRunTimeDays: number; dealsTracked: number };
   invoicing: InvoicingSummary;
   perM2: PerM2Stats;
+  /** De openstaande stapel aan het eind van de periode: alles wat toen open stond, ook van vóór de periode. */
+  openAtEnd: { count: number; value: number };
 }
 
 export interface PeriodData {
@@ -32,6 +34,8 @@ export interface PeriodData {
   comparison: PeriodComparison | null;
   /** Altijd: de even lange periode direct ervoor. */
   previous: PeriodComparison;
+  /** Openstaande stapel aan het eind van déze periode — de tegenhanger van previous.openAtEnd. */
+  openAtEnd: { count: number; value: number };
   customers: CustomerAnalysis;
   adsDaily: AdsDayPoint[];
   openStock: OpenStockPoint[];
@@ -63,6 +67,16 @@ export async function buildPeriodData(input: {
 
   const snapshot = snapshotForRange(quotations, deals, from, to, exclusions, invoicingFor(invoices, from, to), generatedAt);
 
+  // Uitsluitingen blijven overal buiten, ook uit de stapel.
+  const included = quotations.filter((q) => !exclusions.has(q.id));
+  // 'Open' is een momentopname, geen periodecijfer: wat in de vorige periode
+  // open stond is nu beslist, dus 'open in periode' vergelijken geeft altijd
+  // nul. Daarom vergelijken we de stapel aan het eind van beide periodes.
+  const openAt = (date: string) => {
+    const p = openStockSeries(included, date, date)[0];
+    return { count: p?.count ?? 0, value: p?.value ?? 0 };
+  };
+
   const periodFor = (r: { from: string; to: string }): PeriodComparison => {
     const s = snapshotForRange(quotations, deals, r.from, r.to, exclusions, EMPTY_INVOICING, generatedAt);
     return {
@@ -74,6 +88,7 @@ export async function buildPeriodData(input: {
       // Per-m²-cijfers komen uit de vloerregels, dus die kan de client niet uit
       // de totalen afleiden — ze gaan mee zodat de vergelijking klopt.
       perM2: perM2Stats(s.quotations),
+      openAtEnd: openAt(r.to),
     };
   };
 
@@ -97,14 +112,15 @@ export async function buildPeriodData(input: {
     .map((d) => ({ ...d, cost: Math.round(d.cost * 100) / 100, conversions: Math.round(d.conversions * 100) / 100 }))
     .sort((a, b) => a.date.localeCompare(b.date));
 
-  // De stapel kijkt naar álle offertes (ook van vóór de periode), uitsluitingen erbuiten.
-  const openStock = openStockSeries(quotations.filter((q) => !exclusions.has(q.id)), from, to);
+  // De stapel kijkt naar álle offertes (ook van vóór de periode).
+  const openStock = openStockSeries(included, from, to);
 
   return {
     range: { from, to },
     snapshot,
     comparison,
     previous,
+    openAtEnd: openAt(to),
     customers: customerAnalysis(invoices, quotations, from, to),
     adsDaily,
     openStock,

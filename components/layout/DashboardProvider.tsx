@@ -26,6 +26,8 @@ export interface Comparison {
   runTime: { avgRunTimeDays: number; dealsTracked: number };
   /** Omzet/kostprijs/marge per m² over de vergelijkingsperiode. */
   perM2?: PerM2Stats;
+  /** Openstaande stapel aan het eind van die periode. */
+  openAtEnd?: { count: number; value: number };
 }
 
 export interface DashboardData {
@@ -48,6 +50,8 @@ export interface DashboardData {
   adsDaily: AdsDayPoint[];
   /** De openstaande stapel per week, voor Trends. */
   openStock: OpenStockPoint[];
+  /** Stapel aan het eind van de gekozen periode, tegenhanger van previous.openAtEnd. */
+  openAtEnd: { count: number; value: number };
   dataLoading: boolean;
   refreshing: boolean;
   /** Loopt op na elke geslaagde verversing; pagina's met eigen data halen dan opnieuw op. */
@@ -103,6 +107,7 @@ export default function DashboardProvider({
   const [previous, setPrevious] = useState<Comparison | null>(period.previous);
   const [adsDaily, setAdsDaily] = useState<AdsDayPoint[]>(period.adsDaily);
   const [openStock, setOpenStock] = useState<OpenStockPoint[]>(period.openStock);
+  const [openAtEnd, setOpenAtEnd] = useState(period.openAtEnd);
   const [dataLoading, setDataLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [refreshCount, setRefreshCount] = useState(0);
@@ -122,6 +127,7 @@ export default function DashboardProvider({
         setPrevious(data.previous ?? null);
         setAdsDaily(data.adsDaily ?? []);
         setOpenStock(data.openStock ?? []);
+        if (data.openAtEnd) setOpenAtEnd(data.openAtEnd);
         if (data.customers) setCustomers(data.customers);
         setRangeState(r);
       } else {
@@ -173,6 +179,7 @@ export default function DashboardProvider({
       previous,
       adsDaily,
       openStock,
+      openAtEnd,
       dataLoading,
       refreshing,
       refreshCount,
@@ -183,7 +190,7 @@ export default function DashboardProvider({
     }),
     [
       snap, meta, aging, pipeline, payments, pricedSet, customers, series,
-      range, comparison, previous, adsDaily, openStock, dataLoading, refreshing, refreshCount, message, setRange, refresh,
+      range, comparison, previous, adsDaily, openStock, openAtEnd, dataLoading, refreshing, refreshCount, message, setRange, refresh,
     ],
   );
 
