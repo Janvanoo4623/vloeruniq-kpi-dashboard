@@ -272,7 +272,7 @@ run-time data (`dealId → leadSource`); unknown → `Onbekend`. A deal can list
 
 ---
 
-## Meta Ads — voorbereid 2026-09-17, wacht op toegang
+## Meta Ads — gekoppeld 2026-09-17
 
 Zelfde tabel `ads_daily`, met kolom `platform` (`google` | `meta`); `ads_sync_meta` heeft een rij
 per platform (id 1 google, id 2 meta). Migratie staat onderaan `supabase/schema.sql`. Tot die
@@ -291,7 +291,10 @@ Loopt mee in Vernieuwen en de cron, parallel aan Google, zonder Teamleader-lock.
 `onsite_conversion.lead_grouped`); optellen telt dubbel. Per soort (leads, berichten, contact,
 afspraak, aanvraag) telt de eerste naam die voorkomt — `CONVERSION_GROUPS`. Na de eerste echte
 import controleren welke action-types er werkelijk in zitten; een eigen lijst kan in
-`app_settings.ads_meta.conversionActions`. Getest tegen een nagebootst API-antwoord: 3 leads + 2
+`app_settings.ads_meta.conversionActions`. Gecontroleerd op de echte import (2026-09-17): kosten, klikken, vertoningen en conversies over
+30 en 400 dagen cent-gelijk aan Meta's eigen accounttotalen; `lead` (23) is daar de som van
+pixel-lead (19) en lead_grouped (4), dus de groepering telt niets dubbel. Eerder getest tegen een
+nagebootst API-antwoord: 3 leads + 2
 berichten = 5 (was 6 bij optellen), `act_`-voorvoegsel met of zonder ingevuld, verlopen token
 geeft een leesbare fout.
 

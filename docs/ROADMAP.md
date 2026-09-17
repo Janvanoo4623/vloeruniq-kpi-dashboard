@@ -64,8 +64,9 @@ Phased build. Status updated as we go.
 - [x] Overzicht: verloop-grafiek met aan/uit te zetten KPI's, eigen as per eenheid, week/maand.
 - [x] Trends: openstaande stapel per week (€, aantal, gemiddelde leeftijd, ouder dan 60 d).
 - [x] Meta Ads voorbereid: uitlezing, opslag per platform, Vernieuwen/cron, tabblad per kanaal, kaarten op Overzicht, export.
-- [ ] Migratie draaien (`supabase/schema.sql`, onderaan) — nodig vóór de eerste Meta-import.
-- [ ] Toegang Business Manager van Jan → systeemgebruiker-token (`ads_read`) → `.env.local` → `npm run ads:meta-token -- --days 400`.
-- [ ] Na eerste import: welke action-types zitten erin, klopt "Social media" als leadbron voor Meta.
+- [x] Migratie gedraaid.
+- [x] Meta gekoppeld 2026-09-17: account 1133369954486650 (Business Manager 191283362264924), systeemgebruiker "Vloeruniq dash" op app "Dashboard", alleen `ads_read`. 164 dagregels, eerste campagne 2026-04-08. Totalen cent-gelijk aan Meta.
+- [x] Action-types gecontroleerd: `lead` (23) = pixel-lead (19) + lead_grouped (4), dus één keer tellen klopt.
+- [ ] Met Jan checken of leadbron "Social media" alleen betaalde Meta-leads zijn of ook organisch.
 - [ ] Moneybird-koppeling — navragen bij Jan of ze al over zijn en wie de API-sleutel kan maken.
 
