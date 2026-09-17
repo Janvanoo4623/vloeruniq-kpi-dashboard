@@ -7,6 +7,9 @@ import type { PaymentStats } from '@/lib/payments';
 import { weeklySeries, type WeeklyPoint } from '@/lib/series';
 import type { PerM2Stats } from '@/lib/insights';
 import type { CustomerAnalysis } from '@/lib/customers';
+import type { PeriodData } from '@/lib/period-data';
+import type { AdsDayPoint } from '@/lib/kpi-series';
+import type { OpenStockPoint } from '@/lib/open-stock';
 import { presetRange, type RangeState } from '@/components/DateRangePicker';
 import { DEFAULT_PRESET } from '@/lib/default-range';
 
@@ -39,6 +42,12 @@ export interface DashboardData {
   series: WeeklyPoint[];
   range: RangeState;
   comparison: Comparison | null;
+  /** Altijd de even lange periode ervoor — voor de pijltjes op Overzicht. */
+  previous: Comparison | null;
+  /** Dagtotalen Google Ads in de periode (leeg zolang de tabel niet bestaat). */
+  adsDaily: AdsDayPoint[];
+  /** De openstaande stapel per week, voor Trends. */
+  openStock: OpenStockPoint[];
   dataLoading: boolean;
   refreshing: boolean;
   /** Loopt op na elke geslaagde verversing; pagina's met eigen data halen dan opnieuw op. */
@@ -71,28 +80,29 @@ const initialRange = (): RangeState => {
  * client-cache eromheen.
  */
 export default function DashboardProvider({
-  snapshot,
+  period,
   meta,
   aging,
   pipeline,
   payments,
   pricedCodes,
-  customers: initialCustomers,
   children,
 }: {
-  snapshot: Snapshot | null;
+  period: PeriodData;
   meta: SyncMeta | null;
   aging: Aging;
   pipeline: PipelineStats;
   payments: PaymentStats;
   pricedCodes: string[];
-  customers: CustomerAnalysis;
   children: ReactNode;
 }) {
-  const [snap, setSnap] = useState<Snapshot | null>(snapshot);
-  const [customers, setCustomers] = useState<CustomerAnalysis>(initialCustomers);
+  const [snap, setSnap] = useState<Snapshot | null>(period.snapshot);
+  const [customers, setCustomers] = useState<CustomerAnalysis>(period.customers);
   const [range, setRangeState] = useState<RangeState>(initialRange);
   const [comparison, setComparison] = useState<Comparison | null>(null);
+  const [previous, setPrevious] = useState<Comparison | null>(period.previous);
+  const [adsDaily, setAdsDaily] = useState<AdsDayPoint[]>(period.adsDaily);
+  const [openStock, setOpenStock] = useState<OpenStockPoint[]>(period.openStock);
   const [dataLoading, setDataLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [refreshCount, setRefreshCount] = useState(0);
@@ -109,6 +119,9 @@ export default function DashboardProvider({
       if (res.ok && data.snapshot) {
         setSnap(data.snapshot);
         setComparison(data.comparison ?? null);
+        setPrevious(data.previous ?? null);
+        setAdsDaily(data.adsDaily ?? []);
+        setOpenStock(data.openStock ?? []);
         if (data.customers) setCustomers(data.customers);
         setRangeState(r);
       } else {
@@ -157,6 +170,9 @@ export default function DashboardProvider({
       series,
       range,
       comparison,
+      previous,
+      adsDaily,
+      openStock,
       dataLoading,
       refreshing,
       refreshCount,
@@ -167,7 +183,7 @@ export default function DashboardProvider({
     }),
     [
       snap, meta, aging, pipeline, payments, pricedSet, customers, series,
-      range, comparison, dataLoading, refreshing, refreshCount, message, setRange, refresh,
+      range, comparison, previous, adsDaily, openStock, dataLoading, refreshing, refreshCount, message, setRange, refresh,
     ],
   );
 

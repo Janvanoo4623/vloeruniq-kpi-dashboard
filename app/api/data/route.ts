@@ -1,37 +1,16 @@
-// GET /api/data?from&to&compare — aggregate stored quotations/deals/invoices for
-// a date range, with optional period comparison. Session-gated by proxy.ts.
+// GET /api/data?from&to&compare — alles wat van de periode afhangt, voor de
+// periodekiezer. Zelfde functie als de layout gebruikt (lib/period-data.ts).
+// Session-gated by proxy.ts.
 import { NextResponse } from 'next/server';
 import { getAllQuotations, getAllDeals, getExclusions, getAllInvoices, getResolveInput } from '@/lib/db';
-import { summarizeInvoices } from '@/lib/teamleader/invoices';
-import { snapshotForRange } from '@/lib/range';
 import { resolveQuotations } from '@/lib/resolve';
-import { perM2Stats } from '@/lib/insights';
-import { customerAnalysis } from '@/lib/customers';
-import type { InvoiceRow, InvoicingSummary } from '@/lib/types';
+import { buildPeriodData } from '@/lib/period-data';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 const DAY = 86400000;
 const iso = (t: number) => new Date(t).toISOString().split('T')[0];
-
-function shiftYear(date: string, years: number): string {
-  const d = new Date(`${date}T00:00:00Z`);
-  d.setUTCFullYear(d.getUTCFullYear() + years);
-  return d.toISOString().split('T')[0];
-}
-
-const EMPTY_INVOICING: InvoicingSummary = {
-  invoicedExcl: 0,
-  paidExcl: 0,
-  outstandingIncl: 0,
-  invoiceCount: 0,
-  paidCount: 0,
-  openCount: 0,
-};
-
-const invoicingForRange = (invoices: InvoiceRow[], from: string, to: string): InvoicingSummary =>
-  summarizeInvoices(invoices.filter((inv) => inv.invoiceDate >= from && inv.invoiceDate <= to));
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
@@ -50,45 +29,7 @@ export async function GET(request: Request) {
   // Marges worden hier berekend, niet bij het synchroniseren: prijzen en kosten
   // gelden per offertedatum, plus eventuele handmatige correcties.
   const quotations = resolveQuotations(allQuotations, resolveInput);
-  const generatedAt = new Date().toISOString();
 
-  const snapshot = snapshotForRange(
-    quotations,
-    deals,
-    from,
-    to,
-    exclusions,
-    invoicingForRange(invoices, from, to),
-    generatedAt,
-  );
-
-  let comparison = null;
-  if (compare === 'previous' || compare === 'year') {
-    let prevFrom: string;
-    let prevTo: string;
-    if (compare === 'year') {
-      prevFrom = shiftYear(from, -1);
-      prevTo = shiftYear(to, -1);
-    } else {
-      const lenDays = Math.round((Date.parse(to) - Date.parse(from)) / DAY) + 1;
-      prevTo = iso(Date.parse(from) - DAY);
-      prevFrom = iso(Date.parse(prevTo) - (lenDays - 1) * DAY);
-    }
-    const prev = snapshotForRange(quotations, deals, prevFrom, prevTo, exclusions, EMPTY_INVOICING, generatedAt);
-    comparison = {
-      from: prevFrom,
-      to: prevTo,
-      revenue: prev.revenue.totals,
-      runTime: prev.runTime.totals,
-      invoicing: invoicingForRange(invoices, prevFrom, prevTo),
-      // Per-m²-cijfers komen uit de vloerregels, dus die kan de client niet uit
-      // de totalen afleiden — ze gaan hier mee zodat de vergelijking klopt.
-      perM2: perM2Stats(prev.quotations),
-    };
-  }
-
-  // De klantanalyses hangen aan de factuurdatum en dus aan dezelfde periode.
-  const customers = customerAnalysis(invoices, quotations, from, to);
-
-  return NextResponse.json({ range: { from, to }, compare, snapshot, comparison, customers });
+  const data = await buildPeriodData({ quotations, deals, invoices, exclusions, from, to, compare });
+  return NextResponse.json({ ...data, compare });
 }

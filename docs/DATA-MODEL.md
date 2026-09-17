@@ -272,6 +272,27 @@ run-time data (`dealId → leadSource`); unknown → `Onbekend`. A deal can list
 
 ---
 
+## Vergelijking, KPI-grafiek en openstaande stapel — sinds 2026-09-17
+
+**Pijltjes op Overzicht.** De zes kaarten bovenaan vergelijken altijd met de even lange periode
+direct ervoor (30 dagen tegenover de 30 dagen daarvoor; een eigen periode tegenover een even
+lange periode ervoor), ongeacht of 'vergelijken' aanstaat. Kies je 'vorig jaar', dan wint die
+keuze. Andere tabbladen tonen alleen een verschil als je vergelijken aanzet. `PeriodData.previous`.
+
+**Verloop-grafiek op Overzicht** (`lib/kpi-series.ts`, `KpiTrendChart`): één grafiek, KPI's
+aan/uit te zetten, per week of per maand. Elke eenheid krijgt een eigen as (€ links; aantallen,
+procenten en dagen rechts) zodat CPC naast conversies kan. Kleur volgt de KPI, niet de rang.
+Google Ads-KPI's verschijnen alleen als er Ads-data in de periode zit.
+
+**Openstaande stapel** (Trends, `lib/open-stock.ts`): per weekeinde in de periode het aantal en
+bedrag van offertes die op dat moment open stonden, plus hun gemiddelde leeftijd en hoeveel er
+ouder dan 60 dagen waren. Gereconstrueerd uit aanmaakdatum en beslisdatum (geaccepteerd,
+geweigerd óf verlopen): open op t = gemaakt ≤ t en geen beslissing ≤ t. Ook offertes van vóór
+de periode tellen mee; uitgesloten offertes niet. Kanttekening: bij 'verlopen' is de beslisdatum
+de vervaldatum uit Teamleader, niet het moment waarop de klant afhaakte.
+
+---
+
 ## Marketing (Google Ads) — sinds 2026-09-16
 
 Drie bronnen, bewust uit elkaar gehouden:

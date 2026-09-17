@@ -8,12 +8,11 @@ import {
   getAllDeals,
   getInvoiceAdjustments,
 } from '@/lib/db';
-import { computeAging, summarizeInvoices } from '@/lib/teamleader/invoices';
-import { snapshotForRange } from '@/lib/range';
+import { computeAging } from '@/lib/teamleader/invoices';
+import { buildPeriodData } from '@/lib/period-data';
 import { DEFAULT_PRESET, presetRangeServer } from '@/lib/default-range';
 import { computePipeline } from '@/lib/pipeline';
 import { computePaymentStats } from '@/lib/payments';
-import { customerAnalysis } from '@/lib/customers';
 import { resolveQuotations } from '@/lib/resolve';
 import DashboardProvider from '@/components/layout/DashboardProvider';
 import AppShell from '@/components/layout/AppShell';
@@ -49,31 +48,29 @@ export default async function DashboardLayout({ children }: { children: React.Re
   // zegt de kop iets anders dan de grafiek eronder toont. Rekenen is hier
   // goedkoop: alle offertes staan er toch al voor de cashflow en de pijplijn.
   const { from, to } = presetRangeServer(DEFAULT_PRESET);
-  const resolvedSnapshot = snapshotForRange(
-    resolvedQuotations,
+  const period = await buildPeriodData({
+    quotations: resolvedQuotations,
     deals,
+    invoices,
+    exclusions,
     from,
     to,
-    exclusions,
-    summarizeInvoices(invoices.filter((i) => i.invoiceDate >= from && i.invoiceDate <= to)),
-    new Date().toISOString(),
-  );
+    compare: 'none',
+  });
 
   const aging = computeAging(invoices, today, resolvedQuotations, adjustments);
   const pipeline = computePipeline(resolvedQuotations, exclusions, today);
   const payments = computePaymentStats(invoices, today);
   const pricedCodes = prices.map((p) => p.code.toLowerCase());
-  const customers = customerAnalysis(invoices, resolvedQuotations, from, to);
 
   return (
     <DashboardProvider
-      snapshot={resolvedSnapshot}
+      period={period}
       meta={meta}
       aging={aging}
       pipeline={pipeline}
       payments={payments}
       pricedCodes={pricedCodes}
-      customers={customers}
     >
       <AppShell>{children}</AppShell>
     </DashboardProvider>

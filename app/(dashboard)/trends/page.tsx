@@ -6,7 +6,7 @@ import EmptyState from '@/components/pages/EmptyState';
 
 /** De lange lijn: hoe de cijfers zich over weken en maanden bewegen. */
 export default function TrendsPage() {
-  const { snap } = useDashboard();
+  const { snap, openStock } = useDashboard();
   if (!snap) return <EmptyState />;
-  return <TrendsView snapshot={snap} />;
+  return <TrendsView snapshot={snap} openStock={openStock} />;
 }

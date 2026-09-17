@@ -59,3 +59,10 @@ Phased build. Status updated as we go.
 - [ ] Vernieuwen op productie proberen en `ads_sync_meta` controleren.
 - [ ] Later: andere marketingkosten (social, drukwerk) als handmatige maandpost naast Google Ads.
 
+## Feedback 17 september 2026
+- [x] Overzicht: pijltjes met % verschil tegenover de even lange periode ervoor, altijd aan.
+- [x] Overzicht: verloop-grafiek met aan/uit te zetten KPI's, eigen as per eenheid, week/maand.
+- [x] Trends: openstaande stapel per week (€, aantal, gemiddelde leeftijd, ouder dan 60 d).
+- [ ] Meta Ads in Marketing + kaart op Overzicht — wacht op toegang tot de Business Manager van Vloeruniq (vraag aan Jan).
+- [ ] Moneybird-koppeling — navragen bij Jan of ze al over zijn en wie de API-sleutel kan maken.
+

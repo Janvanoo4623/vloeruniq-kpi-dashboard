@@ -17,6 +17,8 @@ import { buildTimeSeries, type Granularity } from '@/lib/series';
 import type { Snapshot } from '@/lib/types';
 import { formatEuro, formatPercent, formatDays, formatNumber } from '@/lib/format';
 import ChartCard from './ChartCard';
+import OpenStockChart from './charts/OpenStockChart';
+import type { OpenStockPoint } from '@/lib/open-stock';
 import { ChartTooltip } from './charts/ChartTooltip';
 import { ChartLegend } from './charts/ChartLegend';
 import { ChartDefs, grad } from './charts/Defs';
@@ -24,7 +26,7 @@ import { AXIS_TICK, CHART } from './charts/theme';
 
 const compactEuro = (v: number) => (Math.abs(v) >= 1000 ? `€${Math.round(v / 1000)}k` : `€${Math.round(v)}`);
 
-export default function TrendsView({ snapshot }: { snapshot: Snapshot }) {
+export default function TrendsView({ snapshot, openStock }: { snapshot: Snapshot; openStock: OpenStockPoint[] }) {
   const [gran, setGran] = useState<Granularity>(snapshot.weeks.length > 16 ? 'month' : 'week');
   const data = useMemo(() => buildTimeSeries(snapshot, gran), [snapshot, gran]);
 
@@ -70,6 +72,14 @@ export default function TrendsView({ snapshot }: { snapshot: Snapshot }) {
           ))}
         </div>
       </div>
+
+      <ChartCard
+        title="Openstaande stapel"
+        subtitle="Aan het eind van elke week: hoeveel offertes nog open stonden (€) en hoe oud die gemiddeld waren — ook offertes van vóór de periode tellen mee"
+        className="mb-4"
+      >
+        <OpenStockChart data={openStock} />
+      </ChartCard>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <ChartCard title="Omzetverloop" subtitle="Geaccepteerde vs. open offertes (ex. btw) — niet gefactureerd">

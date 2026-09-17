@@ -1,17 +1,21 @@
 'use client';
 
+import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
 import { formatDays, formatEuro, formatNumber, formatPercent } from '@/lib/format';
 import { useDashboard } from '@/components/layout/DashboardProvider';
 import KpiCard from '@/components/KpiCard';
 import ChartCard from '@/components/ChartCard';
-import RevenueByWeekChart from '@/components/charts/RevenueByWeekChart';
+import KpiTrendChart from '@/components/charts/KpiTrendChart';
+import { buildKpiSeries } from '@/lib/kpi-series';
 import LeadSourceDonut from '@/components/charts/LeadSourceDonut';
 import RegionList from '@/components/charts/RegionList';
 import EmptyState from '@/components/pages/EmptyState';
 import { Empty, SectionLabel } from '@/components/ui';
 import { perM2Stats } from '@/lib/insights';
+import type { Granularity } from '@/lib/series';
+import { cn } from '@/components/ui';
 
 function deltaPct(cur: number, prev: number | undefined | null): number | null {
   if (prev == null || prev === 0) return null;
@@ -24,18 +28,29 @@ function deltaPct(cur: number, prev: number | undefined | null): number | null {
  * op één scherm passen.
  */
 export default function OverzichtPage() {
-  const { snap, comparison, range, aging, pipeline, series } = useDashboard();
+  const { snap, comparison, previous, range, aging, pipeline, adsDaily } = useDashboard();
+  // Per week zolang het overzichtelijk blijft, anders per maand; omschakelbaar.
+  const [gran, setGran] = useState<Granularity | null>(null);
+  const granularity: Granularity = gran ?? ((snap?.weeks.length ?? 0) > 16 ? 'month' : 'week');
+  const kpiSeries = useMemo(
+    () => (snap ? buildKpiSeries(snap, adsDaily, granularity) : []),
+    [snap, adsDaily, granularity],
+  );
   const totals = snap?.revenue.totals;
   if (!snap || !totals) return <EmptyState />;
 
-  const cmp = comparison?.revenue;
-  const show = comparison != null;
-  const deltaLabel = range.compare === 'year' ? 'vs vorig jaar' : 'vs vorige periode';
+  // De pijltjes vergelijken altijd met de even lange periode ervoor (30 dagen
+  // tegenover de 30 dagen daarvoor), ook zonder dat je 'vergelijken' aanzet.
+  // Kies je 'vorig jaar', dan wint die keuze.
+  const ref = range.compare === 'year' ? comparison : (previous ?? comparison);
+  const cmp = ref?.revenue;
+  const show = ref != null;
+  const deltaLabel = range.compare === 'year' ? 'vs vorig jaar' : 'vs periode ervoor';
   // Marge per m² komt uit de vloerregels zelf. Uit de totalen delen ging mis:
   // de marge telt alleen offertes mét inkoopprijs, de m² tellen ze allemaal.
   const perM2 = perM2Stats(snap.quotations);
   const marginPerM2 = perM2.marginPerM2;
-  const prevMarginPerM2 = comparison?.perM2?.marginPerM2 ?? null;
+  const prevMarginPerM2 = ref?.perM2?.marginPerM2 ?? null;
 
   return (
     <div className="space-y-6">
@@ -83,7 +98,7 @@ export default function OverzichtPage() {
             sub={`${formatNumber(snap.runTime.totals.dealsTracked)} deals gevolgd`}
             higherIsBetter={false}
             deltaPct={
-              show ? deltaPct(snap.runTime.totals.avgRunTimeDays, comparison?.runTime.avgRunTimeDays) : null
+              show ? deltaPct(snap.runTime.totals.avgRunTimeDays, ref?.runTime.avgRunTimeDays) : null
             }
             deltaLabel={deltaLabel}
           />
@@ -139,11 +154,25 @@ export default function OverzichtPage() {
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
         <ChartCard
-          title="Omzet per week"
-          subtitle="Geaccepteerd vs. open (ex. btw)"
+          title="Verloop"
+          subtitle="Kies wat je wilt zien; euro's links, aantallen en procenten rechts"
           className="xl:col-span-2"
+          action={
+            <div className="flex rounded-lg border border-line bg-surface p-0.5 text-[11.5px]">
+              {(['week', 'month'] as Granularity[]).map((g) => (
+                <button
+                  key={g}
+                  type="button"
+                  onClick={() => setGran(g)}
+                  className={cn('rounded-md px-2.5 py-1 font-medium transition', granularity === g ? 'bg-ink text-white' : 'text-ink-mute hover:text-ink')}
+                >
+                  {g === 'week' ? 'Week' : 'Maand'}
+                </button>
+              ))}
+            </div>
+          }
         >
-          <RevenueByWeekChart data={series} />
+          <KpiTrendChart data={kpiSeries} />
         </ChartCard>
         <ChartCard title="Omzet per leadbron" subtitle="Geaccepteerde offertes">
           {snap.leadSources.length > 0 ? (
