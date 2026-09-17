@@ -52,11 +52,21 @@ export default function OverzichtPage() {
   const marginPerM2 = perM2.marginPerM2;
   const prevMarginPerM2 = ref?.perM2?.marginPerM2 ?? null;
 
+  // Marketingkosten over alle kanalen. De kaart verschijnt pas als er ooit
+  // advertentiedata is, anders staat er een nul die niets betekent.
+  const googleCost = adsDaily.reduce((t, d) => t + d.cost, 0);
+  const metaCost = adsDaily.reduce((t, d) => t + (d.metaCost ?? 0), 0);
+  const marketingCost = googleCost + metaCost;
+  const prevMarketingCost = ref?.adsCost ? ref.adsCost.google + ref.adsCost.meta : null;
+  const showMarketing = marketingCost > 0 || (prevMarketingCost ?? 0) > 0;
+
   return (
     <div className="space-y-6">
       <section>
         <SectionLabel>In deze periode — offertebedragen ex btw</SectionLabel>
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-6">
+        {/* Met marketing erbij acht kaarten: twee rijen van vier. Zeven op een rij
+            was te krap, de pijltjes vielen van de kaart af. */}
+        <div className={cn('grid grid-cols-2 gap-3', showMarketing ? 'lg:grid-cols-4' : 'lg:grid-cols-3 xl:grid-cols-6')}>
           <KpiCard
             label="Omzet geaccepteerd"
             value={formatEuro(totals.acceptedRevenue)}
@@ -104,6 +114,33 @@ export default function OverzichtPage() {
             }
             deltaLabel={deltaLabel}
           />
+          {showMarketing && (
+            <KpiCard
+              label="Marketingkosten"
+              value={formatEuro(marketingCost)}
+              sub={
+                metaCost > 0
+                  ? `Google ${formatEuro(googleCost)} · Meta ${formatEuro(metaCost)}`
+                  : `Google Ads · ${formatPercent(totals.totalMargin > 0 ? Math.round((marketingCost / totals.totalMargin) * 1000) / 10 : null)} van de marge`
+              }
+              higherIsBetter={false}
+              deltaPct={show && prevMarketingCost != null ? deltaPct(marketingCost, prevMarketingCost) : null}
+              deltaLabel={deltaLabel}
+            />
+          )}
+          {showMarketing && (
+            <KpiCard
+              label="Marge na marketing"
+              value={formatEuro(totals.totalMargin - marketingCost)}
+              sub="totale marge min advertentiekosten"
+              deltaPct={
+                show && cmp && prevMarketingCost != null
+                  ? deltaPct(totals.totalMargin - marketingCost, cmp.totalMargin - prevMarketingCost)
+                  : null
+              }
+              deltaLabel={deltaLabel}
+            />
+          )}
         </div>
       </section>
 

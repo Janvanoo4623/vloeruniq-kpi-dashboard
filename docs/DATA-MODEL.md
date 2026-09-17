@@ -272,6 +272,42 @@ run-time data (`dealId → leadSource`); unknown → `Onbekend`. A deal can list
 
 ---
 
+## Meta Ads — voorbereid 2026-09-17, wacht op toegang
+
+Zelfde tabel `ads_daily`, met kolom `platform` (`google` | `meta`); `ads_sync_meta` heeft een rij
+per platform (id 1 google, id 2 meta). Migratie staat onderaan `supabase/schema.sql`. Tot die
+gedraaid is valt de Google-verversing terug op de oude vorm (zonder kolom); Meta weigert dan met
+een duidelijke melding, want Meta-rijen zonder platform zouden door de Google-cijfers lopen.
+
+**Uitlezing** (`lib/meta-ads-sync.ts`): Graph API v21,
+`GET act_<id>/insights?level=campaign&time_increment=1&fields=date_start,campaign_id,
+campaign_name,impressions,clicks,spend,actions,action_values` over de laatste 90 dagen t/m
+gisteren, plus `act_<id>/campaigns` voor status en doel. Paginering gevolgd. Koppeling in
+`app_settings.ads_meta` (`{ token, accountId }`, systeemgebruiker-token met `ads_read`), of lokaal
+`META_ACCESS_TOKEN` + `META_AD_ACCOUNT_ID`. `npm run ads:meta-token` test, slaat op en laadt.
+Loopt mee in Vernieuwen en de cron, parallel aan Google, zonder Teamleader-lock.
+
+**Conversies bij Meta.** Meta meldt hetzelfde contactmoment onder meerdere namen (`lead` én
+`onsite_conversion.lead_grouped`); optellen telt dubbel. Per soort (leads, berichten, contact,
+afspraak, aanvraag) telt de eerste naam die voorkomt — `CONVERSION_GROUPS`. Na de eerste echte
+import controleren welke action-types er werkelijk in zitten; een eigen lijst kan in
+`app_settings.ads_meta.conversionActions`. Getest tegen een nagebootst API-antwoord: 3 leads + 2
+berichten = 5 (was 6 bij optellen), `act_`-voorvoegsel met of zonder ingevuld, verlopen token
+geeft een leesbare fout.
+
+**Omzet en marge uit Meta** = geaccepteerde offertes waarvan de deal leadbron **"Social media"**
+heeft (ook facebook/instagram/meta in de naam). Aanname: die leadbron staat voor betaalde én
+organische social; controleren met Jan zodra er cijfers zijn.
+
+**Tabblad Marketing** bovenaan altijd over alle kanalen: marge na marketing = totale marge −
+alle advertentiekosten, balk per kanaal, rendement per kanaal. Daaronder de keuze Alle kanalen
+(kanalen naast elkaar, week totaal, budget per kanaal, alle campagnes) of één kanaal (trechter,
+week, budget, campagnes). Budgetten per kanaal: `app_settings.ads_budgets` (Google) en
+`ads_budgets_meta`. **Overzicht**: kaarten Marketingkosten en Marge na marketing verschijnen zodra
+er advertentiedata is, met pijltje tegenover de periode ervoor.
+
+---
+
 ## Vergelijking, KPI-grafiek en openstaande stapel — sinds 2026-09-17
 
 **Pijltjes op Overzicht.** De zes kaarten bovenaan vergelijken altijd met de even lange periode

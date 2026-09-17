@@ -1,13 +1,13 @@
 'use client';
 
 import { ChevronRight } from 'lucide-react';
-import type { AdsTotals, AdsWeekPoint, GoogleLeadStats, GoogleWeekPoint, MarginAfterAds } from '@/lib/ads';
-import { deltaPct } from '@/lib/ads';
+import type { AdsPlatform, AdsTotals, AdsWeekPoint, GoogleLeadStats, GoogleWeekPoint } from '@/lib/ads';
+import { deltaPct, PLATFORM_SOURCE_LABEL } from '@/lib/ads';
 import { formatEuro, formatNumber, formatPercent } from '@/lib/format';
 import { CHART } from '@/components/charts/theme';
 import Sparkline from '@/components/charts/Sparkline';
 import { Card, cn } from './ui';
-import { Delta } from './AdsHero';
+import { Delta, PLATFORM_COLOR } from './AdsHero';
 
 /**
  * Van inzet tot gewonnen deal, in vier tegels die naar rechts lopen. Elke
@@ -16,22 +16,24 @@ import { Delta } from './AdsHero';
  * per conversie, per deal) staan klein onder het getal waar ze bij horen.
  */
 export default function AdsFunnel({
+  platform,
   ads,
   prev,
-  google,
-  som,
+  leads,
   weeks,
-  googleWeeks,
+  leadWeeks,
   deltaLabel,
 }: {
+  platform: AdsPlatform;
   ads: AdsTotals;
   prev: AdsTotals | null;
-  google: GoogleLeadStats;
-  som: MarginAfterAds;
+  leads: GoogleLeadStats;
   weeks: AdsWeekPoint[];
-  googleWeeks: GoogleWeekPoint[];
+  leadWeeks: GoogleWeekPoint[];
   deltaLabel: string;
 }) {
+  const color = PLATFORM_COLOR[platform];
+  const costPerWonDeal = leads.count > 0 ? ads.cost / leads.count : null;
   const tiles: Tile[] = [
     {
       label: 'Ingezet',
@@ -39,7 +41,7 @@ export default function AdsFunnel({
       delta: deltaPct(ads.cost, prev?.cost),
       higherIsBetter: false,
       spark: weeks.map((w) => w.cost),
-      color: CHART.adsCost,
+      color,
       facts: [[formatNumber(ads.impressions), 'vertoningen'], [formatEuro(ads.cost / Math.max(1, ads.activeDays)), 'per dag']],
     },
     {
@@ -47,23 +49,26 @@ export default function AdsFunnel({
       value: formatNumber(ads.clicks),
       delta: deltaPct(ads.clicks, prev?.clicks),
       spark: weeks.map((w) => w.clicks),
-      color: CHART.adsCost,
+      color,
       facts: [[formatPercent(ads.ctr), 'CTR'], [formatEuro(ads.cpc, true), 'per klik']],
     },
     {
-      label: 'Alle conversies',
+      label: platform === 'meta' ? 'Conversies' : 'Alle conversies',
       value: formatNumber(Math.round(ads.conversions)),
       delta: deltaPct(ads.conversions, prev?.conversions),
       spark: weeks.map((w) => w.conversions),
-      color: CHART.adsCost,
-      facts: [[formatEuro(ads.cpa), 'per conversie'], ['alle conversieacties van Google', '']],
+      color,
+      facts: [
+        [formatEuro(ads.cpa), 'per conversie'],
+        [platform === 'meta' ? 'leads, berichten, contact' : 'alle conversieacties van Google', ''],
+      ],
     },
     {
       label: 'Gewonnen',
-      value: formatNumber(google.count),
-      spark: googleWeeks.map((w) => w.count),
+      value: formatNumber(leads.count),
+      spark: leadWeeks.map((w) => w.count),
       color: CHART.accepted,
-      facts: [[formatEuro(som.costPerWonDeal), 'per deal'], [formatEuro(google.revenue), 'omzet']],
+      facts: [[formatEuro(costPerWonDeal), 'per deal'], [formatEuro(leads.revenue), `omzet · “${PLATFORM_SOURCE_LABEL[platform]}”`]],
       accent: true,
     },
   ];
@@ -73,7 +78,7 @@ export default function AdsFunnel({
       <div className="flex items-baseline justify-between gap-4 px-5 pt-4">
         <div>
           <h3 className="text-[13px] font-semibold tracking-tight text-ink">Van inzet tot gewonnen deal</h3>
-          <p className="mt-0.5 text-xs text-ink-mute">Per week in de lijntjes; Google telt alle conversies, Teamleader de gewonnen offerte</p>
+          <p className="mt-0.5 text-xs text-ink-mute">Per week in de lijntjes; het platform telt de conversie, Teamleader de gewonnen offerte</p>
         </div>
       </div>
       <div className="grid grid-cols-2 gap-3 p-5 lg:grid-cols-[1fr_auto_1fr_auto_1fr_auto_1fr] lg:gap-2">

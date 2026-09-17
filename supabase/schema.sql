@@ -191,3 +191,15 @@ create table if not exists ads_sync_meta (
 );
 -- Maandbudgetten staan in app_settings onder de sleutel 'ads_budgets'
 -- ({ "default": 4000, "2026-09": 4500 }) — dat zijn keuzes, geen metingen.
+
+-- ── Meta Ads (2026-09-17) ────────────────────────────────────────────────
+-- Zelfde tabel, extra kolom: 'google' of 'meta'. Campagne-ID's van beide
+-- platforms zijn getallen van verschillende lengte, dus de sleutel
+-- (date, campaign_id) blijft uniek. De sync-meta krijgt een rij per platform
+-- (id 1 = google, id 2 = meta); de singleton-check gaat eraf.
+alter table ads_daily add column if not exists platform text not null default 'google';
+create index if not exists ads_daily_platform_date on ads_daily (platform, date);
+alter table ads_sync_meta drop constraint if exists ads_sync_meta_singleton;
+alter table ads_sync_meta add column if not exists platform text;
+-- Meta-koppeling (token + account) staat in app_settings 'ads_meta', net als
+-- de Google-koppeling in 'ads_gaql'. Budgetten voor Meta in 'ads_budgets_meta'.

@@ -1,6 +1,6 @@
 // GET  /api/ads?from&to&compare — Google Ads-cijfers voor een periode, plus de
 //      budgetstand per maand. Session-gated door proxy.ts.
-// POST /api/ads { month: 'YYYY-MM' | 'default', amount: number | null } — maandbudget.
+// POST /api/ads { platform: 'google'|'meta', month: 'YYYY-MM' | 'default', amount: number | null } — maandbudget.
 import { NextResponse } from 'next/server';
 import { buildAdsPayload } from '@/lib/ads-payload';
 import { setAdsBudget } from '@/lib/db';
@@ -43,8 +43,9 @@ export async function POST(request: Request) {
     }
     amount = Math.round(amount * 100) / 100;
   }
+  const platform = body.platform === 'meta' ? 'meta' : 'google';
   try {
-    const budgets = await setAdsBudget(month, amount);
+    const budgets = await setAdsBudget(month, amount, platform);
     return NextResponse.json({ ok: true, budgets });
   } catch (err) {
     return NextResponse.json(

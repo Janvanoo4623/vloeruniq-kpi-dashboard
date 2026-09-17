@@ -5,6 +5,7 @@
 import { NextResponse } from 'next/server';
 import { syncAndStore } from '@/lib/teamleader/sync';
 import { syncAds } from '@/lib/ads-sync';
+import { syncMetaAds } from '@/lib/meta-ads-sync';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -25,7 +26,13 @@ export async function POST(request: Request) {
   }
 
   // Google Ads parallel mee (zie /api/refresh): eigen bron, geen Teamleader-lock.
-  const adsRun = syncAds();
+  const adsRun = Promise.all([syncAds(), syncMetaAds()]).then(([google, meta]) => ({
+    ok: google.ok || meta.ok,
+    google,
+    meta,
+    // Eén foutzin voor de melding in de kop; overgeslagen platforms tellen niet.
+    error: [google, meta].filter((r) => !r.ok && !r.skipped).map((r) => r.error).join(' · ') || undefined,
+  }));
   try {
     const [{ meta }, ads] = await Promise.all([
       syncAndStore({ force: false, owner: 'cron/api-sync' }),

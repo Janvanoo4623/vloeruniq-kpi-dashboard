@@ -48,12 +48,15 @@ export default function KpiTrendChart({ data }: { data: KpiPoint[] }) {
       return next;
     });
 
-  const hasAds = data.some((p) => Number(p.adsCost ?? 0) > 0);
+  const hasGoogle = data.some((p) => Number(p.adsCost ?? 0) > 0);
+  const hasMeta = data.some((p) => Number(p.metaCost ?? 0) > 0);
+  const visible = (d: (typeof KPI_DEFS)[number]) =>
+    !d.group || (d.group === 'google' ? hasGoogle : d.group === 'meta' ? hasMeta : hasGoogle || hasMeta);
 
   return (
     <div>
       <div className="mb-3 flex flex-wrap gap-1.5">
-        {KPI_DEFS.filter((d) => hasAds || !d.key.startsWith('ads') && d.key !== 'marginAfterAds').map((d) => {
+        {KPI_DEFS.filter(visible).map((d) => {
           const isOn = on.has(d.key);
           return (
             <button

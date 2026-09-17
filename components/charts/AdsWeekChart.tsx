@@ -20,13 +20,23 @@ import { ChartLegend } from './ChartLegend';
 const compactEuro = (v: number) => (v >= 1000 ? `€${Math.round(v / 1000)}k` : `€${Math.round(v)}`);
 
 /** Kosten (staven, linkeras) en conversies (lijn, rechteras) per week. */
-export default function AdsWeekChart({ data }: { data: AdsWeekPoint[] }) {
+export default function AdsWeekChart({
+  data,
+  conversionsLabel = 'Alle conversies',
+  costColor = CHART.adsCost,
+  costGradient = 'gAdsCost',
+}: {
+  data: AdsWeekPoint[];
+  conversionsLabel?: string;
+  costColor?: string;
+  costGradient?: string;
+}) {
   return (
     <div>
       <ChartLegend
         items={[
-          { label: 'Kosten', color: CHART.adsCost },
-          { label: 'Alle conversies', color: CHART.adsConversions, dashed: true },
+          { label: 'Kosten', color: costColor },
+          { label: conversionsLabel, color: CHART.adsConversions, dashed: true },
         ]}
       />
       <ResponsiveContainer width="100%" height={286}>
@@ -64,7 +74,7 @@ export default function AdsWeekChart({ data }: { data: AdsWeekPoint[] }) {
             content={
               <ChartTooltip
                 format={(v, key) => (key === 'conversions' ? formatNumber(Math.round(v * 10) / 10) : formatEuro(v, true))}
-                dotColors={{ cost: CHART.adsCost, conversions: CHART.adsConversions }}
+                dotColors={{ cost: costColor, conversions: CHART.adsConversions }}
               />
             }
           />
@@ -72,7 +82,7 @@ export default function AdsWeekChart({ data }: { data: AdsWeekPoint[] }) {
             yAxisId="eur"
             dataKey="cost"
             name="Kosten"
-            fill={grad('gAdsCost')}
+            fill={grad(costGradient)}
             radius={[4, 4, 2, 2]}
             maxBarSize={30}
           />
@@ -80,7 +90,7 @@ export default function AdsWeekChart({ data }: { data: AdsWeekPoint[] }) {
             yAxisId="n"
             type="monotone"
             dataKey="conversions"
-            name="Alle conversies"
+            name={conversionsLabel}
             stroke={CHART.adsConversions}
             strokeWidth={2.2}
             strokeDasharray="5 4"

@@ -10,8 +10,13 @@
 import { getISOWeek } from './teamleader/dates';
 import type { LeadSourceStat, QuotationRow, RunTimeRow } from './types';
 
+export type AdsPlatform = 'google' | 'meta';
+
+export const PLATFORM_LABEL: Record<AdsPlatform, string> = { google: 'Google Ads', meta: 'Meta Ads' };
+
 export interface AdsDailyRow {
   date: string; // YYYY-MM-DD
+  platform: AdsPlatform;
   campaignId: string;
   campaignName: string;
   campaignStatus: string;
@@ -274,6 +279,10 @@ export interface GoogleLeadStats {
 }
 
 const isGoogle = (source: string) => /google/i.test(source);
+/** Leadbron in Teamleader die bij Meta hoort: "Social media" (Facebook/Instagram). */
+const isSocial = (source: string) => /social|facebook|instagram|meta/i.test(source);
+export const PLATFORM_SOURCE: Record<AdsPlatform, (s: string) => boolean> = { google: isGoogle, meta: isSocial };
+export const PLATFORM_SOURCE_LABEL: Record<AdsPlatform, string> = { google: 'Google', meta: 'Social media' };
 
 /**
  * Dezelfde koppeling als de leadbron-tabel (aggregate.ts): offerte → deal →
@@ -282,12 +291,18 @@ const isGoogle = (source: string) => /google/i.test(source);
  * LeadSourceStat.
  */
 export function googleLeadStats(quotations: QuotationRow[], runTimeRows: RunTimeRow[]): GoogleLeadStats {
+  return leadStats(quotations, runTimeRows, 'google');
+}
+
+/** Zelfde koppeling, per platform: Google → leadbron "Google", Meta → "Social media". */
+export function leadStats(quotations: QuotationRow[], runTimeRows: RunTimeRow[], platform: AdsPlatform): GoogleLeadStats {
+  const match = PLATFORM_SOURCE[platform];
   const dealSource: Record<string, string> = {};
   for (const r of runTimeRows) if (r.dealId && r.leadSource) dealSource[r.dealId] = r.leadSource;
   const out: GoogleLeadStats = { revenue: 0, margin: 0, marginRevenue: 0, count: 0, unpricedCount: 0 };
   for (const q of quotations) {
     if (q.status !== 'accepted') continue;
-    if (!isGoogle(dealSource[q.dealId] ?? '')) continue;
+    if (!match(dealSource[q.dealId] ?? '')) continue;
     out.revenue += q.revenueExVat;
     out.count += 1;
     if (q.margin !== null) {
@@ -355,12 +370,14 @@ export function googleLeadsByWeek(
   quotations: QuotationRow[],
   runTimeRows: RunTimeRow[],
   weeks: string[],
+  platform: AdsPlatform = 'google',
 ): GoogleWeekPoint[] {
+  const match = PLATFORM_SOURCE[platform];
   const dealSource: Record<string, string> = {};
   for (const r of runTimeRows) if (r.dealId && r.leadSource) dealSource[r.dealId] = r.leadSource;
   const byWeek = new Map<string, GoogleWeekPoint>(weeks.map((w) => [w, { week: w, count: 0, revenue: 0, margin: 0 }]));
   for (const q of quotations) {
-    if (q.status !== 'accepted' || !isGoogle(dealSource[q.dealId] ?? '')) continue;
+    if (q.status !== 'accepted' || !match(dealSource[q.dealId] ?? '')) continue;
     const d = q.dateAccepted || q.dateCreated;
     if (!d) continue;
     const w = getISOWeek(d);

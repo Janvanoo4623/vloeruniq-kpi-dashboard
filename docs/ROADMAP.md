@@ -63,6 +63,9 @@ Phased build. Status updated as we go.
 - [x] Overzicht: pijltjes met % verschil tegenover de even lange periode ervoor, altijd aan.
 - [x] Overzicht: verloop-grafiek met aan/uit te zetten KPI's, eigen as per eenheid, week/maand.
 - [x] Trends: openstaande stapel per week (€, aantal, gemiddelde leeftijd, ouder dan 60 d).
-- [ ] Meta Ads in Marketing + kaart op Overzicht — wacht op toegang tot de Business Manager van Vloeruniq (vraag aan Jan).
+- [x] Meta Ads voorbereid: uitlezing, opslag per platform, Vernieuwen/cron, tabblad per kanaal, kaarten op Overzicht, export.
+- [ ] Migratie draaien (`supabase/schema.sql`, onderaan) — nodig vóór de eerste Meta-import.
+- [ ] Toegang Business Manager van Jan → systeemgebruiker-token (`ads_read`) → `.env.local` → `npm run ads:meta-token -- --days 400`.
+- [ ] Na eerste import: welke action-types zitten erin, klopt "Social media" als leadbron voor Meta.
 - [ ] Moneybird-koppeling — navragen bij Jan of ze al over zijn en wie de API-sleutel kan maken.
 

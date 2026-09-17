@@ -69,6 +69,7 @@ npm run dev        # local dev server (reads snapshot from .data/)
 npm run sync       # run the Teamleader sync locally (no timeout limits) -> writes .data/snapshot.json
 npm run sync:ads   # Google Ads dagcijfers -> Supabase ads_daily, verder terug dan de 90 dagen van Vernieuwen (--days, --from-json)
 npm run ads:token  # test de GAQL-koppeling uit .env.local en zet hem in Supabase (app_settings.ads_gaql) voor Vernieuwen/cron op Vercel
+npm run ads:meta-token  # idem voor Meta Ads (META_ACCESS_TOKEN + META_AD_ACCOUNT_ID), laadt meteen 90 dagen (--days N)
 npm run build      # production build
 npm run lint       # eslint
 ```

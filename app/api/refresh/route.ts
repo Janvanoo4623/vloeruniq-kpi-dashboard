@@ -8,6 +8,7 @@
 import { NextResponse } from 'next/server';
 import { syncAndStore } from '@/lib/teamleader/sync';
 import { syncAds } from '@/lib/ads-sync';
+import { syncMetaAds } from '@/lib/meta-ads-sync';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -49,7 +50,13 @@ export async function POST() {
   // Google Ads loopt parallel mee: eigen bron, eigen tabel, geen Teamleader-lock.
   // Een fout daar staat in ads_sync_meta en in het antwoord, maar houdt de
   // Teamleader-sync niet tegen. Zonder koppeling slaat syncAds zelf stil over.
-  const adsRun = syncAds();
+  const adsRun = Promise.all([syncAds(), syncMetaAds()]).then(([google, meta]) => ({
+    ok: google.ok || meta.ok,
+    google,
+    meta,
+    // Eén foutzin voor de melding in de kop; overgeslagen platforms tellen niet.
+    error: [google, meta].filter((r) => !r.ok && !r.skipped).map((r) => r.error).join(' · ') || undefined,
+  }));
 
   // Production (Hobby): hand off to GitHub Actions.
   const dispatched = await dispatchGitHubWorkflow();

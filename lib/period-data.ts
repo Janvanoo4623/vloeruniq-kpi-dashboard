@@ -25,6 +25,8 @@ export interface PeriodComparison {
   perM2: PerM2Stats;
   /** De openstaande stapel aan het eind van de periode: alles wat toen open stond, ook van vóór de periode. */
   openAtEnd: { count: number; value: number };
+  /** Advertentiekosten in die periode, per platform. */
+  adsCost: { google: number; meta: number };
 }
 
 export interface PeriodData {
@@ -77,7 +79,13 @@ export async function buildPeriodData(input: {
     return { count: p?.count ?? 0, value: p?.value ?? 0 };
   };
 
-  const periodFor = (r: { from: string; to: string }): PeriodComparison => {
+  const adsCostIn = async (r: { from: string; to: string }) => {
+    const rows = (await getAdsRows(r.from, r.to)) ?? [];
+    const sum = (p: string) => Math.round(rows.filter((x) => x.platform === p).reduce((t, x) => t + x.cost, 0) * 100) / 100;
+    return { google: sum('google'), meta: sum('meta') };
+  };
+
+  const periodFor = async (r: { from: string; to: string }): Promise<PeriodComparison> => {
     const s = snapshotForRange(quotations, deals, r.from, r.to, exclusions, EMPTY_INVOICING, generatedAt);
     return {
       from: r.from,
@@ -89,27 +97,37 @@ export async function buildPeriodData(input: {
       // de totalen afleiden — ze gaan mee zodat de vergelijking klopt.
       perM2: perM2Stats(s.quotations),
       openAtEnd: openAt(r.to),
+      adsCost: await adsCostIn(r),
     };
   };
 
   const prevRange = comparisonRange(from, to, 'previous')!;
-  const previous = periodFor(prevRange);
+  const previous = await periodFor(prevRange);
   const cmpRange = comparisonRange(from, to, compare);
-  const comparison = cmpRange ? (compare === 'previous' ? previous : periodFor(cmpRange)) : null;
+  const comparison = cmpRange ? (compare === 'previous' ? previous : await periodFor(cmpRange)) : null;
 
-  // Google Ads: dagtotalen over alle campagnes. Tabel nog niet gemigreerd → leeg.
+  // Advertenties: dagtotalen per platform. Tabel nog niet gemigreerd → leeg.
   const adsRows = (await getAdsRows(from, to)) ?? [];
   const byDay = new Map<string, AdsDayPoint>();
   for (const r of adsRows) {
-    const e = byDay.get(r.date) ?? { date: r.date, cost: 0, clicks: 0, impressions: 0, conversions: 0 };
-    e.cost += r.cost;
-    e.clicks += r.clicks;
-    e.impressions += r.impressions;
-    e.conversions += r.conversions;
+    const e =
+      byDay.get(r.date) ??
+      { date: r.date, cost: 0, clicks: 0, impressions: 0, conversions: 0, metaCost: 0, metaClicks: 0, metaConversions: 0 };
+    if (r.platform === 'meta') {
+      e.metaCost += r.cost;
+      e.metaClicks += r.clicks;
+      e.metaConversions += r.conversions;
+    } else {
+      e.cost += r.cost;
+      e.clicks += r.clicks;
+      e.impressions += r.impressions;
+      e.conversions += r.conversions;
+    }
     byDay.set(r.date, e);
   }
+  const r2 = (v: number) => Math.round(v * 100) / 100;
   const adsDaily = [...byDay.values()]
-    .map((d) => ({ ...d, cost: Math.round(d.cost * 100) / 100, conversions: Math.round(d.conversions * 100) / 100 }))
+    .map((d) => ({ ...d, cost: r2(d.cost), conversions: r2(d.conversions), metaCost: r2(d.metaCost), metaConversions: r2(d.metaConversions) }))
     .sort((a, b) => a.date.localeCompare(b.date));
 
   // De stapel kijkt naar álle offertes (ook van vóór de periode).

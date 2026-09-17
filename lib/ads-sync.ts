@@ -53,6 +53,7 @@ export function reportToRows(report: AdsReport): AdsDailyRow[] {
   const cConvVal = col('metrics.allConversionsValue');
   return report.data.map((r) => ({
     date: r[cDate],
+    platform: 'google' as const,
     campaignId: String(r[cId]),
     campaignName: r[cName] ?? '',
     campaignStatus: r[cStatus] ?? '',
@@ -214,7 +215,7 @@ export async function storeAdsRows(
 ): Promise<{ rows: number; stale: number; meta: AdsMeta }> {
   const started = new Date().toISOString();
   await upsertAdsRows(rows);
-  const stale = await deleteStaleAdsRows(from, to, started);
+  const stale = await deleteStaleAdsRows('google', from, to, started);
   const meta: AdsMeta = { lastSyncAt: started, fromDate: from, toDate: to, rows: rows.length, source, error: null };
   // De historie begint waar de eerste import begon; een 90-daagse verversing
   // mag dat niet naar voren schuiven, anders lijkt het alsof 2024 weg is.

@@ -3,7 +3,7 @@
 import { supabase } from './supabase';
 import { deriveDateParts } from './teamleader/dates';
 import type { PriceRow, CostRow } from './pricing';
-import { parseAdsBudgets, type AdsBudgets, type AdsDailyRow } from './ads';
+import { parseAdsBudgets, type AdsBudgets, type AdsDailyRow, type AdsPlatform } from './ads';
 import type {
   InvoiceAdjustment,
   InvoiceRow,
@@ -48,6 +48,9 @@ function isMissingTable(error: { code?: string; message?: string } | null): bool
     /does not exist|could not find the table/i.test(error.message ?? '')
   );
 }
+
+const MIGRATIE_META =
+  'Meta Ads vraagt een databasemigratie: draai supabase/schema.sql opnieuw in de Supabase SQL editor.';
 
 const num = (v: unknown): number => (v == null ? 0 : Number(v));
 const numOrNull = (v: unknown): number | null => (v == null ? null : Number(v));
@@ -455,13 +458,15 @@ export async function setReviewed(
  * vorm controleren betekent dat de gebruiker een databasefout in beeld krijgt in
  * plaats van te horen dat er een migratie klaarstaat.
  */
-function isMissingColumn(error: { code?: string; message?: string } | null): boolean {
+function isMissingColumn(error: { code?: string; message?: string } | null, column?: string): boolean {
   if (!error) return false;
-  return (
+  const missing =
     error.code === '42703' ||
     error.code === 'PGRST204' ||
-    /column .* does not exist|could not find the .* column/i.test(error.message ?? '')
-  );
+    /column .* does not exist|could not find the .* column/i.test(error.message ?? '');
+  // Met een kolomnaam: alleen als het óver die kolom gaat, zodat een andere
+  // ontbrekende kolom niet stilletjes als 'oude vorm' wordt behandeld.
+  return missing && (!column || (error.message ?? '').includes(column));
 }
 
 /** All overrides keyed by quotation id. line_code '' carries the offerte-level flag. */
@@ -813,6 +818,8 @@ export interface AdsMeta {
 function rowToAds(r: Row): AdsDailyRow {
   return {
     date: r.date as string,
+    // Kolom bestaat pas sinds de Meta-migratie; daarvoor is alles Google.
+    platform: ((r.platform as string) ?? 'google') as AdsPlatform,
     campaignId: String(r.campaign_id),
     campaignName: (r.campaign_name as string) ?? '',
     campaignStatus: (r.campaign_status as string) ?? '',
@@ -857,6 +864,7 @@ export async function upsertAdsRows(rows: AdsDailyRow[]): Promise<void> {
   const syncedAt = new Date().toISOString();
   const payload = rows.map((r) => ({
     date: r.date,
+    platform: r.platform,
     campaign_id: r.campaignId,
     campaign_name: r.campaignName,
     campaign_status: r.campaignStatus,
@@ -869,7 +877,19 @@ export async function upsertAdsRows(rows: AdsDailyRow[]): Promise<void> {
     synced_at: syncedAt,
   }));
   for (let i = 0; i < payload.length; i += 500) {
-    const { error } = await supabase().from('ads_daily').upsert(payload.slice(i, i + 500));
+    let chunk: Record<string, unknown>[] = payload.slice(i, i + 500);
+    let { error } = await supabase().from('ads_daily').upsert(chunk);
+    // Vóór de Meta-migratie bestaat 'platform' niet. Google-rijen kunnen dan
+    // gewoon zonder; Meta-rijen niet, want dan lopen ze door de Google-cijfers.
+    if (isMissingColumn(error, 'platform')) {
+      if (rows.some((r) => r.platform !== 'google')) throw new Error(MIGRATIE_META);
+      chunk = chunk.map((row) => {
+        const rest = { ...row };
+        delete rest.platform;
+        return rest;
+      });
+      ({ error } = await supabase().from('ads_daily').upsert(chunk));
+    }
     if (error) {
       if (isMissingTable(error)) {
         throw new Error(
@@ -887,20 +907,32 @@ export async function upsertAdsRows(rows: AdsDailyRow[]): Promise<void> {
  * dag geen vertoning meer heeft komt niet terug in het rapport — de oude rij
  * zou dan blijven staan en meetellen.
  */
-export async function deleteStaleAdsRows(from: string, to: string, olderThanIso: string): Promise<number> {
-  const { data, error } = await supabase()
-    .from('ads_daily')
-    .delete()
-    .gte('date', from)
-    .lte('date', to)
-    .lt('synced_at', olderThanIso)
-    .select('date');
+export async function deleteStaleAdsRows(
+  platform: AdsPlatform,
+  from: string,
+  to: string,
+  olderThanIso: string,
+): Promise<number> {
+  const run = (withPlatform: boolean) => {
+    let q = supabase().from('ads_daily').delete();
+    if (withPlatform) q = q.eq('platform', platform);
+    return q.gte('date', from).lte('date', to).lt('synced_at', olderThanIso).select('date');
+  };
+  let { data, error } = await run(true);
+  if (isMissingColumn(error, 'platform')) {
+    // Vóór de migratie is alles Google; voor Meta niets weggooien.
+    if (platform !== 'google') return 0;
+    ({ data, error } = await run(false));
+  }
   if (error) throw new Error(`db.deleteStaleAdsRows: ${error.message}`);
   return data?.length ?? 0;
 }
 
-export async function getAdsMeta(): Promise<AdsMeta | null> {
-  const { data, error } = await supabase().from('ads_sync_meta').select('*').eq('id', 1).maybeSingle();
+// Eén rij per platform: id 1 = google, id 2 = meta (zie schema.sql).
+const ADS_META_ID: Record<AdsPlatform, number> = { google: 1, meta: 2 };
+
+export async function getAdsMeta(platform: AdsPlatform = 'google'): Promise<AdsMeta | null> {
+  const { data, error } = await supabase().from('ads_sync_meta').select('*').eq('id', ADS_META_ID[platform]).maybeSingle();
   if (error) {
     if (isMissingTable(error)) return null;
     throw new Error(`db.getAdsMeta: ${error.message}`);
@@ -916,30 +948,37 @@ export async function getAdsMeta(): Promise<AdsMeta | null> {
   };
 }
 
-export async function setAdsMeta(m: AdsMeta): Promise<void> {
-  const { error } = await supabase().from('ads_sync_meta').upsert({
-    id: 1,
+export async function setAdsMeta(m: AdsMeta, platform: AdsPlatform = 'google'): Promise<void> {
+  const row: Record<string, unknown> = {
+    id: ADS_META_ID[platform],
+    platform,
     last_sync_at: m.lastSyncAt,
     from_date: m.fromDate,
     to_date: m.toDate,
     rows: m.rows,
     source: m.source,
     error: m.error,
-  });
+  };
+  let { error } = await supabase().from('ads_sync_meta').upsert(row);
+  if (isMissingColumn(error, 'platform')) {
+    if (platform !== 'google') throw new Error(MIGRATIE_META);
+    delete row.platform;
+    ({ error } = await supabase().from('ads_sync_meta').upsert(row));
+  }
   if (error) throw new Error(`db.setAdsMeta: ${error.message}`);
 }
 
-const ADS_BUDGETS_KEY = 'ads_budgets';
+const ADS_BUDGETS_KEY: Record<AdsPlatform, string> = { google: 'ads_budgets', meta: 'ads_budgets_meta' };
 
-export async function getAdsBudgets(): Promise<AdsBudgets> {
-  return parseAdsBudgets(await getAppSetting<unknown>(ADS_BUDGETS_KEY, {}));
+export async function getAdsBudgets(platform: AdsPlatform = 'google'): Promise<AdsBudgets> {
+  return parseAdsBudgets(await getAppSetting<unknown>(ADS_BUDGETS_KEY[platform], {}));
 }
 
 /** `amount === null` haalt het budget voor die maand (of de standaard) weg. */
-export async function setAdsBudget(month: string, amount: number | null): Promise<AdsBudgets> {
-  const huidig = await getAdsBudgets();
+export async function setAdsBudget(month: string, amount: number | null, platform: AdsPlatform = 'google'): Promise<AdsBudgets> {
+  const huidig = await getAdsBudgets(platform);
   if (amount === null) delete huidig[month];
   else huidig[month] = amount;
-  await setAppSetting(ADS_BUDGETS_KEY, huidig);
+  await setAppSetting(ADS_BUDGETS_KEY[platform], huidig);
   return huidig;
 }

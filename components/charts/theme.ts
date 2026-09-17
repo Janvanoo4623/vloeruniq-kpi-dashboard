@@ -25,6 +25,9 @@ export const CHART = {
   // leisteen, neutraal. Conversies krijgen het accent: dat is wat binnenkomt.
   adsCost: '#6b7f8e',
   adsConversions: '#0e6b63',
+  // Meta naast Google: ook gedempt, maar een andere tint, zodat de gestapelde
+  // balk in de rekensom twee herkenbare delen heeft zonder dat er rood in komt.
+  metaCost: '#5f6ea0',
 } as const;
 
 /**

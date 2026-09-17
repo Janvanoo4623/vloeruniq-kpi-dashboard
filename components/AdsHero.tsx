@@ -1,109 +1,128 @@
 'use client';
 
 import { Minus, TrendingDown, TrendingUp } from 'lucide-react';
-import type { AdsTotals, GoogleLeadStats, MarginAfterAds } from '@/lib/ads';
-import { deltaPct } from '@/lib/ads';
+import type { AdsPlatform, GoogleLeadStats } from '@/lib/ads';
+import { PLATFORM_LABEL, PLATFORM_SOURCE_LABEL } from '@/lib/ads';
 import { formatEuro, formatNumber, formatPercent } from '@/lib/format';
 import { CHART } from '@/components/charts/theme';
 import { Card, cn } from './ui';
 
+export const PLATFORM_COLOR: Record<AdsPlatform, string> = { google: CHART.adsCost, meta: CHART.metaCost };
+
+export interface PlatformReturn {
+  platform: AdsPlatform;
+  cost: number;
+  leads: GoogleLeadStats;
+}
+
 /**
- * Het ene getal waar deze pagina om draait: wat er van de marge overblijft
- * nadat Google Ads betaald is. Groot, en met de balk eronder die laat zíen
- * hoe groot de hap is — 11,8% lees je, maar een smal grijs stuk aan het begin
- * van een lange petrol balk voel je.
+ * Het ene getal waar het tabblad om draait: wat er van de marge overblijft
+ * nadat de advertenties betaald zijn. De balk eronder laat zíen hoe groot de
+ * hap is, per platform een eigen stuk.
  *
- * Rechts wat de advertenties opleverden. Dat is een ander getal dan links:
- * links gaat over het hele bedrijf, rechts alleen over de leads die via
- * Google binnenkwamen. Kleur alleen daar, want dát cijfer kan negatief zijn.
+ * Rechts wat elk platform opleverde: marge uit de leads die via dat kanaal
+ * binnenkwamen, min wat het kostte. Kleur alleen daar, want dát kan negatief.
  */
 export default function AdsHero({
-  ads,
-  google,
-  som,
   totalMargin,
+  platforms,
   prevNet,
   deltaLabel,
 }: {
-  ads: AdsTotals;
-  google: GoogleLeadStats;
-  som: MarginAfterAds;
   totalMargin: number;
+  /** Alleen gekoppelde platforms. */
+  platforms: PlatformReturn[];
   prevNet: number | null;
   deltaLabel: string;
 }) {
-  const positief = som.googleNet >= 0;
-  const delta = prevNet != null ? deltaPct(som.net, prevNet) : null;
-  // Aandeel van de kosten in de marge, begrensd zodat de balk bij verlies vol loopt.
-  const share = totalMargin > 0 ? Math.min(1, ads.cost / totalMargin) : 1;
-  const verlies = som.net < 0;
+  const cost = platforms.reduce((s, p) => s + p.cost, 0);
+  const net = Math.round((totalMargin - cost) * 100) / 100;
+  const delta = prevNet != null && prevNet !== 0 ? Math.round(((net - prevNet) / Math.abs(prevNet)) * 1000) / 10 : null;
+  const verlies = net < 0;
+  const ref = Math.max(totalMargin, cost, 1);
+  const share = totalMargin > 0 ? Math.round((cost / totalMargin) * 1000) / 10 : null;
 
   return (
     <Card>
       <div className="grid grid-cols-1 lg:grid-cols-[1.6fr_1fr]">
         <div className="px-6 py-6">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-ink-faint">Marge na Google Ads</p>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-ink-faint">Marge na marketing</p>
           <div className="mt-2 flex flex-wrap items-end gap-x-3 gap-y-1">
             <p className={cn('text-[48px] font-bold leading-none tracking-tight', verlies ? 'text-crit' : 'text-ink')}>
-              {formatEuro(som.net)}
+              {formatEuro(net)}
             </p>
             <Delta pct={delta} label={deltaLabel} />
           </div>
           <p className="mt-2 text-[13px] text-ink-mute">
             van {formatEuro(totalMargin)} marge in deze periode gaat{' '}
-            <span className="font-semibold text-ink">{formatPercent(som.costShareOfMargin)}</span> naar Google Ads
+            <span className="font-semibold text-ink">{formatPercent(share)}</span> naar advertenties
           </p>
 
-          {/* De balk: één rij, twee delen, 2px wit ertussen. */}
-          <div className="mt-5 flex h-3.5 w-full overflow-hidden rounded-full bg-sunk" role="img" aria-label={`Google Ads ${formatEuro(ads.cost)} van ${formatEuro(totalMargin)} marge`}>
-            <div
-              className="h-full rounded-l-full"
-              style={{ width: `${Math.max(1.5, share * 100)}%`, background: verlies ? CHART.refused : CHART.adsCost }}
-            />
-            {!verlies && <div className="h-full flex-1 border-l-2 border-white" style={{ background: CHART.accepted }} />}
+          {/* Eén balk: per platform een stuk, dan wat overblijft. 2px wit ertussen. */}
+          <div
+            className="mt-5 flex h-3.5 w-full gap-[2px] overflow-hidden rounded-full bg-sunk"
+            role="img"
+            aria-label={`Advertenties ${formatEuro(cost)} van ${formatEuro(totalMargin)} marge`}
+          >
+            {platforms.map((p) => (
+              <div
+                key={p.platform}
+                className="h-full first:rounded-l-full"
+                style={{ width: `${Math.max(p.cost > 0 ? 1.2 : 0, (p.cost / ref) * 100)}%`, background: verlies ? CHART.refused : PLATFORM_COLOR[p.platform] }}
+              />
+            ))}
+            {!verlies && <div className="h-full flex-1 rounded-r-full" style={{ background: CHART.accepted }} />}
           </div>
-          <div className="mt-2 flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-[12px]">
-            <span className="flex items-center gap-1.5 text-ink-mute">
-              <i className="inline-block h-2 w-2 rounded-[2px]" style={{ background: verlies ? CHART.refused : CHART.adsCost }} />
-              Google Ads <span className="font-semibold text-ink tabular-nums">{formatEuro(ads.cost)}</span>
-            </span>
+          <div className="mt-2 flex flex-wrap items-center gap-x-5 gap-y-1 text-[12px]">
+            {platforms.map((p) => (
+              <span key={p.platform} className="flex items-center gap-1.5 text-ink-mute">
+                <i className="inline-block h-2 w-2 rounded-[2px]" style={{ background: PLATFORM_COLOR[p.platform] }} />
+                {PLATFORM_LABEL[p.platform]} <span className="font-semibold text-ink tabular-nums">{formatEuro(p.cost)}</span>
+              </span>
+            ))}
             {!verlies && (
-              <span className="flex items-center gap-1.5 text-ink-mute">
+              <span className="ml-auto flex items-center gap-1.5 text-ink-mute">
                 <i className="inline-block h-2 w-2 rounded-[2px]" style={{ background: CHART.accepted }} />
-                Blijft over <span className="font-semibold text-ink tabular-nums">{formatEuro(som.net)}</span>
+                Blijft over <span className="font-semibold text-ink tabular-nums">{formatEuro(net)}</span>
               </span>
             )}
           </div>
         </div>
 
-        <div className={cn('flex flex-col justify-center border-t border-hair px-6 py-5 lg:border-l lg:border-t-0', positief ? 'bg-good-soft/60' : 'bg-crit-soft/60')}>
-          <p className={cn('text-[11px] font-semibold uppercase tracking-[0.1em]', positief ? 'text-good' : 'text-crit')}>
-            Rendement Google Ads
-          </p>
-          <p className={cn('mt-1.5 text-[30px] font-bold leading-none tracking-tight', positief ? 'text-good' : 'text-crit')}>
-            {formatEuro(som.googleNet)}
-          </p>
-          <p className="mt-1.5 text-[12px] text-ink-mute">marge uit Google-leads min wat de advertenties kostten</p>
-          <dl className="mt-4 space-y-1.5 text-[12.5px]">
-            <Feit label="Omzet uit Google-leads" value={formatEuro(google.revenue)} hint={`${google.count} gewonnen · ${som.roas != null ? `${formatNumber(Math.round(som.roas * 10) / 10)}× de inzet` : '—'}`} />
-            <Feit label="Marge daarvan" value={formatEuro(google.margin)} hint={google.marginRevenue > 0 ? formatPercent((google.margin / google.marginRevenue) * 100) : '—'} />
-            <Feit label="Inzet" value={formatEuro(ads.cost)} hint={som.costPerWonDeal != null ? `${formatEuro(som.costPerWonDeal)} per gewonnen deal` : '—'} />
-          </dl>
+        <div className="border-t border-hair px-6 py-5 lg:border-l lg:border-t-0">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-ink-faint">Rendement per kanaal</p>
+          <p className="mt-1 text-[12px] text-ink-mute">marge uit de leads van dat kanaal, min wat het kostte</p>
+          <div className="mt-3 space-y-2.5">
+            {platforms.map((p) => {
+              const rendement = Math.round((p.leads.margin - p.cost) * 100) / 100;
+              const goed = rendement >= 0;
+              const roas = p.cost > 0 ? Math.round((p.leads.revenue / p.cost) * 10) / 10 : null;
+              return (
+                <div
+                  key={p.platform}
+                  className={cn('rounded-xl px-3.5 py-3 ring-1 ring-inset', goed ? 'bg-good-soft/60 ring-good/20' : 'bg-crit-soft/60 ring-crit/20')}
+                >
+                  <div className="flex items-baseline justify-between gap-3">
+                    <span className="flex items-center gap-1.5 text-[12.5px] font-semibold text-ink-soft">
+                      <i className="inline-block h-2 w-2 rounded-[2px]" style={{ background: PLATFORM_COLOR[p.platform] }} />
+                      {PLATFORM_LABEL[p.platform]}
+                    </span>
+                    <span className={cn('text-[22px] font-bold leading-none tracking-tight', goed ? 'text-good' : 'text-crit')}>
+                      {formatEuro(rendement)}
+                    </span>
+                  </div>
+                  <p className="mt-1.5 text-[11.5px] leading-snug text-ink-mute">
+                    {p.leads.count} gewonnen via “{PLATFORM_SOURCE_LABEL[p.platform]}” · {formatEuro(p.leads.revenue)} omzet ·{' '}
+                    {formatEuro(p.leads.margin)} marge
+                    {roas != null && <> · {formatNumber(roas)}× de inzet</>}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
     </Card>
-  );
-}
-
-function Feit({ label, value, hint }: { label: string; value: string; hint: string }) {
-  return (
-    <div className="flex items-start justify-between gap-3">
-      <dt className="shrink-0 text-ink-mute">{label}</dt>
-      <dd className="text-right">
-        <div className="font-semibold text-ink tabular-nums">{value}</div>
-        <div className="text-[11px] leading-tight text-ink-faint">{hint}</div>
-      </dd>
-    </div>
   );
 }
 

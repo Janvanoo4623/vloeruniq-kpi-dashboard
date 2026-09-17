@@ -1,6 +1,8 @@
 'use client';
 
-import type { AdsCampaignStat } from '@/lib/ads';
+import type { AdsCampaignStat, AdsPlatform } from '@/lib/ads';
+import { PLATFORM_LABEL } from '@/lib/ads';
+import { PLATFORM_COLOR } from './AdsHero';
 import { formatEuro, formatNumber, formatPercent } from '@/lib/format';
 import { Badge } from './ui';
 import { CHART } from './charts/theme';
@@ -13,7 +15,15 @@ const STATUS: Record<string, { label: string; tone: 'neutral' | 'warn' | 'good' 
 };
 
 /** Per campagne: wat hij kost en wat hij daarvoor doet. Gesorteerd op kosten. */
-export default function AdsCampaignTable({ rows }: { rows: AdsCampaignStat[] }) {
+export default function AdsCampaignTable({
+  rows,
+  showPlatform = false,
+  conversionsLabel = 'Alle conversies',
+}: {
+  rows: (AdsCampaignStat & { platform?: AdsPlatform })[];
+  showPlatform?: boolean;
+  conversionsLabel?: string;
+}) {
   const gepagineerd = usePaged(rows);
   if (rows.length === 0) {
     return <div className="flex h-24 items-center justify-center text-sm text-ink-faint">Geen campagnes met uitgaven in deze periode</div>;
@@ -29,7 +39,7 @@ export default function AdsCampaignTable({ rows }: { rows: AdsCampaignStat[] }) 
             <th className="px-3 py-2 text-right font-medium">Klikken</th>
             <th className="px-3 py-2 text-right font-medium">CTR</th>
             <th className="px-3 py-2 text-right font-medium">CPC</th>
-            <th className="px-3 py-2 text-right font-medium">Alle conversies</th>
+            <th className="px-3 py-2 text-right font-medium">{conversionsLabel}</th>
             <th className="px-3 py-2 text-right font-medium">Per conversie</th>
           </tr>
         </thead>
@@ -43,13 +53,21 @@ export default function AdsCampaignTable({ rows }: { rows: AdsCampaignStat[] }) 
                     <span className="truncate" title={c.name}>{c.name}</span>
                     {st && st.tone !== 'good' && <Badge tone={st.tone}>{st.label}</Badge>}
                   </div>
-                  <div className="text-[11px] text-ink-faint">{c.channel.toLowerCase().replace('_', ' ')}</div>
+                  <div className="flex items-center gap-1.5 text-[11px] text-ink-faint">
+                    {showPlatform && c.platform && (
+                      <>
+                        <i className="inline-block h-1.5 w-1.5 rounded-[2px]" style={{ background: PLATFORM_COLOR[c.platform] }} />
+                        {PLATFORM_LABEL[c.platform]} ·
+                      </>
+                    )}
+                    {c.channel.toLowerCase().replace('_', ' ')}
+                  </div>
                 </td>
                 <td className="px-3 py-2 text-right tabular-nums text-ink">{formatEuro(c.cost)}</td>
                 <td className="px-3 py-2">
                   <div className="flex items-center gap-2">
                     <div className="h-2 w-16 overflow-hidden rounded-full bg-sunk">
-                      <div className="h-full rounded-full" style={{ width: `${c.costShare ?? 0}%`, background: CHART.adsCost }} />
+                      <div className="h-full rounded-full" style={{ width: `${c.costShare ?? 0}%`, background: c.platform ? PLATFORM_COLOR[c.platform] : CHART.adsCost }} />
                     </div>
                     <span className="w-11 text-right text-[12px] tabular-nums text-ink-mute">{formatPercent(c.costShare)}</span>
                   </div>

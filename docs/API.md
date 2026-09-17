@@ -63,8 +63,8 @@ is now invalid — persist the new one immediately. See the token-ownership rule
 | `/api/login` | `POST` | none | Compare password to `DASHBOARD_PASSWORD`; set auth cookie. |
 | `/api/logout` | `POST` | session cookie | Clear auth cookie. |
 | `/api/data` | `GET` | session cookie | Alles wat van `?from&to&compare` afhangt (`lib/period-data.ts`): snapshot, `comparison` (gekozen), `previous` (altijd de even lange periode ervoor, voor de pijltjes op Overzicht), klantanalyse, `adsDaily` (dagtotalen Google Ads), `openStock` (openstaande stapel per week). |
-| `/api/ads` | `GET` | session cookie | Google Ads-cijfers voor `?from&to&compare`: totalen, per week, per campagne, budgetstand per maand, laatste import. Leest alleen `ads_daily`. |
-| `/api/ads` | `POST` | session cookie | Maandbudget zetten: `{ month: 'YYYY-MM' \| 'default', amount: number \| null }` → `app_settings.ads_budgets`. |
+| `/api/ads` | `GET` | session cookie | Advertentiecijfers voor `?from&to&compare`: `total` over alle kanalen en `platforms.google` / `platforms.meta` met totalen, per week, per campagne, budgetstand, laatste import, `connected`. Leest alleen `ads_daily`. |
+| `/api/ads` | `POST` | session cookie | Maandbudget zetten: `{ platform: 'google' \| 'meta', month: 'YYYY-MM' \| 'default', amount: number \| null }` → `app_settings.ads_budgets` / `ads_budgets_meta`. |
 
 ### `/api/sync` behaviour
 

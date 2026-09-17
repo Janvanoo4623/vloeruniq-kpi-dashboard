@@ -17,8 +17,8 @@ import { customerAnalysis } from '@/lib/customers';
 import { computeLost } from '@/lib/lost';
 import { perM2Stats, planningOverview } from '@/lib/insights';
 import { DEFAULT_KPI_SETTINGS, parseKpiSettings } from '@/lib/kpi-settings';
-import { buildAdsPayload } from '@/lib/ads-payload';
-import { googleLeadStats, marginAfterAds } from '@/lib/ads';
+import { buildAdsPayload, PLATFORMS } from '@/lib/ads-payload';
+import { leadStats, PLATFORM_LABEL, PLATFORM_SOURCE_LABEL } from '@/lib/ads';
 import { formatDateTime, formatEuro, formatNumber, formatPercent, formatProduct } from '@/lib/format';
 import type { InvoicingSummary, QuotationRow } from '@/lib/types';
 import { STATUS_LABEL } from '@/components/QuotationModal';
@@ -128,12 +128,12 @@ export default async function ExportPage({
   const verloren = computeLost(quotations, vandaag, settings);
   const planning = planningOverview(deals, quotations, vandaag);
 
-  // Marketing: Google Ads-kosten uit ads_daily, omzet en marge uit Teamleader
-  // (leadbron Google) — dezelfde functies als het tabblad Marketing.
+  // Marketing: advertentiekosten uit ads_daily, omzet en marge uit Teamleader
+  // (leadbron per kanaal) — dezelfde functies als het tabblad Marketing.
   const ads = await buildAdsPayload(from, to, compare);
-  const google = googleLeadStats(snap.quotations, snap.runTimeRows);
-  const naAds = marginAfterAds(t.totalMargin, ads.totals, google);
-  const adsVorig = ads.comparison?.totals ?? null;
+  const kanalen = PLATFORMS.filter((p) => ads.platforms[p].connected);
+  const adsTot = ads.total.totals;
+  const adsVorig = ads.total.prevTotals;
 
   const periode = `${from} t/m ${to}`;
   const inPeriode = [...snap.quotations].sort((a, b) => b.revenueExVat - a.revenueExVat);
@@ -376,51 +376,73 @@ export default async function ExportPage({
         />
       </Blad>
 
-      {ads.available && (
-        <Blad titel="Marketing" ondertitel="Google Ads: wat het kost, wat het oplevert en wat er van de marge overblijft">
+      {ads.available && kanalen.length > 0 && (
+        <Blad titel="Marketing" ondertitel="Advertenties: wat ze kosten, wat ze opleveren en wat er van de marge overblijft">
           <Kpis
             rijen={[
-              ['Google Ads-kosten', formatEuro(ads.totals.cost), adsVorig && formatEuro(adsVorig.cost)],
-              ['Klikken', formatNumber(ads.totals.clicks), adsVorig && formatNumber(adsVorig.clicks)],
-              ['CTR', formatPercent(ads.totals.ctr), adsVorig && formatPercent(adsVorig.ctr)],
-              ['CPC', formatEuro(ads.totals.cpc, true), adsVorig && formatEuro(adsVorig.cpc, true)],
-              ['Alle conversies (Google)', formatNumber(Math.round(ads.totals.conversions)), adsVorig && formatNumber(Math.round(adsVorig.conversions))],
-              ['Kosten per alle conversies', formatEuro(ads.totals.cpa), adsVorig && formatEuro(adsVorig.cpa)],
-              ['Omzet uit Google-leads', formatEuro(google.revenue), null],
-              ['Gewonnen Google-offertes', formatNumber(google.count), null],
-              ['Marge uit Google-leads', formatEuro(google.margin), null],
-              ['Kosten per gewonnen deal', formatEuro(naAds.costPerWonDeal), null],
-              ['Rendement Google Ads', formatEuro(naAds.googleNet), null],
               ['Totale marge', formatEuro(t.totalMargin), v && formatEuro(v.totalMargin)],
-              ['Marge na Google Ads', formatEuro(naAds.net), v && adsVorig && formatEuro(v.totalMargin - adsVorig.cost)],
+              ['Advertentiekosten', formatEuro(adsTot.cost), adsVorig && formatEuro(adsVorig.cost)],
+              ...kanalen.map(
+                (p) =>
+                  [`  waarvan ${PLATFORM_LABEL[p]}`, formatEuro(ads.platforms[p].totals.cost), ads.platforms[p].prevTotals && formatEuro(ads.platforms[p].prevTotals!.cost)] as [string, string, string | null],
+              ),
+              ['Marge na marketing', formatEuro(t.totalMargin - adsTot.cost), v && adsVorig && formatEuro(v.totalMargin - adsVorig.cost)],
             ]}
             vergelijking={vorige != null}
           />
           <Tabel
-            titel="Per campagne"
-            kop={['Campagne', 'Kosten', 'Klikken', 'CTR', 'CPC', 'Alle conversies']}
-            rechts={[false, true, true, true, true, true]}
-            rijen={ads.byCampaign.map((c) => [
-              c.name,
-              formatEuro(c.cost),
-              formatNumber(c.clicks),
-              formatPercent(c.ctr),
-              formatEuro(c.cpc, true),
-              formatNumber(Math.round(c.conversions * 10) / 10),
-            ])}
+            titel="Per kanaal"
+            kop={['Kanaal', 'Kosten', 'Klikken', 'CTR', 'CPC', 'Conversies', 'Gewonnen', 'Omzet', 'Rendement']}
+            rechts={[false, true, true, true, true, true, true, true, true]}
+            rijen={kanalen.map((p) => {
+              const k = ads.platforms[p].totals;
+              const l = leadStats(snap.quotations, snap.runTimeRows, p);
+              return [
+                `${PLATFORM_LABEL[p]} (leadbron ${PLATFORM_SOURCE_LABEL[p]})`,
+                formatEuro(k.cost),
+                formatNumber(k.clicks),
+                formatPercent(k.ctr),
+                formatEuro(k.cpc, true),
+                formatNumber(Math.round(k.conversions)),
+                formatNumber(l.count),
+                formatEuro(l.revenue),
+                formatEuro(l.margin - k.cost),
+              ];
+            })}
+            voetnoot="Rendement is de marge uit de leads van dat kanaal min de kosten. Conversies tellen per platform anders; omzet en marge komen uit Teamleader."
           />
           <Tabel
-            titel="Maandbudget"
-            kop={['Maand', 'Budget', 'Uitgegeven', 'Benut']}
-            rechts={[false, true, true, true]}
-            rijen={[...ads.budgets].reverse().map((m) => [
-              m.label,
-              m.budget != null ? formatEuro(m.budget) : '—',
-              formatEuro(m.spent),
-              formatPercent(m.pct),
-            ])}
-            voetnoot={`Google Ads-cijfers t/m ${ads.meta?.toDate ?? '—'}. Alle conversies volgens Google; omzet en marge uit Teamleader op leadbron "Google". Die twee vallen zelden in dezelfde periode.`}
+            titel="Per campagne"
+            kop={['Campagne', 'Kanaal', 'Kosten', 'Klikken', 'CTR', 'CPC', 'Conversies']}
+            rechts={[false, false, true, true, true, true, true]}
+            rijen={kanalen
+              .flatMap((p) => ads.platforms[p].byCampaign)
+              .sort((a, b) => b.cost - a.cost)
+              .map((c) => [
+                c.name,
+                PLATFORM_LABEL[c.platform],
+                formatEuro(c.cost),
+                formatNumber(c.clicks),
+                formatPercent(c.ctr),
+                formatEuro(c.cpc, true),
+                formatNumber(Math.round(c.conversions * 10) / 10),
+              ])}
           />
+          {kanalen.map((p) => (
+            <Tabel
+              key={p}
+              titel={`Maandbudget ${PLATFORM_LABEL[p]}`}
+              kop={['Maand', 'Budget', 'Uitgegeven', 'Benut']}
+              rechts={[false, true, true, true]}
+              rijen={[...ads.platforms[p].budgets].reverse().map((m) => [
+                m.label,
+                m.budget != null ? formatEuro(m.budget) : '—',
+                formatEuro(m.spent),
+                formatPercent(m.pct),
+              ])}
+              voetnoot={`${PLATFORM_LABEL[p]}-cijfers t/m ${ads.platforms[p].sync?.toDate ?? '—'}.`}
+            />
+          ))}
         </Blad>
       )}
 

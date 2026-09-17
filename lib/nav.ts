@@ -113,7 +113,7 @@ export const NAV: NavGroup[] = [
         href: '/marketing',
         label: 'Marketing',
         title: 'Marketing',
-        subtitle: 'Wat Google Ads kost, wat het oplevert, en wat er van de marge overblijft',
+        subtitle: 'Wat advertenties kosten, wat ze opleveren, en wat er van de marge overblijft',
         Icon: Megaphone,
       },
       {

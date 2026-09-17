@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
-import type { AdsBudgets, MonthBudgetStatus } from '@/lib/ads';
+import type { AdsBudgets, AdsPlatform, MonthBudgetStatus } from '@/lib/ads';
 import { monthLabel } from '@/lib/ads';
 import { formatEuro, formatPercent } from '@/lib/format';
 import { Badge, Button } from './ui';
@@ -16,10 +16,12 @@ import { CHART } from './charts/theme';
  * jezelf, geen instelling in het advertentieaccount.
  */
 export default function AdsBudgetPanel({
+  platform = 'google',
   months,
   budgets,
   onSaved,
 }: {
+  platform?: AdsPlatform;
   months: MonthBudgetStatus[];
   budgets: AdsBudgets;
   onSaved: () => Promise<void> | void;
@@ -93,6 +95,7 @@ export default function AdsBudgetPanel({
 
       {bewerk && (
         <BudgetModal
+          platform={platform}
           month={bewerk}
           current={budgets[bewerk] ?? null}
           fallback={bewerk === 'default' ? null : (budgets.default ?? null)}
@@ -132,12 +135,14 @@ function Meter({ m, maxRef }: { m: MonthBudgetStatus; maxRef: number }) {
 }
 
 function BudgetModal({
+  platform,
   month,
   current,
   fallback,
   onClose,
   onSaved,
 }: {
+  platform: AdsPlatform;
   month: string;
   current: number | null;
   fallback: number | null;
@@ -162,7 +167,7 @@ function BudgetModal({
       const res = await fetch('/api/ads', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ month, amount }),
+        body: JSON.stringify({ platform, month, amount }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data.ok) {

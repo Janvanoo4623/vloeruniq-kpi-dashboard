@@ -28,6 +28,7 @@ const BAR_GRADIENTS: Stop[] = [
   { id: 'gMargin', color: CHART.margin },
   { id: 'gRunTime', color: CHART.runTime },
   { id: 'gAdsCost', color: CHART.adsCost },
+  { id: 'gMetaCost', color: CHART.metaCost },
 ];
 
 const AREA_GRADIENTS: Stop[] = [
