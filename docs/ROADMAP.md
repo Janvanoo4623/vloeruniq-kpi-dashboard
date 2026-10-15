@@ -70,3 +70,26 @@ Phased build. Status updated as we go.
 - [ ] Met Jan checken of leadbron "Social media" alleen betaalde Meta-leads zijn of ook organisch.
 - [ ] Moneybird-koppeling — navragen bij Jan of ze al over zijn en wie de API-sleutel kan maken.
 
+
+## Idee: conversies terugkoppelen naar Google en Meta (click-ID tracking)
+Doel: Google Ads en Meta niet alleen op "formulier ingevuld" laten sturen, maar op wat er
+daarna gebeurt — offerte gewonnen, gefactureerd, marge. En in het dashboard per campagne
+kunnen zien wat er écht uit komt, in plaats van via de grove leadbron in Teamleader.
+
+- [ ] Website: bij een aanvraag `gclid` (Google, ook `gbraid`/`wbraid`) en `fbclid` + de
+      `_fbc`/`_fbp`-cookies (Meta) uitlezen en als verborgen velden meesturen met het formulier.
+      Ook `utm_campaign` meenemen. Uitzoeken wie de website/formulieren beheert.
+- [ ] Teamleader: eigen velden op de deal (of contact) voor click-ID, cookies, campagne en
+      aanvraagdatum; het formulier moet die vullen. Sync leest ze mee (`deals.info` custom fields).
+- [ ] Dashboard: deal ↔ campagne koppelen via de click-ID → omzet en marge per campagne,
+      tijd van klik tot akkoord tot factuur. Vervangt de leadbron-aanname "Social media = Meta".
+- [ ] Google: offline conversies terugsturen (Offline Conversion Import of Enhanced Conversions
+      for Leads) bij "offerte gewonnen" met de omzet of marge als waarde. Klik-ID's verlopen na
+      90 dagen, dus binnen die termijn uploaden; consent mode/AVG checken.
+- [ ] Meta: Conversions API-events (bijv. `Purchase` of een eigen "offerte gewonnen") met
+      `fbc`/`fbp` + gehashte e-mail/telefoon. Kan pas als de Meta-koppeling weer werkt
+      (sinds 2026-09-18 "API access blocked") en vraagt extra rechten naast `ads_read`.
+- [ ] Daarna in Google/Meta optimaliseren op deze conversies (waarde-gebaseerd bieden) i.p.v. op formulierleads.
+
+Afhankelijk van: toegang tot de website-formulieren, eigen velden in Teamleader, Meta weer
+ontgrendeld. Werkt pas vooruit: historische deals hebben geen click-ID.
