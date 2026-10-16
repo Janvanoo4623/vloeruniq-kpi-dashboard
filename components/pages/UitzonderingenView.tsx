@@ -6,6 +6,7 @@ import { formatEuro, formatPercent, formatProduct } from '@/lib/format';
 import { STATUS_LABEL, STATUS_STYLE } from '@/components/QuotationModal';
 import { Badge, Empty, Panel, SectionLabel, cn } from '@/components/ui';
 import KpiCard from '@/components/KpiCard';
+import KpiRow from '@/components/KpiRow';
 
 /**
  * Elke handmatige ingreep op één plek, mét het effect dat hij op de marge heeft.
@@ -21,7 +22,7 @@ export default function UitzonderingenView({ data }: { data: ExceptionsOverview 
     <div className="space-y-6">
       <section>
         <SectionLabel>Wat er handmatig is bijgesteld — bedragen ex btw</SectionLabel>
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <KpiRow>
           <KpiCard
             label="Gecorrigeerde offertes"
             value={String(corrections.length)}
@@ -43,7 +44,7 @@ export default function UitzonderingenView({ data }: { data: ExceptionsOverview 
             sub="hoe minder, hoe beter de bron klopt"
             higherIsBetter={false}
           />
-        </div>
+        </KpiRow>
       </section>
 
       <Panel

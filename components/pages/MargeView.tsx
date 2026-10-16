@@ -3,6 +3,7 @@
 import { formatEuro, formatNumber, formatPercent } from '@/lib/format';
 import { useDashboard } from '@/components/layout/DashboardProvider';
 import KpiCard from '@/components/KpiCard';
+import KpiRow from '@/components/KpiRow';
 import ChartCard from '@/components/ChartCard';
 import MarginTrendChart from '@/components/charts/MarginTrendChart';
 import ProductsTable from '@/components/ProductsTable';
@@ -42,7 +43,7 @@ export default function MargeView({
     <div className="space-y-6">
       <section>
         <SectionLabel>Per verkochte m² — vloerregels, ex btw</SectionLabel>
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <KpiRow>
           <KpiCard
             label="Totale marge"
             value={formatEuro(totals.totalMargin)}
@@ -64,7 +65,7 @@ export default function MargeView({
             value={formatEuro(perM2.marginPerM2, true)}
             sub={`${formatPercent(perM2.marginPct)} van de vloeromzet`}
           />
-        </div>
+        </KpiRow>
         <p className="mt-2 text-[11.5px] leading-relaxed text-ink-faint">
           Gerekend over {formatNumber(perM2.m2Priced)} van de {formatNumber(perM2.m2Total)} verkochte m²
           {dekking != null && ` (${formatPercent(dekking)})`} — de rest heeft nog geen inkoopprijs en

@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { Minus, TrendingDown, TrendingUp } from 'lucide-react';
 import { cn } from './ui';
+import { useInKpiRow } from './KpiRow';
 
 /**
  * Eén KPI.
@@ -56,6 +57,42 @@ export default function KpiCard({
       : 'bg-crit-soft text-crit ring-crit/20';
 
   const s = signal ? SIGNAL[signal] : null;
+  const inRow = useInKpiRow();
+
+  // In een KpiRow: geen eigen kader. Een signaal kleurt dan het getal zelf —
+  // dat is de plek waar je kijkt — en de verschil-pil wordt groen of rood.
+  if (inRow) {
+    return (
+      <div className={cn('min-w-0 px-5 py-4', className)}>
+        <div className="flex items-start justify-between gap-2">
+          <p className="text-[12px] font-medium leading-tight text-ink-mute">{label}</p>
+          {showDelta && (
+            <span
+              title={deltaLabel}
+              className={cn(
+                'inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold tabular-nums',
+                flat ? 'bg-sunk text-ink-mute' : good ? 'bg-good-soft text-good' : 'bg-crit-soft text-crit',
+              )}
+            >
+              <TrendIcon size={11} strokeWidth={2.6} />
+              {Math.abs(deltaPct as number).toFixed(0)}%
+            </span>
+          )}
+        </div>
+        <p
+          className={cn(
+            'mt-1.5 text-[22px] font-bold leading-tight tracking-tight tabular-nums',
+            // Alleen een echt alarm kleurt het getal; "let op" in oranje op
+            // drie van de vier cijfers maakte van elke rij een waarschuwing.
+            signal === 'crit' ? 'text-crit' : 'text-ink',
+          )}
+        >
+          {value}
+        </p>
+        {sub && <p className="mt-1 text-[11.5px] leading-snug text-ink-faint">{sub}</p>}
+      </div>
+    );
+  }
 
   return (
     <div

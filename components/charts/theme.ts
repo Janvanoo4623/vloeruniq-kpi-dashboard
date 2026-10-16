@@ -46,3 +46,26 @@ export const SOURCE_COLORS = [
 ];
 
 export const AXIS_TICK = { fill: CHART.text, fontSize: 11.5 } as const;
+
+/**
+ * Kleur per leadbron op náám, niet op volgorde. Op volgorde kreeg Google in de
+ * donut petrol en in het verloop eiken, omdat de twee grafieken anders
+ * sorteren. "Onbekend" is geen bron maar een gat in de data en krijgt daarom
+ * een neutraal grijs; Social media (Meta) dezelfde tint als Meta op Marketing.
+ */
+const VASTE_BRONKLEUR: Record<string, string> = {
+  google: '#0e6b63',
+  'social media': '#5f6ea0',
+  'mond op mond reclame': '#b4762a',
+  netwerk: '#4a8f9c',
+  onbekend: '#cfc8be',
+};
+
+export function sourceColor(name: string): string {
+  const key = name.trim().toLowerCase();
+  if (VASTE_BRONKLEUR[key]) return VASTE_BRONKLEUR[key];
+  let h = 0;
+  for (const c of key) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+  const vrij = SOURCE_COLORS.filter((c) => !Object.values(VASTE_BRONKLEUR).includes(c));
+  return vrij[h % vrij.length];
+}

@@ -10,6 +10,7 @@ import { formatEuro, formatNumber, formatPercent } from '@/lib/format';
 import { Empty, Panel, SectionLabel, cn } from '@/components/ui';
 import { Pagination, usePaged } from '@/components/ui/Pagination';
 import KpiCard from '@/components/KpiCard';
+import KpiRow from '@/components/KpiRow';
 
 type SortKey = 'revenue' | 'winRate' | 'marginPct' | 'quotes';
 
@@ -68,7 +69,7 @@ export default function RegioView({
     <div className="space-y-6">
       <section>
         <SectionLabel>Over alle offertes, niet alleen de gekozen periode — omzet ex btw</SectionLabel>
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <KpiRow>
           <KpiCard
             label="Plaatsen"
             value={String(regions.length)}
@@ -90,7 +91,7 @@ export default function RegioView({
             value={bestMargin ? formatPercent(bestMargin.marginPct) : '—'}
             sub={bestMargin ? bestMargin.name : undefined}
           />
-        </div>
+        </KpiRow>
       </section>
 
       <MarktaandeelPanel data={marketShare} />

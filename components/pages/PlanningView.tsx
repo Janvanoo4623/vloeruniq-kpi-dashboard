@@ -22,6 +22,7 @@ import { ChartTooltip } from '@/components/charts/ChartTooltip';
 import { ChartLegend } from '@/components/charts/ChartLegend';
 import { Empty, Panel, SectionLabel, cn } from '@/components/ui';
 import KpiCard from '@/components/KpiCard';
+import KpiRow from '@/components/KpiRow';
 
 const monthLabel = (m: string) => {
   const [y, mm] = m.split('-');
@@ -61,7 +62,7 @@ export default function PlanningView({
     <div className="space-y-6">
       <section>
         <SectionLabel>Nog uit te voeren — omzet ex btw</SectionLabel>
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <KpiRow>
           <KpiCard
             label="Orderportefeuille"
             value={formatEuro(backlogRevenue)}
@@ -83,7 +84,7 @@ export default function PlanningView({
             sub="deals met een uitvoerdatum"
             signal={sample < 100 ? 'warn' : undefined}
           />
-        </div>
+        </KpiRow>
       </section>
 
       <Panel

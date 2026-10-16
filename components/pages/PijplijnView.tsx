@@ -9,6 +9,7 @@ import {
 } from '@/components/charts/WinRateCharts';
 import { useDashboard } from '@/components/layout/DashboardProvider';
 import KpiCard from '@/components/KpiCard';
+import KpiRow from '@/components/KpiRow';
 import ChartCard from '@/components/ChartCard';
 import PipelineCard from '@/components/PipelineCard';
 import CountsByWeekChart from '@/components/charts/CountsByWeekChart';
@@ -35,7 +36,7 @@ export default function PijplijnView({
     <div className="space-y-6">
       <section>
         <SectionLabel>Open offertes — huidige stand, bedragen ex btw</SectionLabel>
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <KpiRow>
           <KpiCard label="Open waarde" value={formatEuro(pipeline.openValue)} sub={`${pipeline.openCount} offertes`} />
           <KpiCard
             label="Verwachte omzet"
@@ -60,7 +61,7 @@ export default function PijplijnView({
             higherIsBetter={false}
             signal={(pipeline.ageTiers.find((t) => t.label.includes('60'))?.count ?? 0) > 0 ? 'warn' : undefined}
           />
-        </div>
+        </KpiRow>
       </section>
 
       <CallListPanel callList={today.callList} pricedCodes={pricedCodes} />

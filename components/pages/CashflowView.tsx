@@ -3,6 +3,7 @@
 import { formatDays, formatEuro, formatPercent } from '@/lib/format';
 import { useDashboard } from '@/components/layout/DashboardProvider';
 import KpiCard from '@/components/KpiCard';
+import KpiRow from '@/components/KpiRow';
 import ChartCard from '@/components/ChartCard';
 import CashflowCard from '@/components/CashflowCard';
 import PaymentsCard from '@/components/PaymentsCard';
@@ -30,7 +31,7 @@ export default function CashflowView({
 
       <section>
         <SectionLabel>Huidige stand — bedragen incl. btw</SectionLabel>
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <KpiRow>
           <KpiCard
             label="Openstaand"
             value={formatEuro(aging.totalOutstanding)}
@@ -54,7 +55,7 @@ export default function CashflowView({
             value={formatPercent(payments.onTimePct)}
             sub="op of vóór de vervaldatum"
           />
-        </div>
+        </KpiRow>
       </section>
 
       <QuotedVsInvoicedPanel data={quotedVsInvoiced} />

@@ -22,6 +22,7 @@ import { ChartLegend } from '@/components/charts/ChartLegend';
 import { Empty, Panel, SectionLabel, cn } from '@/components/ui';
 import { Pagination, usePaged } from '@/components/ui/Pagination';
 import KpiCard from '@/components/KpiCard';
+import KpiRow from '@/components/KpiRow';
 
 
 
@@ -56,7 +57,7 @@ export default function KlantenView() {
     <div className="space-y-6">
       <section>
         <SectionLabel>Gefactureerd in deze periode, ex btw</SectionLabel>
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <KpiRow>
           <KpiCard
             label="Klanten"
             value={formatNumber(customers.length)}
@@ -78,7 +79,7 @@ export default function KlantenView() {
             sub="aandeel van je tien grootste klanten"
             signal={top10Share >= 40 ? 'warn' : undefined}
           />
-        </div>
+        </KpiRow>
       </section>
 
       <Panel

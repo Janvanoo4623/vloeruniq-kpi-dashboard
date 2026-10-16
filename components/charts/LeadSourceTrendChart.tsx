@@ -1,8 +1,8 @@
 'use client';
 
 import {
-  Area,
-  AreaChart,
+  Bar,
+  BarChart,
   CartesianGrid,
   ResponsiveContainer,
   Tooltip,
@@ -12,7 +12,7 @@ import {
 import { useState } from 'react';
 import type { LeadSourceTrend } from '@/lib/insights';
 import { formatEuro, formatPercent } from '@/lib/format';
-import { AXIS_TICK, CHART, SOURCE_COLORS } from './theme';
+import { AXIS_TICK, CHART, sourceColor } from './theme';
 import { ChartTooltip } from './ChartTooltip';
 import { ChartLegend } from './ChartLegend';
 import { Empty, cn } from '@/components/ui';
@@ -38,12 +38,13 @@ export default function LeadSourceTrendChart({ data }: { data: LeadSourceTrend }
     return <Empty>Te weinig historie voor een verloop per leadbron.</Empty>;
   }
 
-  const kleur = (i: number) => SOURCE_COLORS[i % SOURCE_COLORS.length];
+  // Kleur volgt de naam (theme.ts), zodat Google hier dezelfde kleur heeft als in de donut.
+  const kleurVan = (naam: string) => sourceColor(naam);
 
   return (
     <div>
       <ChartLegend
-        items={sources.map((s, i) => ({ label: s, color: kleur(i) }))}
+        items={sources.map((s) => ({ label: s, color: kleurVan(s) }))}
         right={
           <div className="flex rounded-lg border border-line p-0.5 text-[11.5px]">
             {(
@@ -68,15 +69,7 @@ export default function LeadSourceTrendChart({ data }: { data: LeadSourceTrend }
       />
 
       <ResponsiveContainer width="100%" height={272}>
-        <AreaChart data={points} margin={{ top: 6, right: 8, left: 4, bottom: 0 }} stackOffset={modus === 'aandeel' ? 'expand' : undefined}>
-          <defs>
-            {sources.map((s, i) => (
-              <linearGradient key={s} id={`ls${i}`} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor={kleur(i)} stopOpacity={0.85} />
-                <stop offset="100%" stopColor={kleur(i)} stopOpacity={0.45} />
-              </linearGradient>
-            ))}
-          </defs>
+        <BarChart data={points} margin={{ top: 6, right: 8, left: 4, bottom: 0 }} stackOffset={modus === 'aandeel' ? 'expand' : undefined}>
           <CartesianGrid stroke={CHART.grid} strokeDasharray="2 5" vertical={false} />
           <XAxis
             dataKey="month"
@@ -95,36 +88,39 @@ export default function LeadSourceTrendChart({ data }: { data: LeadSourceTrend }
             tickFormatter={(v) => (modus === 'aandeel' ? `${Math.round(v * 100)}%` : compactEuro(v))}
           />
           <Tooltip
-            cursor={{ stroke: CHART.axis, strokeDasharray: '3 3' }}
+            cursor={{ fill: CHART.cursor }}
             content={
               <ChartTooltip
                 labelFormat={maandLabel}
                 format={(v) => formatEuro(v)}
-                dotColors={Object.fromEntries(sources.map((s, i) => [s, kleur(i)]))}
+                dotColors={Object.fromEntries(sources.map((s) => [s, kleurVan(s)]))}
               />
             }
           />
+          {/* Gestapelde staven per maand. Gestapelde vlakken met gladde curves
+              lieten lagen door elkaar lijken te lopen en verzonnen golven
+              tussen twee maanden; een staaf is gewoon wat er die maand was. */}
           {sources.map((s, i) => (
-            <Area
+            <Bar
               key={s}
-              type="monotone"
               dataKey={s}
               name={s}
               stackId="bron"
-              stroke={kleur(i)}
-              strokeWidth={1.2}
-              fill={`url(#ls${i})`}
+              fill={kleurVan(s)}
+              fillOpacity={0.88}
+              maxBarSize={28}
+              radius={i === sources.length - 1 ? [3, 3, 0, 0] : undefined}
             />
           ))}
-        </AreaChart>
+        </BarChart>
       </ResponsiveContainer>
 
       <ul className="mt-3 flex flex-wrap gap-x-5 gap-y-1.5 border-t border-hair pt-3">
-        {totals.map((t, i) => (
+        {totals.map((t) => (
           <li key={t.name} className="flex items-baseline gap-1.5 text-[12px]">
             <span
               className="inline-block h-2.5 w-2.5 shrink-0 translate-y-px rounded-[3px]"
-              style={{ background: kleur(i) }}
+              style={{ background: kleurVan(t.name) }}
             />
             <span className="text-ink-soft">{t.name}</span>
             <span className="font-semibold tabular-nums text-ink">{formatEuro(t.revenue)}</span>

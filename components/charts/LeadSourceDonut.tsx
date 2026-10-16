@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Cell, Pie, PieChart, ResponsiveContainer } from 'recharts';
 import type { LeadSource } from '@/lib/types';
 import { formatEuro } from '@/lib/format';
-import { SOURCE_COLORS } from './theme';
+import { sourceColor } from './theme';
 
 /**
  * Donut met een actief segment in plaats van een tooltip: je zweeft over een
@@ -23,10 +23,10 @@ export default function LeadSourceDonut({ data }: { data: LeadSource[] }) {
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <defs>
-              {SOURCE_COLORS.map((c, i) => (
+              {data.map((d, i) => (
                 <linearGradient key={i} id={`src${i}`} x1="0" y1="0" x2="1" y2="1">
-                  <stop offset="0%" stopColor={c} stopOpacity={1} />
-                  <stop offset="100%" stopColor={c} stopOpacity={0.62} />
+                  <stop offset="0%" stopColor={sourceColor(d.name)} stopOpacity={1} />
+                  <stop offset="100%" stopColor={sourceColor(d.name)} stopOpacity={0.62} />
                 </linearGradient>
               ))}
             </defs>
@@ -46,7 +46,7 @@ export default function LeadSourceDonut({ data }: { data: LeadSource[] }) {
               {data.map((_, i) => (
                 <Cell
                   key={i}
-                  fill={`url(#src${i % SOURCE_COLORS.length})`}
+                  fill={`url(#src${i})`}
                   opacity={active == null || active === i ? 1 : 0.32}
                   style={{ transition: 'opacity .15s', cursor: 'pointer' }}
                 />
@@ -82,7 +82,7 @@ export default function LeadSourceDonut({ data }: { data: LeadSource[] }) {
             >
               <span
                 className="inline-block h-2.5 w-2.5 shrink-0 rounded-[3px]"
-                style={{ background: SOURCE_COLORS[i % SOURCE_COLORS.length] }}
+                style={{ background: sourceColor(d.name) }}
               />
               <span className="min-w-0 flex-1 truncate text-ink-soft">{d.name}</span>
               <span className="shrink-0 tabular-nums text-ink-faint">{pct}%</span>
