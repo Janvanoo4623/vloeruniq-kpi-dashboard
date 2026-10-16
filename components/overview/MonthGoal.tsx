@@ -67,7 +67,9 @@ export default function MonthGoal({ month }: { month: MonthProgress }) {
         <div className="mt-3 grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-[1.7fr_1fr_1fr]">
           <div className="col-span-2 sm:col-span-1">
             <p className="text-[12px] text-ink-mute">Omzet geaccepteerd</p>
-            <p className="mt-0.5 text-[28px] font-bold leading-none tracking-tight tabular-nums text-ink">
+            {/* Vaste hoogte voor het getal, ook bij de kleinere ernaast: dan
+                staan alle drie de balken en onderschriften op dezelfde lijn. */}
+            <p className="mt-0.5 flex h-8 items-end text-[28px] font-bold leading-none tracking-tight tabular-nums text-ink">
               <CountUp value={hoofd.value} format={(v) => formatEuro(v)} />
             </p>
             <Meter value={aandeel} expected={verstreken} />
@@ -87,8 +89,8 @@ export default function MonthGoal({ month }: { month: MonthProgress }) {
             return (
               <div key={r.key}>
                 <p className="text-[12px] text-ink-mute">{r.label}</p>
-                <p className="mt-0.5 text-[18px] font-semibold leading-tight tabular-nums text-ink">{r.fmt(r.value)}</p>
-                <Meter value={a} expected={verstreken} thin />
+                <p className="mt-0.5 flex h-8 items-end text-[18px] font-semibold leading-none tabular-nums text-ink">{r.fmt(r.value)}</p>
+                <Meter value={a} expected={verstreken} />
                 <p className="mt-1.5 text-[11px] text-ink-faint">{g ? `doel ${r.fmt(g)}` : `vorige maand ${r.fmt(r.prev)}`}</p>
               </div>
             );

@@ -9,8 +9,10 @@ import { deltaTone } from '@/lib/signal';
 import { Card, cn } from '@/components/ui';
 
 /**
- * Verschil-pil die alleen kleurt als het verschil iets betekent (lib/signal.ts).
- * Daaronder grijs, met het getal er gewoon bij — weglaten zou ook misleiden.
+ * Verschil-pil: groen als het beter gaat, rood als het slechter gaat — op
+ * verzoek van Jasper (2026-10-16), ook bij kleine aantallen. Of het verschil
+ * echt iets betekent staat in de tooltip (lib/signal.ts); alleen een vrijwel
+ * vlak verschil blijft grijs.
  */
 export function CalmDelta({
   pct,
@@ -24,25 +26,16 @@ export function CalmDelta({
   higherIsBetter?: boolean;
 }) {
   if (pct == null || !Number.isFinite(pct)) return null;
-  const tone = deltaTone(pct, { sample, higherIsBetter });
-  const Icon = Math.abs(pct) < 0.05 ? Minus : pct > 0 ? TrendingUp : TrendingDown;
-  // Betekent het verschil niets, dan geen pil: alleen klein grijs getal. Een
-  // rij grijze pillen trekt evenveel aandacht als een rij gekleurde.
-  if (tone === 'neutral') {
-    return (
-      <span title={label} className="inline-flex items-center gap-0.5 text-[11px] font-medium tabular-nums text-ink-faint">
-        <Icon size={11} strokeWidth={2.4} />
-        {Math.abs(pct).toFixed(0)}%
-      </span>
-    );
-  }
+  const flat = Math.abs(pct) < 1;
+  const good = (pct > 0) === higherIsBetter;
+  const Icon = flat ? Minus : pct > 0 ? TrendingUp : TrendingDown;
+  const toeval = deltaTone(pct, { sample, higherIsBetter }) === 'neutral' && !flat;
   return (
     <span
-      title={label}
+      title={`${label ?? ''}${toeval ? ' — op weinig offertes, kan toeval zijn' : ''}`.trim()}
       className={cn(
-        'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold tabular-nums ring-1 ring-inset',
-        tone === 'good' && 'bg-good-soft text-good ring-good/20',
-        tone === 'crit' && 'bg-crit-soft text-crit ring-crit/20',
+        'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold tabular-nums',
+        flat ? 'bg-sunk text-ink-mute' : good ? 'bg-good-soft text-good' : 'bg-crit-soft text-crit',
       )}
     >
       <Icon size={11} strokeWidth={2.6} />

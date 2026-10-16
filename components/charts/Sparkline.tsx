@@ -5,8 +5,8 @@ import { useId } from 'react';
 /**
  * Kleine trendlijn in een tegel. Geen assen, geen labels: de tegel zelf draagt
  * het getal, de lijn laat alleen zien of het omhoog of omlaag gaat. Eén reeks,
- * dus geen legenda. De laatste punt krijgt een stip, want dát is het getal
- * dat erboven staat.
+ * dus geen legenda. Geen eindstip: met preserveAspectRatio="none" wordt een
+ * cirkel in een brede tegel een uitgerekt ovaal.
  */
 export default function Sparkline({
   values,
@@ -34,7 +34,6 @@ export default function Sparkline({
   const pts = values.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`);
   const line = `M${pts.join(' L')}`;
   const area = `${line} L${x(values.length - 1).toFixed(1)},${(h - pad).toFixed(1)} L${x(0).toFixed(1)},${(h - pad).toFixed(1)} Z`;
-  const last = values.length - 1;
 
   return (
     <svg
@@ -46,13 +45,13 @@ export default function Sparkline({
     >
       <defs>
         <linearGradient id={id} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={color} stopOpacity={0.22} />
+          <stop offset="0%" stopColor={color} stopOpacity={0.1} />
           <stop offset="100%" stopColor={color} stopOpacity={0} />
         </linearGradient>
       </defs>
       <path d={area} fill={`url(#${id})`} />
-      <path d={line} fill="none" stroke={color} strokeWidth={1.8} strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
-      <circle cx={x(last)} cy={y(values[last])} r={2.6} fill={color} stroke="#fff" strokeWidth={1.2} vectorEffect="non-scaling-stroke" />
+      {/* Dun en half doorzichtig: de lijn is achtergrond bij het getal, geen grafiek. */}
+      <path d={line} fill="none" stroke={color} strokeOpacity={0.55} strokeWidth={1.25} strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
     </svg>
   );
 }
