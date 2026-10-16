@@ -79,14 +79,16 @@ export default function OverzichtPage() {
       </div>
 
       <section>
-        <SectionLabel>Gekozen periode — offertes, ex btw</SectionLabel>
+        <SectionLabel right={<span className="text-[11px] text-ink-faint">lijnen: lopende 4 weken, laatste halfjaar</span>}>
+          Gekozen periode — offertes, ex btw
+        </SectionLabel>
         <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
           <Tile
             label="Omzet geaccepteerd"
             value={formatEuro(totals.acceptedRevenue)}
             sub={`${totals.acceptedCount} offertes · ${formatEuro(totals.avgRevenuePerDeal)} gemiddeld`}
             delta={<CalmDelta pct={deltaPct(totals.acceptedRevenue, cmp?.acceptedRevenue)} label={deltaLabel} sample={sample} />}
-            spark={spark('acceptedRevenue')}
+            spark={today.trends.revenue}
             color={CHART.accepted}
           />
           <Tile
@@ -94,7 +96,7 @@ export default function OverzichtPage() {
             value={formatEuro(totals.totalMargin)}
             sub={`${formatPercent(totals.avgMarginPct)} van de omzet`}
             delta={<CalmDelta pct={deltaPct(totals.totalMargin, cmp?.totalMargin)} label={deltaLabel} sample={sample} />}
-            spark={spark('margin')}
+            spark={today.trends.margin}
             color={CHART.margin}
           />
           <Tile
@@ -102,7 +104,7 @@ export default function OverzichtPage() {
             value={formatNumber(totals.m2Sold)}
             sub={`${formatEuro(perM2.marginPerM2, true)} marge per m²`}
             delta={<CalmDelta pct={deltaPct(totals.m2Sold, cmp?.m2Sold)} label={deltaLabel} sample={sample} />}
-            spark={spark('m2')}
+            spark={today.trends.m2}
             color={CHART.open}
           />
           {showMarketing ? (
@@ -117,7 +119,7 @@ export default function OverzichtPage() {
                   sample={sample}
                 />
               }
-              spark={spark('marginAfterAds')}
+              spark={today.trends.marginAfterAds}
               color={CHART.adsConversions}
             />
           ) : (

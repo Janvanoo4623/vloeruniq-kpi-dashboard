@@ -31,8 +31,23 @@ export default function Sparkline({
   const span = max - min || 1;
   const x = (i: number) => pad + (i / (values.length - 1)) * (w - pad * 2);
   const y = (v: number) => h - pad - ((v - min) / span) * (h - pad * 2);
-  const pts = values.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`);
-  const line = `M${pts.join(' L')}`;
+  // Vloeiend door elke punt (Catmull-Rom als Bézier). De y van de
+  // controlepunten wordt binnen het bereik van de twee buurpunten gehouden,
+  // zodat de lijn nooit voorbij een echte waarde uitschiet.
+  const P = values.map((v, i) => ({ x: x(i), y: y(v) }));
+  const clamp = (v: number, a: number, b: number) => Math.min(Math.max(v, Math.min(a, b)), Math.max(a, b));
+  let line = `M${P[0].x.toFixed(1)},${P[0].y.toFixed(1)}`;
+  for (let i = 0; i < P.length - 1; i++) {
+    const p0 = P[i - 1] ?? P[i];
+    const p1 = P[i];
+    const p2 = P[i + 1];
+    const p3 = P[i + 2] ?? p2;
+    const c1x = p1.x + (p2.x - p0.x) / 6;
+    const c1y = clamp(p1.y + (p2.y - p0.y) / 6, p1.y, p2.y);
+    const c2x = p2.x - (p3.x - p1.x) / 6;
+    const c2y = clamp(p2.y - (p3.y - p1.y) / 6, p1.y, p2.y);
+    line += ` C${c1x.toFixed(1)},${c1y.toFixed(1)} ${c2x.toFixed(1)},${c2y.toFixed(1)} ${p2.x.toFixed(1)},${p2.y.toFixed(1)}`;
+  }
   const area = `${line} L${x(values.length - 1).toFixed(1)},${(h - pad).toFixed(1)} L${x(0).toFixed(1)},${(h - pad).toFixed(1)} Z`;
 
   return (

@@ -8,10 +8,11 @@ import {
   getAllDeals,
   getInvoiceAdjustments,
   getAppSetting,
+  getAdsRows,
 } from '@/lib/db';
 import { getMoneybirdPL } from '@/lib/moneybird';
 import { DEFAULT_START, START_KEY, invoicedByMonth } from '@/lib/resultaat';
-import { EMPTY_GOALS, computeBreakEven, computeCallList, computeMonthProgress, type Goals } from '@/lib/today';
+import { EMPTY_GOALS, computeBreakEven, computeCallList, computeMonthProgress, computeTileTrends, type Goals } from '@/lib/today';
 import { computeAging } from '@/lib/teamleader/invoices';
 import { buildPeriodData } from '@/lib/period-data';
 import { DEFAULT_PRESET, presetRangeServer } from '@/lib/default-range';
@@ -70,7 +71,11 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const payments = computePaymentStats(invoices, today);
   const pricedCodes = prices.map((p) => p.code.toLowerCase());
   // Wat van de kalender afhangt, niet van de periodekiezer — zie lib/today.ts.
+  // Een halfjaar plus vier weken advertentiekosten, voor de trendlijn van "marge na marketing".
+  const adsSinds = new Date(Date.parse(today) - (26 * 7 + 28) * 86400000).toISOString().slice(0, 10);
+  const adsVoorTrend = (await getAdsRows(adsSinds, today)) ?? [];
   const today_ = {
+    trends: computeTileTrends(resolvedQuotations, exclusions, adsVoorTrend, today),
     callList: computeCallList(resolvedQuotations, exclusions, today),
     month: computeMonthProgress(resolvedQuotations, exclusions, today, { ...EMPTY_GOALS, ...goals }),
     breakEven: computeBreakEven(pl, invoicedByMonth(invoices), startMonth, today),

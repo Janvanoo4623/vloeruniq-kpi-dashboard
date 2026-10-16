@@ -226,3 +226,66 @@ export function computeBreakEven(
     invoicedThisMonth: r0(revenueByMonth.get(thisMonth) ?? 0),
   };
 }
+
+// ── Trendlijntjes voor de tegels ────────────────────────────────────────
+
+export interface TileTrends {
+  revenue: number[];
+  margin: number[];
+  m2: number[];
+  marginAfterAds: number[];
+}
+
+/**
+ * Per week het lopende 4-wekentotaal, over het laatste halfjaar (26 punten,
+ * het laatste is vandaag). De tegels lieten eerst de weken van de gekozen
+ * periode zien: vijf punten waarvan de eerste en laatste een halve week, dus
+ * een zigzag die niets zei. Een voortschrijdend totaal is rustig en laat zien
+ * waar het werkelijk heen gaat.
+ */
+export function computeTileTrends(
+  quotations: QuotationRow[],
+  exclusions: Set<string>,
+  ads: { date: string; cost: number }[],
+  asOf: string,
+  weeks = 26,
+): TileTrends {
+  const end = Date.parse(asOf);
+  const perDag = new Map<string, { revenue: number; margin: number; m2: number; ads: number }>();
+  const dag = (d: string) => {
+    const e = perDag.get(d) ?? { revenue: 0, margin: 0, m2: 0, ads: 0 };
+    perDag.set(d, e);
+    return e;
+  };
+  for (const q of quotations) {
+    if (q.status !== 'accepted' || !q.dateAccepted || exclusions.has(q.id)) continue;
+    const e = dag(q.dateAccepted);
+    e.revenue += q.revenueExVat;
+    e.margin += q.margin ?? 0;
+    e.m2 += q.totalM2;
+  }
+  for (const a of ads) dag(a.date).ads += a.cost;
+
+  const out: TileTrends = { revenue: [], margin: [], m2: [], marginAfterAds: [] };
+  for (let w = weeks - 1; w >= 0; w--) {
+    const tot = end - w * 7 * DAY;
+    const van = tot - 27 * DAY;
+    let revenue = 0;
+    let margin = 0;
+    let m2 = 0;
+    let adsCost = 0;
+    for (let t = van; t <= tot; t += DAY) {
+      const e = perDag.get(new Date(t).toISOString().slice(0, 10));
+      if (!e) continue;
+      revenue += e.revenue;
+      margin += e.margin;
+      m2 += e.m2;
+      adsCost += e.ads;
+    }
+    out.revenue.push(r0(revenue));
+    out.margin.push(r0(margin));
+    out.m2.push(r0(m2));
+    out.marginAfterAds.push(r0(margin - adsCost));
+  }
+  return out;
+}
