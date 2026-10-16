@@ -79,6 +79,7 @@ export default function Briefing({
   date,
   lastSyncAt,
   pricedCodes,
+  children,
 }: {
   zinnen: BriefingLine[];
   callList: CallList;
@@ -86,6 +87,8 @@ export default function Briefing({
   /** Laatste sync met Teamleader: bepaalt of het label "Live" mag heten. */
   lastSyncAt: string | null;
   pricedCodes?: Set<string>;
+  /** Komt onder de zinnen: de lopende maand (MonthGoal). */
+  children?: React.ReactNode;
 }) {
   const { open, laden, modal } = useQuotationOpener(pricedCodes);
   const groet = useGroet();
@@ -139,6 +142,7 @@ export default function Briefing({
               );
             })}
           </ul>
+          {children && <div className="mt-5 border-t border-hair pt-5">{children}</div>}
         </div>
 
         <div className="border-t border-hair bg-sunk/50 px-5 py-5 lg:border-l lg:border-t-0">

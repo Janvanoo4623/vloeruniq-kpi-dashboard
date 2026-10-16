@@ -3,7 +3,7 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
-import { formatDays, formatEuro, formatNumber, formatPercent } from '@/lib/format';
+import { formatEuro, formatNumber, formatPercent } from '@/lib/format';
 import { useDashboard } from '@/components/layout/DashboardProvider';
 import ChartCard from '@/components/ChartCard';
 import KpiTrendChart from '@/components/charts/KpiTrendChart';
@@ -32,7 +32,7 @@ import { CalmDelta, Tile } from '@/components/overview/parts';
  * verschil op genoeg offertes (lib/signal.ts).
  */
 export default function OverzichtPage() {
-  const { snap, comparison, previous, range, aging, pipeline, adsDaily, openAtEnd, today, pricedCodes, meta } = useDashboard();
+  const { snap, comparison, previous, range, aging, pipeline, adsDaily, today, pricedCodes, meta } = useDashboard();
   const [gran, setGran] = useState<Granularity | null>(null);
   const granularity: Granularity = gran ?? ((snap?.weeks.length ?? 0) > 16 ? 'month' : 'week');
   const kpiSeries = useMemo(
@@ -71,113 +71,72 @@ export default function OverzichtPage() {
   return (
     <div className="space-y-6">
       <div className="animate-rise-in">
-        <Briefing zinnen={zinnen} callList={today.callList} date={date} lastSyncAt={meta?.lastSyncAt ?? null} pricedCodes={pricedCodes} />
+        <Briefing
+          // De maand zelf staat in het blok eronder; de zinnen gaan over de rest.
+          zinnen={zinnen.filter((z) => !['up', 'down', 'flat', 'goal'].includes(z.kind))}
+          callList={today.callList}
+          date={date}
+          lastSyncAt={meta?.lastSyncAt ?? null}
+          pricedCodes={pricedCodes}
+        >
+          <MonthGoal month={today.month} />
+        </Briefing>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1fr_1.35fr]">
-        <MonthGoal month={today.month} />
-
-        <section>
-          <SectionLabel>Gekozen periode — offertes, ex btw</SectionLabel>
-          <div className="grid grid-cols-2 gap-3">
+      <section>
+        <SectionLabel>Gekozen periode — offertes, ex btw</SectionLabel>
+        <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+          <Tile
+            label="Omzet geaccepteerd"
+            value={formatEuro(totals.acceptedRevenue)}
+            sub={`${totals.acceptedCount} offertes · ${formatEuro(totals.avgRevenuePerDeal)} gemiddeld`}
+            delta={<CalmDelta pct={deltaPct(totals.acceptedRevenue, cmp?.acceptedRevenue)} label={deltaLabel} sample={sample} />}
+            spark={spark('acceptedRevenue')}
+            color={CHART.accepted}
+          />
+          <Tile
+            label="Marge"
+            value={formatEuro(totals.totalMargin)}
+            sub={`${formatPercent(totals.avgMarginPct)} van de omzet`}
+            delta={<CalmDelta pct={deltaPct(totals.totalMargin, cmp?.totalMargin)} label={deltaLabel} sample={sample} />}
+            spark={spark('margin')}
+            color={CHART.margin}
+          />
+          <Tile
+            label="M² verkocht"
+            value={formatNumber(totals.m2Sold)}
+            sub={`${formatEuro(perM2.marginPerM2, true)} marge per m²`}
+            delta={<CalmDelta pct={deltaPct(totals.m2Sold, cmp?.m2Sold)} label={deltaLabel} sample={sample} />}
+            spark={spark('m2')}
+            color={CHART.open}
+          />
+          {showMarketing ? (
             <Tile
-              label="Omzet geaccepteerd"
-              value={formatEuro(totals.acceptedRevenue)}
-              sub={`${totals.acceptedCount} offertes · ${formatEuro(totals.avgRevenuePerDeal)} gemiddeld`}
-              delta={<CalmDelta pct={deltaPct(totals.acceptedRevenue, cmp?.acceptedRevenue)} label={deltaLabel} sample={sample} />}
-              spark={spark('acceptedRevenue')}
+              label="Marge na marketing"
+              value={formatEuro(totals.totalMargin - marketingCost)}
+              sub={`${formatEuro(marketingCost)} aan advertenties`}
+              delta={
+                <CalmDelta
+                  pct={cmp && prevMarketingCost != null ? deltaPct(totals.totalMargin - marketingCost, cmp.totalMargin - prevMarketingCost) : null}
+                  label={deltaLabel}
+                  sample={sample}
+                />
+              }
+              spark={spark('marginAfterAds')}
+              color={CHART.adsConversions}
+            />
+          ) : (
+            <Tile
+              label="Conversie"
+              value={formatPercent(totals.conversionPct)}
+              sub="gewonnen van de beslisten"
+              delta={<CalmDelta pct={deltaPct(totals.conversionPct, cmp?.conversionPct)} label={deltaLabel} sample={sample} />}
+              spark={spark('conversionPct')}
               color={CHART.accepted}
             />
-            <Tile
-              label="Marge"
-              value={formatEuro(totals.totalMargin)}
-              sub={`${formatPercent(totals.avgMarginPct)} van de omzet`}
-              delta={<CalmDelta pct={deltaPct(totals.totalMargin, cmp?.totalMargin)} label={deltaLabel} sample={sample} />}
-              spark={spark('margin')}
-              color={CHART.margin}
-            />
-            <Tile
-              label="M² verkocht"
-              value={formatNumber(totals.m2Sold)}
-              sub={`${formatEuro(perM2.marginPerM2, true)} marge per m²`}
-              delta={<CalmDelta pct={deltaPct(totals.m2Sold, cmp?.m2Sold)} label={deltaLabel} sample={sample} />}
-              spark={spark('m2')}
-              color={CHART.open}
-            />
-            {showMarketing ? (
-              <Tile
-                label="Marge na marketing"
-                value={formatEuro(totals.totalMargin - marketingCost)}
-                sub={`${formatEuro(marketingCost)} aan advertenties`}
-                delta={
-                  <CalmDelta
-                    pct={cmp && prevMarketingCost != null ? deltaPct(totals.totalMargin - marketingCost, cmp.totalMargin - prevMarketingCost) : null}
-                    label={deltaLabel}
-                    sample={sample}
-                  />
-                }
-                spark={spark('marginAfterAds')}
-                color={CHART.adsConversions}
-              />
-            ) : (
-              <Tile
-                label="Conversie"
-                value={formatPercent(totals.conversionPct)}
-                sub="gewonnen van de beslisten"
-                delta={<CalmDelta pct={deltaPct(totals.conversionPct, cmp?.conversionPct)} label={deltaLabel} sample={sample} />}
-                spark={spark('conversionPct')}
-                color={CHART.accepted}
-              />
-            )}
-          </div>
-        </section>
-      </div>
-
-      <Card>
-        <div className="grid grid-cols-2 divide-hair lg:grid-cols-4 lg:divide-x [&>*]:border-hair max-lg:[&>*:nth-child(-n+2)]:border-b">
-          <Stat
-            label="Marge per m²"
-            value={formatEuro(perM2.marginPerM2, true)}
-            sub={`${formatEuro(perM2.revenuePerM2, true)} omzet − ${formatEuro(perM2.costPerM2, true)} kostprijs`}
-            delta={<CalmDelta pct={deltaPct(perM2.marginPerM2, ref?.perM2?.marginPerM2)} label={deltaLabel} sample={sample} />}
-          />
-          <Stat
-            label="Open offertes"
-            value={formatEuro(openAtEnd.value)}
-            sub={`${openAtEnd.count} offertes in de pijplijn`}
-            delta={<CalmDelta pct={deltaPct(openAtEnd.value, ref?.openAtEnd?.value)} label="stapel vs eind periode ervoor" />}
-          />
-          <Stat
-            label="Doorlooptijd"
-            value={formatDays(snap.runTime.totals.avgRunTimeDays)}
-            sub={`akkoord tot uitvoering · ${snap.runTime.totals.dealsTracked} deals`}
-            delta={
-              <CalmDelta
-                pct={deltaPct(snap.runTime.totals.avgRunTimeDays, ref?.runTime.avgRunTimeDays)}
-                label={deltaLabel}
-                sample={snap.runTime.totals.dealsTracked}
-                higherIsBetter={false}
-              />
-            }
-          />
-          <Stat
-            label={showMarketing ? 'Marketingkosten' : 'Conversie'}
-            value={showMarketing ? formatEuro(marketingCost) : formatPercent(totals.conversionPct)}
-            sub={
-              showMarketing
-                ? metaCost > 0
-                  ? `Google ${formatEuro(googleCost)} · Meta ${formatEuro(metaCost)}`
-                  : 'Google Ads'
-                : 'gewonnen van de beslisten'
-            }
-            delta={
-              showMarketing ? (
-                <CalmDelta pct={deltaPct(marketingCost, prevMarketingCost)} label={deltaLabel} higherIsBetter={false} />
-              ) : null
-            }
-          />
+          )}
         </div>
-      </Card>
+      </section>
 
       <section>
         <SectionLabel

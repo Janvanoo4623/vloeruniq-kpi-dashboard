@@ -26,6 +26,16 @@ export function CalmDelta({
   if (pct == null || !Number.isFinite(pct)) return null;
   const tone = deltaTone(pct, { sample, higherIsBetter });
   const Icon = Math.abs(pct) < 0.05 ? Minus : pct > 0 ? TrendingUp : TrendingDown;
+  // Betekent het verschil niets, dan geen pil: alleen klein grijs getal. Een
+  // rij grijze pillen trekt evenveel aandacht als een rij gekleurde.
+  if (tone === 'neutral') {
+    return (
+      <span title={label} className="inline-flex items-center gap-0.5 text-[11px] font-medium tabular-nums text-ink-faint">
+        <Icon size={11} strokeWidth={2.4} />
+        {Math.abs(pct).toFixed(0)}%
+      </span>
+    );
+  }
   return (
     <span
       title={label}
@@ -33,7 +43,6 @@ export function CalmDelta({
         'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold tabular-nums ring-1 ring-inset',
         tone === 'good' && 'bg-good-soft text-good ring-good/20',
         tone === 'crit' && 'bg-crit-soft text-crit ring-crit/20',
-        tone === 'neutral' && 'bg-sunk text-ink-mute ring-ink-faint/15',
       )}
     >
       <Icon size={11} strokeWidth={2.6} />
