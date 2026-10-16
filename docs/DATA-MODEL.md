@@ -456,3 +456,41 @@ hem over en toont de Marge-pagina dat de koppeling ontbreekt.
 - Token: `MONEYBIRD_TOKEN` (env) gaat vóór `app_settings.moneybird` (productie). Persoonlijk token
   per administratie, aangemaakt in Moneybird → Instellingen → Koppelingen → Externe applicaties →
   API token aanmaken; rechten verkoopfacturen, documenten, bank, instellingen.
+
+
+---
+
+## Premiumronde — 2026-10-16
+
+**Overzicht** (`app/(dashboard)/page.tsx`): briefing in zinnen (`lib/briefing.ts`, vaste regels met
+drempels, geen AI) + belijst, maanddoel als hoofdgetal (`components/overview/MonthGoal.tsx`, doelen in
+`app_settings.goals`), vier tegels met weeksparklines, rest in stroken. Pijltjes kleuren pas bij
+≥15% verschil én ≥20 offertes in beide periodes (`lib/signal.ts`); daaronder grijs.
+
+**Belijst** (`lib/today.ts` `computeCallList`): open offertes ≥5 dagen, gesorteerd op bedrag × kans.
+Kans voor een offerte van leeftijd *a* = (geaccepteerd ná dag *a*) / (beslist − geaccepteerd vóór dag *a*).
+Alleen de acceptatiedatum is betrouwbaar: bij verlopen offertes is de beslisdatum in de helft van de
+gevallen de aanmaakdag (mediaan 0 d over 456 offertes, gemeten 2026-10-16). Verloren offertes tellen
+daarom als "stond nog open". Eerste versie gebruikte die beslisdatum en gaf iedereen ~69% kans.
+
+**Break-even** (`computeBreakEven`): gemiddelde bedrijfskosten (− overige baten) ÷ brutomarge over de
+laatste ≤6 complete Moneybird-maanden vanaf de startmaand. Loonkosten staan (nog) niet in Moneybird.
+
+**Cashprognose** (`lib/cash-forecast.ts`, Cashflow-pagina): banksaldo (Moneybird `reports/bank_balance`)
++ open facturen op vervaldatum + gepland werk (uitvoerdatum + 7 d + mediane betaaltermijn) − open
+inkoopfacturen (Moneybird, state open|late) − geschatte inkoop voor gepland werk, alleen voor zover
+groter dan wat al als inkoopfactuur openstaat − gemiddelde vaste lasten. Niet meegeteld: facturen
+>60 d over vervaldatum, inkoopfacturen >30 d 'te laat' (niet afgeletterd sinds de bankkoppeling van
+14-09-2026). Btw-afdracht en aanbetalingen zitten er niet in.
+
+**Capaciteit** (Planning): `app_settings.capacity.m2PerWeek`; bezetting per maand = m² / (m²/week × 52/12).
+
+**Prijsgevoeligheid** (`lib/price-sensitivity.ts`, Marge): extra marge = verkochte m² (12 mnd) × stap;
+naast de winkans van besliste offertes onder/boven de mediane prijs per m².
+
+**Markt** (`lib/market.ts`, Trends): CBS 83693NED (consumentenvertrouwen, "gunstige tijd voor grote
+aankopen") en 85770NED invoerprijzen (A044077) voor kunststof vloerbedekking (A014429),
+parketpanelen (A013436) en lijm (A014159), index 2021=100.
+
+**Merk**: logo en sfeerfoto van vloeruniq.nl in `public/brand/`, favicon van hun site. Huisgroen
+#22CB63 bewust níet als accent: groen betekent in het dashboard "goed".

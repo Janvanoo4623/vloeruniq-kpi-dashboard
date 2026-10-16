@@ -55,6 +55,19 @@ export interface ResultaatData {
   months: ResultMonth[];
 }
 
+/** Gefactureerd per maand (Teamleader), ex btw, creditnota's eraf, NV Vloeren eruit. */
+export function invoicedByMonth(invoices: InvoiceRow[]): Map<string, number> {
+  const omzet = new Map<string, number>();
+  for (const inv of invoices) {
+    if (inv.status === 'draft' || !inv.invoiceDate) continue;
+    // Intern gefactureerd blijft overal buiten, net als in de cashflow.
+    if (CASHFLOW_EXCLUDE.test(inv.customerName)) continue;
+    const m = inv.invoiceDate.slice(0, 7);
+    omzet.set(m, (omzet.get(m) ?? 0) + inv.totalExcl);
+  }
+  return omzet;
+}
+
 export async function buildResultaat(input: {
   invoices: InvoiceRow[];
   quotations: QuotationRow[]; // al door resolveQuotations heen
@@ -66,14 +79,7 @@ export async function buildResultaat(input: {
     getAppSetting<string>(START_KEY, DEFAULT_START).catch(() => DEFAULT_START),
   ]);
 
-  const omzet = new Map<string, number>();
-  for (const inv of input.invoices) {
-    if (inv.status === 'draft' || !inv.invoiceDate) continue;
-    // Intern gefactureerd blijft overal buiten, net als in de cashflow.
-    if (CASHFLOW_EXCLUDE.test(inv.customerName)) continue;
-    const m = inv.invoiceDate.slice(0, 7);
-    omzet.set(m, (omzet.get(m) ?? 0) + inv.totalExcl);
-  }
+  const omzet = invoicedByMonth(input.invoices);
 
   // Maanden waarin er in Moneybird (bijna) niets geboekt was — 2025, vóór de
   // overstap van SnelStart, met één verdwaalde inkoopfactuur van EUR 388 in

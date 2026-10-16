@@ -47,6 +47,17 @@ export interface MoneybirdMonth {
   other: number;
 }
 
+/** Een inkoopfactuur die in Moneybird nog openstaat (state open of late). */
+export interface OpenPurchase {
+  id: string;
+  supplier: string;
+  date: string; // factuurdatum
+  dueDate: string; // '' als onbekend
+  /** Nog te betalen, incl btw (totaal min de al geregistreerde betalingen). */
+  open: number;
+  late: boolean;
+}
+
 export interface MoneybirdPL {
   syncedAt: string | null;
   error: string | null;
@@ -55,6 +66,10 @@ export interface MoneybirdPL {
   periodStart: string | null;
   accounts: LedgerAccount[];
   months: MoneybirdMonth[];
+  /** Saldo van alle bankrekeningen in Moneybird, op het moment van ophalen. */
+  bankBalance?: number | null;
+  /** Openstaande inkoopfacturen, voor de uitgaande kant van de cashprognose. */
+  openPurchases?: OpenPurchase[];
 }
 
 export const EMPTY_PL: MoneybirdPL = {
@@ -64,6 +79,8 @@ export const EMPTY_PL: MoneybirdPL = {
   periodStart: null,
   accounts: [],
   months: [],
+  bankBalance: null,
+  openPurchases: [],
 };
 
 export async function getMoneybirdConfig(): Promise<MoneybirdConfig | null> {
@@ -128,6 +145,16 @@ interface MbPeriod {
   direct_costs_by_ledger_account: MbLedgerValues;
   expenses_by_ledger_account: MbLedgerValues;
   other_income_expenses_by_ledger_account: MbLedgerValues;
+}
+
+interface MbPurchaseInvoice {
+  id: string;
+  date?: string | null;
+  due_date?: string | null;
+  state?: string;
+  total_price_incl_tax?: string;
+  payments?: { price?: string }[];
+  contact?: { company_name?: string | null; firstname?: string | null; lastname?: string | null } | null;
 }
 
 const KINDS: LedgerKind[] = ['revenue', 'direct_costs', 'expenses', 'other_income_expenses'];
@@ -198,6 +225,37 @@ export async function fetchMoneybirdPL(cfg: MoneybirdConfig): Promise<MoneybirdP
   }
   months.sort((a, b) => a.month.localeCompare(b.month));
 
+  // Banksaldo en openstaande inkoop: voor de cashprognose. Een fout hier mag het
+  // W&V-rapport niet tegenhouden — dan blijven deze twee leeg.
+  let bankBalance: number | null = null;
+  let openPurchases: OpenPurchase[] = [];
+  try {
+    const bal = await mbGet<{ total?: string }>(`${base}/reports/bank_balance.json`, cfg.token);
+    bankBalance = bal.total != null && Number.isFinite(Number(bal.total)) ? r2(Number(bal.total)) : null;
+    const rows: MbPurchaseInvoice[] = [];
+    for (let page = 1; page <= 20; page++) {
+      const batch = await mbGet<MbPurchaseInvoice[]>(
+        `${base}/documents/purchase_invoices.json?filter=state:open|late&per_page=100&page=${page}`,
+        cfg.token,
+      );
+      rows.push(...batch);
+      if (batch.length < 100) break;
+    }
+    openPurchases = rows.map((r) => {
+      const betaald = (r.payments ?? []).reduce((t, p) => t + Number(p.price ?? 0), 0);
+      return {
+        id: r.id,
+        supplier: r.contact?.company_name || [r.contact?.firstname, r.contact?.lastname].filter(Boolean).join(' ') || '—',
+        date: r.date ?? '',
+        dueDate: r.due_date ?? '',
+        open: r2(Number(r.total_price_incl_tax ?? 0) - betaald),
+        late: r.state === 'late',
+      };
+    }).filter((r) => r.open > 0);
+  } catch (err) {
+    console.warn('[moneybird] banksaldo/inkoop niet opgehaald:', err instanceof Error ? err.message : err);
+  }
+
   return {
     syncedAt: new Date().toISOString(),
     error: null,
@@ -205,6 +263,8 @@ export async function fetchMoneybirdPL(cfg: MoneybirdConfig): Promise<MoneybirdP
     periodStart: admin.period_start_date ?? null,
     accounts,
     months,
+    bankBalance,
+    openPurchases,
   };
 }
 

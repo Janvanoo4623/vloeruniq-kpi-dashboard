@@ -13,6 +13,8 @@ import { perM2Stats } from '@/lib/insights';
 import type { InstallMixPoint, InstallModeStat, ProductSpread } from '@/lib/insights';
 import ProductSpreadPanel from '@/components/pages/ProductSpreadPanel';
 import InvoicedMarginPanel from '@/components/pages/InvoicedMarginPanel';
+import PriceSensitivityPanel from '@/components/pages/PriceSensitivityPanel';
+import type { PriceSensitivity } from '@/lib/price-sensitivity';
 import { SectionLabel } from '@/components/ui';
 
 /** Alles over marge op één plek: de curve, per product, en waar het misgaat. */
@@ -20,10 +22,12 @@ export default function MargeView({
   installTotals,
   installByQuarter,
   spread,
+  sensitivity,
 }: {
   installTotals: InstallModeStat[];
   installByQuarter: InstallMixPoint[];
   spread: ProductSpread[];
+  sensitivity: PriceSensitivity;
 }) {
   const { snap, series, pricedCodes, invoicedMargin } = useDashboard();
   const totals = snap?.revenue.totals;
@@ -85,6 +89,8 @@ export default function MargeView({
       </ChartCard>
 
       <ProductSpreadPanel products={spread} />
+
+      <PriceSensitivityPanel data={sensitivity} />
 
       <ChartCard
         title="Aandachtspunten"

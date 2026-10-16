@@ -18,7 +18,7 @@ export default function AppShell({
   badges?: Record<string, number>;
   children: ReactNode;
 }) {
-  const { message, dismissMessage } = useDashboard();
+  const { message, dismissMessage, dataLoading, refreshing } = useDashboard();
   const [menu, setMenu] = useState(false);
 
   return (
@@ -31,6 +31,12 @@ export default function AppShell({
 
         <div className="flex min-w-0 flex-1 flex-col">
           <TopBar onMenu={() => setMenu(true)} />
+          {/* Dunne laadbalk onder de kop zolang een andere periode of een
+              verversing onderweg is: je ziet dát er iets gebeurt zonder dat de
+              pagina wegvalt. */}
+          <div className="relative h-[2px] shrink-0 overflow-hidden" aria-hidden>
+            {(dataLoading || refreshing) && <span className="absolute inset-y-0 w-1/3 animate-loading-bar rounded-full bg-accent" />}
+          </div>
 
           {message && (
             <div className="animate-fade-in border-b border-accent-line bg-accent-soft px-6 py-2.5">
@@ -48,7 +54,12 @@ export default function AppShell({
           )}
 
           <main className="min-w-0 flex-1 overflow-y-auto bg-canvas">
-            <div className="mx-auto w-full max-w-[1400px] px-3 py-4 sm:px-6 sm:py-6">{children}</div>
+            <div
+              className={`mx-auto w-full max-w-[1400px] px-3 py-4 transition-opacity duration-200 sm:px-6 sm:py-6 ${dataLoading ? 'pointer-events-none opacity-55' : ''}`}
+              aria-busy={dataLoading}
+            >
+              {children}
+            </div>
           </main>
         </div>
       </div>

@@ -67,6 +67,12 @@ body {
   from { opacity: 0; transform: translateY(6px); }
   to { opacity: 1; transform: translateY(0); }
 }
+@keyframes loading-bar {
+  from { left: -33%; }
+  to { left: 100%; }
+}
+.animate-loading-bar { animation: loading-bar 1.1s cubic-bezier(0.4, 0, 0.2, 1) infinite; }
+
 @keyframes slide-in-right {
   from { opacity: 0; transform: translateX(24px); }
   to { opacity: 1; transform: translateX(0); }
@@ -79,7 +85,8 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .animate-fade-in,
   .animate-rise-in,
-  .animate-slide-in-right {
+  .animate-slide-in-right,
+  .animate-loading-bar {
     animation: none;
   }
 }

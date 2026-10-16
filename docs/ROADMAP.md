@@ -99,3 +99,13 @@ ontgrendeld. Werkt pas vooruit: historische deals hebben geen click-ID.
 - [ ] Google/Meta-afschrijvingen boeken op reclamekosten, anders is het resultaat te rooskleurig.
 - [ ] Startmaand bijstellen zodra de boekhouding vanaf eerder compleet is.
 - [ ] Resultaat ook in het exportrapport (`/export`).
+
+## Premiumronde — 2026-10-16
+- [x] Overzicht: briefing, belijst, maanddoel, tegels met sparklines, rustige pijltjes, presets in de verloopgrafiek.
+- [x] Belijst op Pijplijn, break-even op Resultaat, cashprognose op Cashflow, capaciteit op Planning, prijsgevoeligheid op Marge.
+- [x] Markt op Trends (CBS consumentenvertrouwen en invoerprijzen).
+- [x] Merk: logo, favicon, loginpagina met eigen vloer. Laadbalk en optellende hoofdgetallen.
+- [ ] Google-reviews (eigen + concurrenten) — vraagt een Google Places API-sleutel.
+- [ ] Wekelijkse samenvatting per mail/WhatsApp aan Jan.
+- [ ] Maanddoelen invullen (Jan), capaciteit in m²/week invullen (Jan).
+- [ ] Inkoopfacturen in Moneybird afletteren — 12 stuks (€61k) staan nog 'te laat', vertekent de cashprognose.

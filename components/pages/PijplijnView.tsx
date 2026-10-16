@@ -14,6 +14,7 @@ import PipelineCard from '@/components/PipelineCard';
 import CountsByWeekChart from '@/components/charts/CountsByWeekChart';
 import EmptyState from '@/components/pages/EmptyState';
 import { SectionLabel } from '@/components/ui';
+import CallListPanel from '@/components/pages/CallListPanel';
 
 /** Wat er nog binnen kán komen uit offertes die open staan. */
 export default function PijplijnView({
@@ -27,7 +28,7 @@ export default function PijplijnView({
   decision: DecisionTime;
   definition: string;
 }) {
-  const { snap, pipeline, pricedCodes, series } = useDashboard();
+  const { snap, pipeline, pricedCodes, series, today } = useDashboard();
   if (!snap) return <EmptyState />;
 
   return (
@@ -61,6 +62,8 @@ export default function PijplijnView({
           />
         </div>
       </section>
+
+      <CallListPanel callList={today.callList} pricedCodes={pricedCodes} />
 
       <ChartCard
         title="Pijplijn"

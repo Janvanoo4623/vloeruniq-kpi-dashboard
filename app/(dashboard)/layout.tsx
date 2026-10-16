@@ -7,7 +7,11 @@ import {
   getResolveInput,
   getAllDeals,
   getInvoiceAdjustments,
+  getAppSetting,
 } from '@/lib/db';
+import { getMoneybirdPL } from '@/lib/moneybird';
+import { DEFAULT_START, START_KEY, invoicedByMonth } from '@/lib/resultaat';
+import { EMPTY_GOALS, computeBreakEven, computeCallList, computeMonthProgress, type Goals } from '@/lib/today';
 import { computeAging } from '@/lib/teamleader/invoices';
 import { buildPeriodData } from '@/lib/period-data';
 import { DEFAULT_PRESET, presetRangeServer } from '@/lib/default-range';
@@ -25,7 +29,7 @@ export const dynamic = 'force-dynamic';
  * Alle zware berekeningen blijven server-side; de client krijgt alleen resultaat.
  */
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const [meta, invoices, quotations, prices, exclusions, resolveInput, deals, adjustments] =
+  const [meta, invoices, quotations, prices, exclusions, resolveInput, deals, adjustments, pl, startMonth, goals] =
     await Promise.all([
       getMeta(),
       getAllInvoices(),
@@ -35,6 +39,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
       getResolveInput(),
       getAllDeals(),
       getInvoiceAdjustments(),
+      getMoneybirdPL(),
+      getAppSetting<string>(START_KEY, DEFAULT_START).catch(() => DEFAULT_START),
+      getAppSetting<Goals>('goals', EMPTY_GOALS).catch(() => EMPTY_GOALS),
     ]);
 
   const today = new Date().toISOString().split('T')[0];
@@ -62,6 +69,12 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const pipeline = computePipeline(resolvedQuotations, exclusions, today);
   const payments = computePaymentStats(invoices, today);
   const pricedCodes = prices.map((p) => p.code.toLowerCase());
+  // Wat van de kalender afhangt, niet van de periodekiezer — zie lib/today.ts.
+  const today_ = {
+    callList: computeCallList(resolvedQuotations, exclusions, today),
+    month: computeMonthProgress(resolvedQuotations, exclusions, today, { ...EMPTY_GOALS, ...goals }),
+    breakEven: computeBreakEven(pl, invoicedByMonth(invoices), startMonth, today),
+  };
 
   return (
     <DashboardProvider
@@ -71,6 +84,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       pipeline={pipeline}
       payments={payments}
       pricedCodes={pricedCodes}
+      today={today_}
     >
       <AppShell>{children}</AppShell>
     </DashboardProvider>

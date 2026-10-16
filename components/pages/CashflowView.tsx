@@ -10,14 +10,24 @@ import EmptyState from '@/components/pages/EmptyState';
 import QuotedVsInvoicedPanel from '@/components/pages/QuotedVsInvoicedPanel';
 import type { QuotedVsInvoiced } from '@/lib/customers';
 import { SectionLabel } from '@/components/ui';
+import CashForecastPanel from '@/components/pages/CashForecastPanel';
+import type { CashForecast } from '@/lib/cash-forecast';
 
 /** Openstaand geld en betaalgedrag. Altijd de huidige stand, niet de periode. */
-export default function CashflowView({ quotedVsInvoiced }: { quotedVsInvoiced: QuotedVsInvoiced }) {
+export default function CashflowView({
+  quotedVsInvoiced,
+  forecast,
+}: {
+  quotedVsInvoiced: QuotedVsInvoiced;
+  forecast: CashForecast;
+}) {
   const { snap, aging, payments, pricedCodes } = useDashboard();
   if (!snap) return <EmptyState />;
 
   return (
     <div className="space-y-6">
+      {forecast.available && <CashForecastPanel forecast={forecast} />}
+
       <section>
         <SectionLabel>Huidige stand — bedragen incl. btw</SectionLabel>
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">

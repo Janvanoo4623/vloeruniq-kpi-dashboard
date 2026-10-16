@@ -73,15 +73,13 @@ function SidebarInhoud({
 
   return (
     <>
-      <div className="flex h-[68px] shrink-0 items-center gap-2.5 border-b border-line px-5">
-        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-accent text-[13px] font-bold text-white">
-          V
-        </span>
-        <div className="min-w-0">
-          <p className="text-[14.5px] font-bold leading-none tracking-tight text-ink">Vloeruniq</p>
-          <p className="mt-1.5 text-[10px] leading-none text-ink-faint">KPI-dashboard</p>
-        </div>
-      </div>
+      {/* Hun eigen logo, van vloeruniq.nl. Het groen erin blijft het enige
+          stukje huisgroen: als accentkleur zou het verward worden met "goed". */}
+      <Link href="/" onClick={onNavigate} className="flex h-[68px] shrink-0 flex-col justify-center gap-1.5 border-b border-line px-5">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/brand/logo.svg" alt="Vloeruniq" width={112} height={21} className="h-[21px] w-auto self-start" />
+        <p className="text-[10px] font-medium uppercase leading-none tracking-[0.14em] text-ink-faint">KPI-dashboard</p>
+      </Link>
 
       <nav className="flex-1 overflow-y-auto px-3 py-2">
         {NAV.map((group) => (

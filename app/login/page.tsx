@@ -45,36 +45,53 @@ function LoginForm() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-sunk p-6 text-ink">
-      <form
-        onSubmit={onSubmit}
-        className="w-full max-w-sm rounded-2xl border border-line bg-white p-8 shadow-sm"
-      >
-        <h1 className="text-xl font-semibold">Vloeruniq Dashboard</h1>
-        <p className="mt-1 text-sm text-ink-mute">Voer het wachtwoord in om verder te gaan.</p>
+    // Links hun eigen vloer (PVC visgraat Riva Natural Oak, van vloeruniq.nl),
+    // rechts het formulier. Op een telefoon alleen het formulier, met de foto
+    // als smalle band erboven.
+    <main className="grid min-h-screen bg-canvas text-ink lg:grid-cols-[1.15fr_1fr]">
+      <div className="relative h-40 overflow-hidden lg:h-auto">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/brand/vloer.jpg" alt="" className="absolute inset-0 h-full w-full object-cover" />
+        <div className="absolute inset-0 bg-gradient-to-t from-ink/55 via-ink/10 to-transparent" />
+        <div className="absolute bottom-0 left-0 hidden p-10 text-white lg:block">
+          <p className="max-w-sm text-[22px] font-semibold leading-snug tracking-tight">
+            Elke vloer, elke offerte, elke euro marge op één plek.
+          </p>
+          <p className="mt-2 text-[13px] text-white/75">PVC Visgraat · Riva Natural Oak</p>
+        </div>
+      </div>
 
-        <label htmlFor="password" className="mt-6 block text-sm font-medium text-ink-soft">
-          Wachtwoord
-        </label>
-        <input
-          id="password"
-          type="password"
-          autoFocus
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="mt-2 w-full rounded-lg border border-line bg-white px-3 py-2 text-sm outline-none focus:border-accent"
-        />
+      <div className="flex items-center justify-center p-6 lg:p-12">
+        <form onSubmit={onSubmit} className="w-full max-w-sm animate-rise-in">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/brand/logo.svg" alt="Vloeruniq" width={150} height={28} className="h-7 w-auto" />
+          <h1 className="mt-8 text-[24px] font-bold tracking-tight">Welkom terug</h1>
+          <p className="mt-1 text-[13.5px] text-ink-mute">Log in om het dashboard te openen.</p>
 
-        {error && <p className="mt-3 text-sm text-crit">{error}</p>}
+          <label htmlFor="password" className="mt-8 block text-[12.5px] font-medium text-ink-soft">
+            Wachtwoord
+          </label>
+          <input
+            id="password"
+            type="password"
+            autoFocus
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="mt-2 w-full rounded-xl border border-line bg-surface px-3.5 py-2.5 text-[14px] outline-none transition focus:border-accent focus:ring-4 focus:ring-accent/10"
+          />
 
-        <button
-          type="submit"
-          disabled={loading || !password}
-          className="mt-6 w-full rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white transition hover:bg-accent/90 disabled:opacity-50"
-        >
-          {loading ? 'Bezig…' : 'Inloggen'}
-        </button>
-      </form>
+          {error && <p className="mt-3 text-sm text-crit">{error}</p>}
+
+          <button
+            type="submit"
+            disabled={loading || !password}
+            className="mt-6 w-full rounded-xl bg-ink px-4 py-2.5 text-[14px] font-semibold text-white transition hover:bg-ink/90 disabled:opacity-40"
+          >
+            {loading ? 'Bezig…' : 'Inloggen'}
+          </button>
+          <p className="mt-8 text-[11.5px] text-ink-faint">Vloeruniq.nl B.V. · Rijssen</p>
+        </form>
+      </div>
     </main>
   );
 }

@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Check } from 'lucide-react';
+import { Check, SlidersHorizontal } from 'lucide-react';
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { KPI_DEFS, type KpiPoint, type KpiUnit } from '@/lib/kpi-series';
 import { formatDays, formatEuro, formatNumber, formatPercent } from '@/lib/format';
@@ -31,8 +31,21 @@ const formatValue = (unit: KpiUnit, v: number) =>
  * alles eromheen uitzet. De knoppen dragen dezelfde kleur als hun lijn, dus de
  * legenda is de knoppenrij zelf.
  */
+/**
+ * Vier vaste vragen in plaats van negentien knoppen. Wie meer wil, klapt
+ * "Aanpassen" open en krijgt de losse KPI's alsnog — de keuze verdwijnt niet,
+ * hij staat alleen niet meer in de weg.
+ */
+const PRESETS: { key: string; label: string; kpis: string[] }[] = [
+  { key: 'verkoop', label: 'Verkoop', kpis: ['acceptedRevenue', 'openRevenue', 'acceptedCount'] },
+  { key: 'marge', label: 'Marge', kpis: ['margin', 'marginPct'] },
+  { key: 'marketing', label: 'Marketing', kpis: ['adsCost', 'metaCost', 'marginAfterAds'] },
+  { key: 'tempo', label: 'Tempo', kpis: ['conversionPct', 'avgRunTime'] },
+];
+
 export default function KpiTrendChart({ data }: { data: KpiPoint[] }) {
-  const [on, setOn] = useState<Set<string>>(() => new Set(KPI_DEFS.filter((d) => d.defaultOn).map((d) => d.key)));
+  const [on, setOn] = useState<Set<string>>(() => new Set(PRESETS[0].kpis));
+  const [aanpassen, setAanpassen] = useState(false);
   const active = useMemo(() => KPI_DEFS.filter((d) => on.has(d.key)), [on]);
   const units = useMemo(() => [...new Set(active.map((d) => d.unit))], [active]);
 
@@ -53,8 +66,50 @@ export default function KpiTrendChart({ data }: { data: KpiPoint[] }) {
   const visible = (d: (typeof KPI_DEFS)[number]) =>
     !d.group || (d.group === 'google' ? hasGoogle : d.group === 'meta' ? hasMeta : hasGoogle || hasMeta);
 
+  const presets = PRESETS.map((p) => ({ ...p, kpis: p.kpis.filter((k) => visible(KPI_DEFS.find((d) => d.key === k)!)) })).filter(
+    (p) => p.kpis.length > 0,
+  );
+  const actief = presets.find((p) => p.kpis.length === on.size && p.kpis.every((k) => on.has(k)))?.key;
+
   return (
     <div>
+      <div className="mb-3 flex flex-wrap items-center gap-2">
+        <div className="flex rounded-lg border border-line bg-surface p-0.5 text-[12px]">
+          {presets.map((p) => (
+            <button
+              key={p.key}
+              type="button"
+              onClick={() => setOn(new Set(p.kpis))}
+              className={cn('rounded-md px-3 py-1 font-medium transition', actief === p.key ? 'bg-ink text-white' : 'text-ink-mute hover:text-ink')}
+            >
+              {p.label}
+            </button>
+          ))}
+        </div>
+        <button
+          type="button"
+          onClick={() => setAanpassen((a) => !a)}
+          aria-pressed={aanpassen}
+          className={cn(
+            'inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-[12px] font-medium transition',
+            aanpassen || !actief ? 'bg-sunk text-ink' : 'text-ink-mute hover:text-ink',
+          )}
+        >
+          <SlidersHorizontal size={12} strokeWidth={2.2} /> Aanpassen
+        </button>
+        {/* Legenda van wat er nu aan staat, ook als de knoppen dicht zijn. */}
+        {!aanpassen && (
+          <span className="ml-auto flex flex-wrap items-center gap-x-3 gap-y-1">
+            {active.map((d) => (
+              <span key={d.key} className="flex items-center gap-1.5 text-[11.5px] text-ink-mute">
+                <i className="inline-block h-2 w-2 rounded-[2px]" style={{ background: d.color }} />
+                {d.label}
+              </span>
+            ))}
+          </span>
+        )}
+      </div>
+      {aanpassen && (
       <div className="mb-3 flex flex-wrap gap-1.5">
         {KPI_DEFS.filter(visible).map((d) => {
           const isOn = on.has(d.key);
@@ -80,6 +135,7 @@ export default function KpiTrendChart({ data }: { data: KpiPoint[] }) {
           );
         })}
       </div>
+      )}
 
       <ResponsiveContainer width="100%" height={300}>
         <AreaChart data={data} margin={{ top: 8, right: 8, left: 4, bottom: 0 }}>

@@ -61,13 +61,9 @@ export default function InvoicedMarginPanel({
   const titel = 'Marge op facturen';
   const subtitel = 'Dezelfde marge, maar geteld op de factuurdatum in plaats van de datum van akkoord — ex btw';
 
-  if (!data.linked) {
-    return (
-      <Panel title={titel} subtitle={subtitel}>
-        <Empty>Facturen zijn nog niet aan hun offerte gekoppeld (kolom invoices.deal_id ontbreekt nog of is nog leeg).</Empty>
-      </Panel>
-    );
-  }
+  // Zonder koppeling tussen facturen en offertes is er niets te tonen; een leeg
+  // blok met een technische melding staat slordiger dan geen blok.
+  if (!data.linked) return null;
 
   const totaal = data.parts.ok.amount + data.parts['geen-inkoopprijs'].amount + data.parts['geen-offerte'].amount;
   const aandeel = (v: number) => (totaal > 0 ? Math.max(0, v / totaal) * 100 : 0);

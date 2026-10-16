@@ -1,12 +1,12 @@
-'use client';
+import { getAllQuotations, getExclusions, getResolveInput } from '@/lib/db';
+import { resolveQuotations } from '@/lib/resolve';
+import { fetchMarket } from '@/lib/market';
+import TrendsPage from '@/components/pages/TrendsPage';
 
-import { useDashboard } from '@/components/layout/DashboardProvider';
-import TrendsView from '@/components/TrendsView';
-import EmptyState from '@/components/pages/EmptyState';
+export const dynamic = 'force-dynamic';
 
-/** De lange lijn: hoe de cijfers zich over weken en maanden bewegen. */
-export default function TrendsPage() {
-  const { snap, openStock } = useDashboard();
-  if (!snap) return <EmptyState />;
-  return <TrendsView snapshot={snap} openStock={openStock} />;
+export default async function Page() {
+  const [quotations, resolveInput, exclusions] = await Promise.all([getAllQuotations(), getResolveInput(), getExclusions()]);
+  const market = await fetchMarket(resolveQuotations(quotations, resolveInput), exclusions);
+  return <TrendsPage market={market} />;
 }

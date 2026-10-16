@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Bar, CartesianGrid, Cell, ComposedChart, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import type { ResultaatData, ResultMonth } from '@/lib/resultaat';
 import type { LedgerKind } from '@/lib/moneybird';
+import type { BreakEven } from '@/lib/today';
 import { formatDateTime, formatEuro, formatPercent } from '@/lib/format';
 import { useDashboard } from '@/components/layout/DashboardProvider';
 import { AXIS_TICK, CHART } from '@/components/charts/theme';
@@ -12,6 +13,7 @@ import { ChartTooltip } from '@/components/charts/ChartTooltip';
 import { ChartLegend } from '@/components/charts/ChartLegend';
 import { Badge, Empty, Panel, SectionLabel, cn } from '@/components/ui';
 import { Pagination, usePaged } from '@/components/ui/Pagination';
+import CountUp from '@/components/CountUp';
 
 const MAAND = ['jan', 'feb', 'mrt', 'apr', 'mei', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'dec'];
 const MAAND_LANG = ['januari', 'februari', 'maart', 'april', 'mei', 'juni', 'juli', 'augustus', 'september', 'oktober', 'november', 'december'];
@@ -48,7 +50,7 @@ const resultaat = (m: Pick<ResultMonth, 'revenue' | 'directCosts' | 'expenses' |
  */
 export default function ResultaatView({ data }: { data: ResultaatData }) {
   const router = useRouter();
-  const { range, refreshCount } = useDashboard();
+  const { range, refreshCount, today } = useDashboard();
 
   // Vernieuwen haalt Moneybird opnieuw op; deze pagina rekent op de server, dus
   // daarna opnieuw laten renderen.
@@ -93,6 +95,8 @@ export default function ResultaatView({ data }: { data: ResultaatData }) {
       )}
 
       <Hero maanden={maanden} terugval={terugval} />
+
+      {today.breakEven && <BreakEvenPanel be={today.breakEven} day={today.month.day} daysInMonth={today.month.daysInMonth} />}
 
       <MaandGrafiek months={data.months} startMonth={data.startMonth} />
 
@@ -157,7 +161,7 @@ function Hero({ maanden, terugval }: { maanden: ResultMonth[]; terugval: boolean
           <div>
             <p className="text-[12px] font-medium text-ink-mute">Bedrijfsresultaat, vóór belasting</p>
             <p className={cn('mt-1 text-[48px] font-bold leading-none tracking-tight tabular-nums', res < 0 ? 'text-crit' : 'text-ink')}>
-              {formatEuro(res)}
+              <CountUp value={res} format={(v) => formatEuro(v)} />
             </p>
             <p className="mt-2 text-[12.5px] text-ink-mute">
               {resPct != null && `${formatPercent(resPct)} van ${formatEuro(t.revenue)} gefactureerd`}
@@ -474,5 +478,54 @@ function StartMaand({ data }: { data: ResultaatData }) {
       </label>
       {fout && <span className="w-full text-crit">{fout}</span>}
     </div>
+  );
+}
+
+// ── Quitte spelen ────────────────────────────────────────────────────────
+
+/**
+ * Het break-evenpunt in één balk: wat er deze maand gefactureerd is tegenover
+ * wat er nodig is om de vaste lasten te dekken. Het streepje is waar je bij een
+ * gelijkmatig tempo nu zou staan.
+ */
+function BreakEvenPanel({ be, day, daysInMonth }: { be: BreakEven; day: number; daysInMonth: number }) {
+  const aandeel = be.revenueNeeded > 0 ? be.invoicedThisMonth / be.revenueNeeded : 0;
+  const gedekt = aandeel >= 1;
+  const verstreken = day / daysInMonth;
+  return (
+    <Panel
+      title="Break-evenpunt"
+      subtitle={`Omzet die per maand nodig is om de vaste lasten te dekken — gemiddelde over de laatste ${be.months} complete ${be.months === 1 ? 'maand' : 'maanden'}`}
+    >
+      <div className="grid gap-6 md:grid-cols-[1fr_1.4fr]">
+        <div>
+          <p className="text-[34px] font-bold leading-none tracking-tight tabular-nums text-ink">{formatEuro(be.revenueNeeded)}</p>
+          <p className="mt-2 text-[12.5px] leading-relaxed text-ink-mute">
+            {formatEuro(be.fixedPerMonth)} vaste lasten per maand ÷ {formatPercent(be.grossMarginPct)} brutomarge. Elke euro
+            omzet daarboven is, na inkoop en uitbesteed werk, voor {formatPercent(be.grossMarginPct)} resultaat.
+          </p>
+        </div>
+        <div>
+          <div className="flex items-baseline justify-between text-[12.5px]">
+            <span className="text-ink-mute">Deze maand gefactureerd</span>
+            <span className="font-semibold tabular-nums text-ink">
+              {formatEuro(be.invoicedThisMonth)} <span className="font-normal text-ink-faint">van {formatEuro(be.revenueNeeded)}</span>
+            </span>
+          </div>
+          <div className="relative mt-2 h-3 w-full rounded-full bg-sunk">
+            <span
+              className={cn('block h-full rounded-full transition-[width] duration-700 ease-out', gedekt ? 'bg-good' : 'bg-accent')}
+              style={{ width: `${Math.min(100, aandeel * 100)}%` }}
+            />
+            <span aria-hidden className="absolute top-1/2 h-5 w-[2px] -translate-y-1/2 rounded-full bg-ink/60" style={{ left: `${verstreken * 100}%` }} />
+          </div>
+          <p className="mt-2 text-[12px] text-ink-faint">
+            {gedekt
+              ? `Gedekt: alles wat er deze maand nog gefactureerd wordt, is voor ${formatPercent(be.grossMarginPct)} winst.`
+              : `Nog ${formatEuro(be.revenueNeeded - be.invoicedThisMonth)} te factureren tot de vaste lasten gedekt zijn. Het streepje is waar je bij een gelijkmatig tempo nu zou staan.`}
+          </p>
+        </div>
+      </div>
+    </Panel>
   );
 }

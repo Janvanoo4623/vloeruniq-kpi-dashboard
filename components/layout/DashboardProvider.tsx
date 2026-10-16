@@ -11,6 +11,14 @@ import type { PeriodData } from '@/lib/period-data';
 import type { AdsDayPoint } from '@/lib/kpi-series';
 import type { OpenStockPoint } from '@/lib/open-stock';
 import type { InvoicedMargin } from '@/lib/invoiced-margin';
+import type { BreakEven, CallList, MonthProgress } from '@/lib/today';
+
+/** Wat van de kalender afhangt, niet van de periode (lib/today.ts). */
+export interface TodayData {
+  callList: CallList;
+  month: MonthProgress;
+  breakEven: BreakEven | null;
+}
 import { presetRange, type RangeState } from '@/components/DateRangePicker';
 import { DEFAULT_PRESET } from '@/lib/default-range';
 
@@ -44,6 +52,7 @@ export interface DashboardData {
   pipeline: PipelineStats;
   payments: PaymentStats;
   pricedCodes: Set<string>;
+  today: TodayData;
   /** Klantanalyses voor de gekozen periode (betaalgedrag blijft over alles). */
   customers: CustomerAnalysis;
   series: WeeklyPoint[];
@@ -97,6 +106,7 @@ export default function DashboardProvider({
   pipeline,
   payments,
   pricedCodes,
+  today,
   children,
 }: {
   period: PeriodData;
@@ -105,6 +115,7 @@ export default function DashboardProvider({
   pipeline: PipelineStats;
   payments: PaymentStats;
   pricedCodes: string[];
+  today: TodayData;
   children: ReactNode;
 }) {
   const [snap, setSnap] = useState<Snapshot | null>(period.snapshot);
@@ -181,6 +192,7 @@ export default function DashboardProvider({
       pipeline,
       payments,
       pricedCodes: pricedSet,
+      today,
       customers,
       series,
       range,
@@ -199,7 +211,7 @@ export default function DashboardProvider({
       dismissMessage: () => setMessage(null),
     }),
     [
-      snap, meta, aging, pipeline, payments, pricedSet, customers, series,
+      snap, meta, aging, pipeline, payments, pricedSet, today, customers, series,
       range, comparison, previous, adsDaily, openStock, openAtEnd, invoicedMargin, dataLoading, refreshing, refreshCount, message, setRange, refresh,
     ],
   );
