@@ -74,10 +74,11 @@ export default function MonthGoal({ month }: { month: MonthProgress }) {
             <p className="mt-1.5 text-[11.5px] text-ink-faint">
               {doel
                 ? `${formatPercent(Math.round((aandeel ?? 0) * 100))} van het doel van ${formatEuro(doel)}`
-                : maat
-                  ? `${formatPercent(Math.round((aandeel ?? 0) * 100))} van heel vorige maand (${formatEuro(maat)})`
-                  : 'gewonnen offertes deze maand'}
-              {month.prevSameDay.revenue > 0 && ` · op dezelfde dag vorige maand ${formatEuro(month.prevSameDay.revenue)}`}
+                : month.prevSameDay.revenue > 0
+                  ? `${formatEuro(month.prevSameDay.revenue)} op deze dag vorige maand`
+                  : maat
+                    ? `vorige maand ${formatEuro(maat)}`
+                    : 'gewonnen offertes deze maand'}
             </p>
           </div>
           {rijen.slice(1).map((r) => {

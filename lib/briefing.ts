@@ -22,7 +22,8 @@ export interface BriefingInput {
   /** Gemiddelde marge % in de gekozen periode en de periode ervoor. */
   marginPct: number | null;
   prevMarginPct: number | null;
-  overdue: { amount: number; count: number };
+  /** Te laat (bedrag, aantal) en het totaal dat openstaat, incl. btw. */
+  overdue: { amount: number; count: number; outstanding?: number };
 }
 
 export type BriefingKind = 'up' | 'down' | 'flat' | 'goal' | 'margin-up' | 'margin-down' | 'margin-flat' | 'breakeven' | 'breakeven-ok' | 'overdue';
@@ -95,7 +96,10 @@ export function buildBriefing(i: BriefingInput): BriefingLine[] {
   if (i.overdue.count > 0) {
     zinnen.push({
       kind: 'overdue',
-      text: `Er staat **${formatEuro(i.overdue.amount)}** over de vervaldatum, verdeeld over **${i.overdue.count} ${i.overdue.count === 1 ? 'factuur' : 'facturen'}**.`,
+      text:
+        i.overdue.outstanding != null && i.overdue.outstanding > i.overdue.amount
+          ? `Er staat ${formatEuro(i.overdue.outstanding)} open, waarvan **${formatEuro(i.overdue.amount)}** al over de vervaldatum is (**${i.overdue.count} ${i.overdue.count === 1 ? 'factuur' : 'facturen'}**).`
+          : `Er staat **${formatEuro(i.overdue.amount)}** over de vervaldatum, verdeeld over **${i.overdue.count} ${i.overdue.count === 1 ? 'factuur' : 'facturen'}**.`,
     });
   }
 

@@ -65,6 +65,20 @@ function useVers(lastSyncAt: string | null): boolean {
   );
 }
 
+/**
+ * "12:00" als het van vandaag is, anders "di 12:00". Altijd in Nederlandse
+ * tijd: dan geven server en browser hetzelfde en is er geen hydratiefout.
+ * Bewust geen "Live" — de data ververst twee keer per dag, en een label dat
+ * naast "5 uur geleden" in de kop staat spreekt zichzelf tegen.
+ */
+function bijgewerkt(iso: string, vandaag: boolean): string {
+  const d = new Date(iso);
+  const tijd = d.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Amsterdam' });
+  if (vandaag) return tijd;
+  const dag = d.toLocaleDateString('nl-NL', { weekday: 'short', timeZone: 'Europe/Amsterdam' });
+  return `${dag} ${tijd}`;
+}
+
 const DAG = ['zondag', 'maandag', 'dinsdag', 'woensdag', 'donderdag', 'vrijdag', 'zaterdag'];
 const MAAND = ['januari', 'februari', 'maart', 'april', 'mei', 'juni', 'juli', 'augustus', 'september', 'oktober', 'november', 'december'];
 
@@ -96,7 +110,7 @@ export default function Briefing({
   const vers = useVers(lastSyncAt);
   const d = new Date(date + 'T12:00:00Z');
   const kop = `${DAG[d.getUTCDay()]} ${d.getUTCDate()} ${MAAND[d.getUTCMonth()]}`;
-  const top = callList.items.slice(0, 4);
+  const top = callList.items.slice(0, 5);
 
   return (
     <Card className="overflow-hidden">
@@ -114,12 +128,11 @@ export default function Briefing({
                 'inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[11.5px] font-semibold ring-1 ring-inset',
                 vers ? 'bg-good-soft text-good ring-good/20' : 'bg-warn-soft text-warn ring-warn/20',
               )}
-              title={lastSyncAt ? `Laatst bijgewerkt ${timeAgo(lastSyncAt)}` : 'Nog nooit bijgewerkt'}
+              title={lastSyncAt ? `Laatst bijgewerkt ${timeAgo(lastSyncAt)}` : undefined}
             >
               <span className={cn('relative inline-flex h-1.5 w-1.5 rounded-full', vers ? 'bg-good' : 'bg-warn')}>
-                {vers && <span className="absolute inset-0 animate-ping rounded-full bg-good/60" />}
               </span>
-              {vers ? 'Live' : `Bijgewerkt ${timeAgo(lastSyncAt)}`}
+              {lastSyncAt ? `Bijgewerkt ${bijgewerkt(lastSyncAt, vers)}` : 'Nog niet bijgewerkt'}
             </span>
           </div>
           <ul className="mt-4 space-y-2.5">
