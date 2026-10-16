@@ -2,6 +2,7 @@
 
 import { useState, type ReactNode } from 'react';
 import { X } from 'lucide-react';
+import { usePathname } from 'next/navigation';
 import Sidebar, { MobileSidebar } from './Sidebar';
 import TopBar from './TopBar';
 import { useDashboard } from './DashboardProvider';
@@ -20,6 +21,7 @@ export default function AppShell({
 }) {
   const { message, dismissMessage, dataLoading, refreshing } = useDashboard();
   const [menu, setMenu] = useState(false);
+  const pathname = usePathname();
 
   return (
     // Op de telefoon geen marge en geen ronde hoeken: die kosten daar alleen maar
@@ -58,7 +60,11 @@ export default function AppShell({
               className={`mx-auto w-full max-w-[1400px] px-3 py-4 transition-opacity duration-200 sm:px-6 sm:py-6 ${dataLoading ? 'pointer-events-none opacity-55' : ''}`}
               aria-busy={dataLoading}
             >
-              {children}
+              {/* Bij elke paginawissel komt de inhoud zacht omhoog (0,2 s). Klein,
+                  maar het verschil tussen een website en een app. */}
+              <div key={pathname} className="animate-rise-in">
+                {children}
+              </div>
             </div>
           </main>
         </div>

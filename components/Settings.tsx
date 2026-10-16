@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
 import type { CurrentPrice, CurrentCost, Exclusion } from '@/lib/db';
 import type { KpiSettings } from '@/lib/kpi-settings';
 import KpiSettingsTab from './KpiSettingsTab';
@@ -72,21 +71,10 @@ export default function Settings({ initial }: { initial: State }) {
   }
 
   return (
-    <div className="mx-auto w-full max-w-4xl px-4 py-6 sm:px-6 lg:px-8">
-      <header className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-semibold tracking-tight text-ink">Instellingen</h1>
-          <p className="mt-0.5 text-sm text-ink-mute">Prijzen, kosten en uitsluitingen</p>
-        </div>
-        <Link
-          href="/"
-          className="rounded-lg border border-line bg-white px-3 py-2 text-sm text-ink-soft transition hover:text-ink"
-        >
-          ← Terug naar dashboard
-        </Link>
-      </header>
-
-      <div className="mt-4 rounded-lg border border-line bg-canvas px-4 py-2.5 text-xs leading-relaxed text-ink-mute">
+    // De paginakop staat al in de bovenbalk; een tweede kop en een knop "terug
+    // naar dashboard" stamden uit de tijd dat dit een losse pagina was.
+    <div className="mx-auto w-full max-w-5xl">
+      <div className="rounded-xl border border-line bg-surface px-4 py-3 text-xs leading-relaxed text-ink-mute">
         Bij elke prijs- of kostenwijziging kies je zelf vanaf wanneer hij geldt. <strong>Vanaf
         vandaag</strong> laat oude offertes met hun eigen prijs staan; <strong>met terugwerkende
         kracht</strong> rekent de hele historie opnieuw door. Het effect is meteen zichtbaar, een
@@ -272,7 +260,7 @@ function PricesTab({ prices, post, busy }: { prices: CurrentPrice[]; post: Post;
                       />
                     </div>
                   </td>
-                  <td className="px-3 py-2 text-xs text-ink-faint tabular-nums">{p.effectiveFrom}</td>
+                  <td className="px-3 py-2 text-xs text-ink-faint tabular-nums">{p.effectiveFrom <= '2000-01-01' ? 'altijd' : p.effectiveFrom}</td>
                   <td className="px-3 py-2 text-right">
                     <button
                       disabled={busy || !changed}
@@ -288,7 +276,7 @@ function PricesTab({ prices, post, busy }: { prices: CurrentPrice[]; post: Post;
                         );
                         if (ok) setEdits((s) => ({ ...s, [p.code]: '' }));
                       }}
-                      className="rounded-md bg-accent px-2.5 py-1 text-xs font-medium text-white transition hover:bg-accent/90 disabled:opacity-40"
+                      className={`rounded-md bg-accent px-2.5 py-1 text-xs font-medium text-white transition hover:bg-accent/90 disabled:opacity-40 ${changed ? 'animate-fade-in' : 'invisible'}`}
                     >
                       Opslaan
                     </button>
@@ -402,7 +390,7 @@ function CostsTab({ costs, post, busy }: { costs: CurrentCost[]; post: Post; bus
                 className="w-28 rounded border border-line px-2 py-1 text-sm tabular-nums outline-none focus:border-accent"
               />
               <span className="hidden text-xs text-ink-faint sm:inline">
-                {scope} · sinds {c?.effectiveFrom ?? '—'}
+                {scope} · {!c?.effectiveFrom ? 'sinds —' : c.effectiveFrom <= '2000-01-01' ? 'altijd' : `sinds ${c.effectiveFrom}`}
               </span>
               <button
                 disabled={busy || !changed}
@@ -413,7 +401,7 @@ function CostsTab({ costs, post, busy }: { costs: CurrentCost[]; post: Post; bus
                   );
                   if (ok) setEdits((s) => ({ ...s, [key]: '' }));
                 }}
-                className="ml-auto rounded-md bg-accent px-2.5 py-1 text-xs font-medium text-white transition hover:bg-accent/90 disabled:opacity-40"
+                className={`ml-auto rounded-md bg-accent px-2.5 py-1 text-xs font-medium text-white transition hover:bg-accent/90 disabled:opacity-40 ${changed ? 'animate-fade-in' : 'invisible'}`}
               >
                 Opslaan
               </button>
