@@ -6,6 +6,7 @@ import { NextResponse } from 'next/server';
 import { syncAndStore } from '@/lib/teamleader/sync';
 import { syncAds } from '@/lib/ads-sync';
 import { syncMetaAds } from '@/lib/meta-ads-sync';
+import { syncMoneybird } from '@/lib/moneybird';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -26,12 +27,14 @@ export async function POST(request: Request) {
   }
 
   // Google Ads parallel mee (zie /api/refresh): eigen bron, geen Teamleader-lock.
-  const adsRun = Promise.all([syncAds(), syncMetaAds()]).then(([google, meta]) => ({
+  // Moneybird (kosten uit de boekhouding) loopt op dezelfde manier mee.
+  const adsRun = Promise.all([syncAds(), syncMetaAds(), syncMoneybird()]).then(([google, meta, moneybird]) => ({
     ok: google.ok || meta.ok,
     google,
     meta,
-    // Eén foutzin voor de melding in de kop; overgeslagen platforms tellen niet.
-    error: [google, meta].filter((r) => !r.ok && !r.skipped).map((r) => r.error).join(' · ') || undefined,
+    moneybird,
+    // Eén foutzin voor de melding in de kop; overgeslagen bronnen tellen niet.
+    error: [google, meta, moneybird].filter((r) => !r.ok && !r.skipped).map((r) => r.error).join(' · ') || undefined,
   }));
   try {
     const [{ meta }, ads] = await Promise.all([

@@ -25,7 +25,12 @@ export async function runSync(): Promise<{ snapshot: Snapshot; pushed: number }>
   );
   // Creditnota's komen uit een aparte Teamleader-lijst en worden als factuur met
   // een negatief bedrag opgeslagen — zie fetchCreditNotes().
-  const [facturen, credits] = await Promise.all([fetchInvoices(cutoff), fetchCreditNotes(cutoff)]);
+  // Een creditnota erft de deal van de factuur die hij crediteert. Die factuur
+  // kan van vóór het sync-venster zijn, dus vallen we terug op wat er al ligt.
+  const [facturen, opgeslagen] = await Promise.all([fetchInvoices(cutoff), db.getAllInvoices()]);
+  const dealVan = new Map(opgeslagen.map((i) => [i.id, i.dealId]));
+  for (const f of facturen) dealVan.set(f.id, f.dealId);
+  const credits = await fetchCreditNotes(cutoff, (id) => dealVan.get(id) ?? '');
   const invoices = [...facturen, ...credits];
   await db.upsertInvoices(invoices);
   const invoicing = summarizeInvoices(invoices);

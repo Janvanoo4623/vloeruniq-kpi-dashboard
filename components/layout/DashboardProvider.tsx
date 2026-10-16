@@ -10,6 +10,7 @@ import type { CustomerAnalysis } from '@/lib/customers';
 import type { PeriodData } from '@/lib/period-data';
 import type { AdsDayPoint } from '@/lib/kpi-series';
 import type { OpenStockPoint } from '@/lib/open-stock';
+import type { InvoicedMargin } from '@/lib/invoiced-margin';
 import { presetRange, type RangeState } from '@/components/DateRangePicker';
 import { DEFAULT_PRESET } from '@/lib/default-range';
 
@@ -30,6 +31,8 @@ export interface Comparison {
   openAtEnd?: { count: number; value: number };
   /** Advertentiekosten in die periode, per kanaal. */
   adsCost?: { google: number; meta: number };
+  /** Marge op de facturen van die periode. */
+  invoicedMargin?: number;
 }
 
 export interface DashboardData {
@@ -54,6 +57,8 @@ export interface DashboardData {
   openStock: OpenStockPoint[];
   /** Stapel aan het eind van de gekozen periode, tegenhanger van previous.openAtEnd. */
   openAtEnd: { count: number; value: number };
+  /** Marge geteld op factuurdatum, voor de Marge-pagina. */
+  invoicedMargin: InvoicedMargin;
   dataLoading: boolean;
   refreshing: boolean;
   /** Loopt op na elke geslaagde verversing; pagina's met eigen data halen dan opnieuw op. */
@@ -110,6 +115,7 @@ export default function DashboardProvider({
   const [adsDaily, setAdsDaily] = useState<AdsDayPoint[]>(period.adsDaily);
   const [openStock, setOpenStock] = useState<OpenStockPoint[]>(period.openStock);
   const [openAtEnd, setOpenAtEnd] = useState(period.openAtEnd);
+  const [invoicedMargin, setInvoicedMargin] = useState<InvoicedMargin>(period.invoicedMargin);
   const [dataLoading, setDataLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [refreshCount, setRefreshCount] = useState(0);
@@ -130,6 +136,7 @@ export default function DashboardProvider({
         setAdsDaily(data.adsDaily ?? []);
         setOpenStock(data.openStock ?? []);
         if (data.openAtEnd) setOpenAtEnd(data.openAtEnd);
+        if (data.invoicedMargin) setInvoicedMargin(data.invoicedMargin);
         if (data.customers) setCustomers(data.customers);
         setRangeState(r);
       } else {
@@ -151,7 +158,7 @@ export default function DashboardProvider({
       if (res.ok && data.dispatched) {
         setMessage('Synchronisatie gestart op de achtergrond (~1–2 min). Ververs daarna de pagina.');
       } else if (res.ok && data.ok) {
-        setMessage(data.ads?.error ? `Data bijgewerkt. Advertenties niet: ${data.ads.error}` : 'Data bijgewerkt.');
+        setMessage(data.ads?.error ? `Data bijgewerkt. Niet gelukt: ${data.ads.error}` : 'Data bijgewerkt.');
         await setRange(range);
         setRefreshCount((n) => n + 1);
       } else if (res.status === 409) {
@@ -182,6 +189,7 @@ export default function DashboardProvider({
       adsDaily,
       openStock,
       openAtEnd,
+      invoicedMargin,
       dataLoading,
       refreshing,
       refreshCount,
@@ -192,7 +200,7 @@ export default function DashboardProvider({
     }),
     [
       snap, meta, aging, pipeline, payments, pricedSet, customers, series,
-      range, comparison, previous, adsDaily, openStock, openAtEnd, dataLoading, refreshing, refreshCount, message, setRange, refresh,
+      range, comparison, previous, adsDaily, openStock, openAtEnd, invoicedMargin, dataLoading, refreshing, refreshCount, message, setRange, refresh,
     ],
   );
 

@@ -727,11 +727,26 @@ function rowToInvoice(r: Row): InvoiceRow {
     dueOn: (r.due_on as string) ?? '',
     customerName: (r.customer_name as string) ?? '',
     paidAt: (r.paid_at as string) ?? '',
+    dealId: (r.deal_id as string) ?? '',
   };
+}
+
+/**
+ * Bestaat invoices.deal_id al? Tot de migratie gedraaid is niet, en dan moet de
+ * sync gewoon doorlopen zonder die kolom — een sync die klapt op een nieuwe
+ * kolom is erger dan een factuur zonder deal.
+ */
+let invoiceDealColumn: Promise<boolean> | null = null;
+function hasInvoiceDealColumn(): Promise<boolean> {
+  invoiceDealColumn ??= Promise.resolve(
+    supabase().from('invoices').select('deal_id').limit(1),
+  ).then(({ error }) => !error);
+  return invoiceDealColumn;
 }
 
 export async function upsertInvoices(rows: InvoiceRow[]): Promise<void> {
   if (rows.length === 0) return;
+  const metDeal = await hasInvoiceDealColumn();
   const payload = rows.map((inv) => ({
     id: inv.id,
     invoice_date: inv.invoiceDate || null,
@@ -743,6 +758,7 @@ export async function upsertInvoices(rows: InvoiceRow[]): Promise<void> {
     due_on: inv.dueOn || null,
     customer_name: inv.customerName || null,
     paid_at: inv.paidAt || null,
+    ...(metDeal ? { deal_id: inv.dealId || null } : {}),
     synced_at: new Date().toISOString(),
   }));
   for (let i = 0; i < payload.length; i += 500) {

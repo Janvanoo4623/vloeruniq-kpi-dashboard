@@ -12,6 +12,7 @@ import InstallMixPanel from '@/components/pages/InstallMixPanel';
 import { perM2Stats } from '@/lib/insights';
 import type { InstallMixPoint, InstallModeStat, ProductSpread } from '@/lib/insights';
 import ProductSpreadPanel from '@/components/pages/ProductSpreadPanel';
+import InvoicedMarginPanel from '@/components/pages/InvoicedMarginPanel';
 import { SectionLabel } from '@/components/ui';
 
 /** Alles over marge op één plek: de curve, per product, en waar het misgaat. */
@@ -24,7 +25,7 @@ export default function MargeView({
   installByQuarter: InstallMixPoint[];
   spread: ProductSpread[];
 }) {
-  const { snap, series, pricedCodes } = useDashboard();
+  const { snap, series, pricedCodes, invoicedMargin } = useDashboard();
   const totals = snap?.revenue.totals;
   if (!snap || !totals) return <EmptyState />;
 
@@ -70,6 +71,8 @@ export default function MargeView({
           .
         </p>
       </section>
+
+      <InvoicedMarginPanel data={invoicedMargin} quotationMargin={totals.totalMargin} pricedCodes={pricedCodes} />
 
       <ChartCard title="Marge per week" subtitle="Marge in € (staven) en % (lijn)">
         <MarginTrendChart data={series} />

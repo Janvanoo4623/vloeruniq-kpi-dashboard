@@ -22,6 +22,10 @@ a live web dashboard the business owner and his client can view on any device.
 6. **Marketing** (since 2026-09-16): Google Ads day-level cost per campaign lands in `ads_daily`
    on every Vernieuwen/cron (GAQL.app REST, `lib/ads-sync.ts`, no Teamleader lock); the Marketing tab shows cost, CTR/CPC, conversions, monthly budget and
    **margin after Google Ads**. See `docs/DATA-MODEL.md` "Marketing".
+7. **Resultaat** (since 2026-10-15): costs per ledger account per month from **Moneybird**'s
+   profit & loss report (`lib/moneybird.ts`, stored in `app_settings.moneybird_pl`, refreshed with
+   Vernieuwen/cron, no Teamleader lock). Revenue stays **Teamleader** invoices — Combidesk copies
+   them into Moneybird, so never sum both. See `docs/DATA-MODEL.md` "Resultaat".
 
 ## Read these first
 
@@ -70,6 +74,7 @@ npm run sync       # run the Teamleader sync locally (no timeout limits) -> writ
 npm run sync:ads   # Google Ads dagcijfers -> Supabase ads_daily, verder terug dan de 90 dagen van Vernieuwen (--days, --from-json)
 npm run ads:token  # test de GAQL-koppeling uit .env.local en zet hem in Supabase (app_settings.ads_gaql) voor Vernieuwen/cron op Vercel
 npm run ads:meta-token  # idem voor Meta Ads (META_ACCESS_TOKEN + META_AD_ACCOUNT_ID), laadt meteen 90 dagen (--days N)
+npm run moneybird:token  # test MONEYBIRD_TOKEN uit .env.local, zet hem in Supabase (app_settings.moneybird) en laadt de W&V per maand
 npm run build      # production build
 npm run lint       # eslint
 ```

@@ -412,3 +412,47 @@ Revenue per lead source:
 | Mond op mond reclame | € 60 944,40 | 16 |
 | Netwerk | € 17 981,73 | 5 |
 | Social media | € 5 963,64 | 1 |
+
+
+---
+
+## Marge op facturen — 2026-10-01
+
+`lib/invoiced-margin.ts`. Dezelfde marge als op de offerte, maar geteld op de **factuurdatum**.
+Een factuur vindt zijn offerte via `invoices.deal_id` (Teamleader geeft `deal.id` mee in
+`invoices.list`; een creditnota erft de deal van de factuur die hij crediteert). De factuur krijgt
+`factuurbedrag / offerte-omzet × offertemarge`: een aanbetaling van 40% draagt 40% van de marge.
+Staat geen offerte van de deal op geaccepteerd (gefactureerd terwijl de offerte op verlopen staat),
+dan de versie waarvan het bedrag het dichtst bij het gefactureerde ligt.
+
+Drie soorten, nooit bij elkaar opgeteld: marge bekend / offerte zonder inkoopprijs / zonder offerte
+(geen deal: losse verkoop). Het percentage gaat alleen over de eerste.
+Gemeten 2026-10-01 over alle 822 geboekte facturen: EUR 865k exact via geaccepteerde offerte,
+EUR 268k via een offerte op 'verlopen' (73 offertes — eigenlijk gewonnen), EUR 462k zonder
+inkoopprijs, EUR 628k zonder deal. Over de hele historie 41,8% marge op facturen vs 42,4% op offertes.
+
+Vereist de kolom `invoices.deal_id` (zie `supabase/schema.sql`); zonder die kolom slaat de sync
+hem over en toont de Marge-pagina dat de koppeling ontbreekt.
+
+---
+
+## Resultaat (Moneybird) — 2026-10-15
+
+`lib/moneybird.ts` + `lib/resultaat.ts`, pagina `/resultaat`.
+
+- **Bron kosten:** Moneybird `reports/profit_loss?granularity=month` (max. 12 maanden per aanroep),
+  bedragen per grootboekrekening, gegroepeerd in directe kosten, bedrijfskosten en overige
+  baten/lasten. Bevat ook bankboekingen zonder factuur.
+- **Bron omzet:** Teamleader-facturen (ex btw, creditnota's eraf, NV Vloeren eruit). Moneybird kent
+  omzet pas vanaf juli 2026 (Combidesk). Waar ze overlappen kwamen ze binnen 1–5% overeen; de
+  pagina toont die controle.
+- **Resultaat** = omzet − directe kosten − bedrijfskosten + overige baten/lasten, per hele maand
+  (de periodekiezer pakt de maanden die de periode raakt).
+- **Compleet vanaf** (`app_settings.moneybird_start`, standaard 2026-06): de boekhouding is in 2026
+  opgebouwd (inkoop feb 0,2k → mei 44k → jun 113k). Eerdere maanden staan lichter in de grafiek en
+  tellen niet mee. Instelbaar onderaan de pagina.
+- **Signalen:** reclamekosten in Moneybird vs Google+Meta-uitgaven, ontbrekende loonkosten,
+  omzetverschil Moneybird ↔ Teamleader.
+- Token: `MONEYBIRD_TOKEN` (env) gaat vóór `app_settings.moneybird` (productie). Persoonlijk token
+  per administratie, aangemaakt in Moneybird → Instellingen → Koppelingen → Externe applicaties →
+  API token aanmaken; rechten verkoopfacturen, documenten, bank, instellingen.

@@ -116,6 +116,7 @@ create index if not exists invoices_date on invoices (invoice_date);
 alter table invoices add column if not exists due_on date;         -- vervaldatum
 alter table invoices add column if not exists customer_name text;  -- factuur-tenaamstelling
 alter table invoices add column if not exists paid_at date;        -- betaaldatum (voor betaaltermijn/DSO)
+alter table invoices add column if not exists deal_id text;        -- deal in Teamleader: koppelt factuur aan offerte (marge op facturen)
 
 -- Per-quotation manual corrections (feedback Jan 2026-07-13):
 --  * a per-line special purchase price (€/m²) for a one-off deal, e.g. the

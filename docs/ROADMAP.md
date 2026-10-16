@@ -68,7 +68,7 @@ Phased build. Status updated as we go.
 - [x] Meta gekoppeld 2026-09-17: account 1133369954486650 (Business Manager 191283362264924), systeemgebruiker "Vloeruniq dash" op app "Dashboard", alleen `ads_read`. 164 dagregels, eerste campagne 2026-04-08. Totalen cent-gelijk aan Meta.
 - [x] Action-types gecontroleerd: `lead` (23) = pixel-lead (19) + lead_grouped (4), dus één keer tellen klopt.
 - [ ] Met Jan checken of leadbron "Social media" alleen betaalde Meta-leads zijn of ook organisch.
-- [ ] Moneybird-koppeling — navragen bij Jan of ze al over zijn en wie de API-sleutel kan maken.
+- [x] Moneybird-koppeling (2026-10-15): pagina Resultaat, kosten per grootboekrekening uit de W&V, omzet uit Teamleader.
 
 
 ## Idee: conversies terugkoppelen naar Google en Meta (click-ID tracking)
@@ -93,3 +93,9 @@ kunnen zien wat er écht uit komt, in plaats van via de grove leadbron in Teamle
 
 Afhankelijk van: toegang tot de website-formulieren, eigen velden in Teamleader, Meta weer
 ontgrendeld. Werkt pas vooruit: historische deals hebben geen click-ID.
+
+## Moneybird — vervolg
+- [ ] Loonkosten: waar worden die geboekt? (staan niet in Moneybird)
+- [ ] Google/Meta-afschrijvingen boeken op reclamekosten, anders is het resultaat te rooskleurig.
+- [ ] Startmaand bijstellen zodra de boekhouding vanaf eerder compleet is.
+- [ ] Resultaat ook in het exportrapport (`/export`).

@@ -24,6 +24,7 @@ interface TLInvoice {
     due?: { amount: number };
   };
   invoicee?: { name?: string; customer?: { id?: string } | null } | null;
+  deal?: { id?: string } | null;
 }
 
 interface TLCreditNote {
@@ -32,6 +33,7 @@ interface TLCreditNote {
   status?: string;
   total?: { tax_exclusive?: { amount: number }; tax_inclusive?: { amount: number } };
   invoicee?: { name?: string; customer?: { id?: string } | null } | null;
+  invoice?: { id?: string } | null;
 }
 
 /**
@@ -48,7 +50,10 @@ interface TLCreditNote {
  * levert deze functie een lege lijst en gaat de rest van de sync gewoon door.
  * Een sync die klapt op een bijzaak is erger dan een ontbrekende creditnota.
  */
-export async function fetchCreditNotes(cutoff: string): Promise<InvoiceRow[]> {
+export async function fetchCreditNotes(
+  cutoff: string,
+  dealOfInvoice: (invoiceId: string) => string = () => '',
+): Promise<InvoiceRow[]> {
   let notes: TLCreditNote[] = [];
   try {
     notes = await fetchAllPages<TLCreditNote>('/creditNotes.list', {
@@ -83,6 +88,8 @@ export async function fetchCreditNotes(cutoff: string): Promise<InvoiceRow[]> {
       dueOn: '',
       customerName: n.invoicee?.name ?? '',
       paidAt: n.credit_note_date ? dateOnly(n.credit_note_date) : '',
+      // Een creditnota heeft zelf geen deal, wel de factuur die hij crediteert.
+      dealId: n.invoice?.id ? dealOfInvoice(n.invoice.id) : '',
     }));
 }
 
@@ -107,6 +114,7 @@ export async function fetchInvoices(cutoff: string): Promise<InvoiceRow[]> {
       dueOn: inv.due_on ?? '',
       customerName: inv.invoicee?.name ?? '',
       paidAt: inv.paid_at ? dateOnly(inv.paid_at) : '',
+      dealId: inv.deal?.id ?? '',
     }));
 }
 
@@ -119,7 +127,7 @@ const BUCKETS = [
 ] as const;
 
 /** Customer(s) to omit from cashflow entirely (e.g. intercompany). */
-const CASHFLOW_EXCLUDE = /nv\s*vloeren/i;
+export const CASHFLOW_EXCLUDE = /nv\s*vloeren/i;
 
 const normName = (s: string): string => s.trim().toLowerCase().replace(/\s+/g, ' ');
 

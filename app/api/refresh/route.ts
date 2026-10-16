@@ -9,6 +9,7 @@ import { NextResponse } from 'next/server';
 import { syncAndStore } from '@/lib/teamleader/sync';
 import { syncAds } from '@/lib/ads-sync';
 import { syncMetaAds } from '@/lib/meta-ads-sync';
+import { syncMoneybird } from '@/lib/moneybird';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -50,12 +51,14 @@ export async function POST() {
   // Google Ads loopt parallel mee: eigen bron, eigen tabel, geen Teamleader-lock.
   // Een fout daar staat in ads_sync_meta en in het antwoord, maar houdt de
   // Teamleader-sync niet tegen. Zonder koppeling slaat syncAds zelf stil over.
-  const adsRun = Promise.all([syncAds(), syncMetaAds()]).then(([google, meta]) => ({
+  // Moneybird (kosten uit de boekhouding) loopt op dezelfde manier mee.
+  const adsRun = Promise.all([syncAds(), syncMetaAds(), syncMoneybird()]).then(([google, meta, moneybird]) => ({
     ok: google.ok || meta.ok,
     google,
     meta,
-    // Eén foutzin voor de melding in de kop; overgeslagen platforms tellen niet.
-    error: [google, meta].filter((r) => !r.ok && !r.skipped).map((r) => r.error).join(' · ') || undefined,
+    moneybird,
+    // Eén foutzin voor de melding in de kop; overgeslagen bronnen tellen niet.
+    error: [google, meta, moneybird].filter((r) => !r.ok && !r.skipped).map((r) => r.error).join(' · ') || undefined,
   }));
 
   // Production (Hobby): hand off to GitHub Actions.

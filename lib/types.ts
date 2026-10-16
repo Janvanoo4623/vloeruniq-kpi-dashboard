@@ -234,6 +234,12 @@ export interface InvoiceRow {
   dueOn: string; // due date YYYY-MM-DD ('' if none)
   customerName: string;
   paidAt: string; // payment date YYYY-MM-DD ('' if unpaid / unknown)
+  /**
+   * De deal in Teamleader waar de factuur bij hoort ('' als die er niet is). Via
+   * de deal vindt een factuur zijn offerte terug — exact, niet op klantnaam.
+   * Een creditnota erft de deal van de factuur die hij crediteert.
+   */
+  dealId: string;
 }
 
 /**

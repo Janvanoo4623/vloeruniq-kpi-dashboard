@@ -6,6 +6,8 @@
 //    periodekiezer);
 //  - `adsDaily`: dagtotalen Google Ads, voor de KPI-grafiek op Overzicht;
 //  - `openStock`: de openstaande stapel per week, voor Trends.
+// En sinds 2026-10-01 `invoicedMargin`: marge geteld op factuurdatum in plaats
+// van op de datum van akkoord, voor de Marge-pagina (lib/invoiced-margin.ts).
 import { getAdsRows } from './db';
 import { summarizeInvoices } from './teamleader/invoices';
 import { snapshotForRange } from './range';
@@ -13,6 +15,7 @@ import { perM2Stats, type PerM2Stats } from './insights';
 import { customerAnalysis, type CustomerAnalysis } from './customers';
 import { openStockSeries, type OpenStockPoint } from './open-stock';
 import { comparisonRange } from './ads-payload';
+import { invoicedMargin, type InvoicedMargin } from './invoiced-margin';
 import type { AdsDayPoint } from './kpi-series';
 import type { InvoiceRow, InvoicingSummary, QuotationRow, RevenueTotals, RunTimeRow, Snapshot } from './types';
 
@@ -27,6 +30,8 @@ export interface PeriodComparison {
   openAtEnd: { count: number; value: number };
   /** Advertentiekosten in die periode, per platform. */
   adsCost: { google: number; meta: number };
+  /** Marge op de facturen van die periode (alleen het totaal, zonder regels). */
+  invoicedMargin: number;
 }
 
 export interface PeriodData {
@@ -41,6 +46,8 @@ export interface PeriodData {
   customers: CustomerAnalysis;
   adsDaily: AdsDayPoint[];
   openStock: OpenStockPoint[];
+  /** Marge op factuurdatum, met de facturen erachter. */
+  invoicedMargin: InvoicedMargin;
 }
 
 const EMPTY_INVOICING: InvoicingSummary = {
@@ -98,6 +105,7 @@ export async function buildPeriodData(input: {
       perM2: perM2Stats(s.quotations),
       openAtEnd: openAt(r.to),
       adsCost: await adsCostIn(r),
+      invoicedMargin: invoicedMargin(invoices, quotations, exclusions, r.from, r.to).margin,
     };
   };
 
@@ -142,5 +150,6 @@ export async function buildPeriodData(input: {
     customers: customerAnalysis(invoices, quotations, from, to),
     adsDaily,
     openStock,
+    invoicedMargin: invoicedMargin(invoices, quotations, exclusions, from, to),
   };
 }

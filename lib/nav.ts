@@ -17,6 +17,7 @@ import {
   Users2,
   TrendingDown,
   Megaphone,
+  Scale,
 } from 'lucide-react';
 
 export interface NavItem {
@@ -68,6 +69,13 @@ export const NAV: NavGroup[] = [
         title: 'Marge',
         subtitle: 'Marge per week, per product en per m²',
         Icon: Percent,
+      },
+      {
+        href: '/resultaat',
+        label: 'Resultaat',
+        title: 'Resultaat',
+        subtitle: 'Wat er onderaan overblijft: gefactureerde omzet min de kosten uit Moneybird',
+        Icon: Scale,
       },
       {
         href: '/cashflow',

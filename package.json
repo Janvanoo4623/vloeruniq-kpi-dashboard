@@ -16,7 +16,8 @@
     "import:prices": "tsx scripts/import-prices.ts",
     "sync:ads": "tsx scripts/ads-sync.ts",
     "ads:token": "tsx scripts/ads-token.ts",
-    "ads:meta-token": "tsx scripts/ads-meta-token.ts"
+    "ads:meta-token": "tsx scripts/ads-meta-token.ts",
+    "moneybird:token": "tsx scripts/moneybird-token.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.110.2",
