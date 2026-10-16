@@ -3,7 +3,8 @@
 // Geen AI. Elke zin komt uit een vaste regel met een drempel, zodat hij elke
 // dag hetzelfde betekent en je hem kunt vertrouwen: "loopt achter" zegt het
 // dashboard alleen als het echt achterloopt. Getallen staan tussen **…** en
-// worden vet gezet.
+// worden vet gezet. Elke regel krijgt een soort mee, waar de UI een icoon bij
+// kiest.
 import { formatEuro, formatPercent } from './format';
 import type { BreakEven, MonthProgress } from './today';
 
@@ -24,8 +25,15 @@ export interface BriefingInput {
   overdue: { amount: number; count: number };
 }
 
-export function buildBriefing(i: BriefingInput): string[] {
-  const zinnen: string[] = [];
+export type BriefingKind = 'up' | 'down' | 'flat' | 'goal' | 'margin-up' | 'margin-down' | 'margin-flat' | 'breakeven' | 'breakeven-ok' | 'overdue';
+
+export interface BriefingLine {
+  kind: BriefingKind;
+  text: string;
+}
+
+export function buildBriefing(i: BriefingInput): BriefingLine[] {
+  const zinnen: BriefingLine[] = [];
   const { month: m } = i;
   const naam = maandNaam(m.month);
   const vorige = maandNaam(vorigeMaand(m.month));
@@ -33,8 +41,10 @@ export function buildBriefing(i: BriefingInput): string[] {
   // 1. De maand tot nu toe, tegenover vorige maand op dezelfde dag.
   const ref = m.prevSameDay.revenue;
   let tempo = '';
+  let richting: BriefingKind = 'flat';
   if (ref > 0) {
     const verschil = (m.revenue - ref) / ref;
+    richting = verschil > 0.1 ? 'up' : verschil < -0.1 ? 'down' : 'flat';
     tempo =
       verschil > 0.1
         ? ` — **${formatPercent(Math.round(verschil * 100))} meer** dan ${vorige} op dezelfde dag`
@@ -42,9 +52,10 @@ export function buildBriefing(i: BriefingInput): string[] {
           ? ` — **${formatPercent(Math.round(-verschil * 100))} minder** dan ${vorige} op dezelfde dag (${formatEuro(ref)})`
           : ` — ongeveer gelijk aan ${vorige} op dezelfde dag`;
   }
-  zinnen.push(
-    `${cap(naam)} tot nu toe **${formatEuro(m.revenue)}** gewonnen uit ${m.count} ${m.count === 1 ? 'offerte' : 'offertes'}${tempo}.`,
-  );
+  zinnen.push({
+    kind: richting,
+    text: `${cap(naam)} tot nu toe **${formatEuro(m.revenue)}** gewonnen uit **${m.count} ${m.count === 1 ? 'offerte' : 'offertes'}**${tempo}.`,
+  });
 
   // 2. Het maanddoel, tegen het deel van de maand dat voorbij is.
   if (m.goals.revenue) {
@@ -54,40 +65,38 @@ export function buildBriefing(i: BriefingInput): string[] {
       behaald >= verstreken + 0.05 ? 'loopt voor op schema' : behaald <= verstreken - 0.1 ? 'loopt achter op schema' : 'ligt op schema';
     const nodig = Math.max(0, m.goals.revenue - m.revenue);
     const dagenOver = m.daysInMonth - m.day;
-    zinnen.push(
+    zinnen.push({ kind: 'goal', text:
       `Dat is **${formatPercent(Math.round(behaald * 100))}** van het maanddoel van ${formatEuro(m.goals.revenue)} terwijl de maand voor ${formatPercent(Math.round(verstreken * 100))} om is: het ${oordeel}.` +
-        (nodig > 0 && dagenOver > 0 ? ` Nog ${formatEuro(nodig)} te gaan in ${dagenOver} ${dagenOver === 1 ? 'dag' : 'dagen'}.` : ''),
-    );
+        (nodig > 0 && dagenOver > 0 ? ` Nog ${formatEuro(nodig)} te gaan in ${dagenOver} ${dagenOver === 1 ? 'dag' : 'dagen'}.` : '') });
   }
 
   // 3. Marge: alleen iets zeggen als het meer dan twee procentpunt beweegt.
   if (i.marginPct != null && i.prevMarginPct != null) {
     const d = i.marginPct - i.prevMarginPct;
-    zinnen.push(
+    zinnen.push({ kind: Math.abs(d) < 2 ? 'margin-flat' : d > 0 ? 'margin-up' : 'margin-down', text:
       Math.abs(d) < 2
         ? `De marge houdt stand op **${formatPercent(i.marginPct)}**.`
         : d > 0
           ? `De marge stijgt naar **${formatPercent(i.marginPct)}** (was ${formatPercent(i.prevMarginPct)}).`
-          : `De marge zakt naar **${formatPercent(i.marginPct)}** (was ${formatPercent(i.prevMarginPct)}) — kijk op Marge welke offertes dat doen.`,
-    );
+          : `De marge zakt naar **${formatPercent(i.marginPct)}** (was ${formatPercent(i.prevMarginPct)}) — kijk op Marge welke offertes dat doen.` });
   }
 
   // 4. Break-even: wat er gefactureerd moet worden om quitte te spelen.
   if (i.breakEven) {
     const b = i.breakEven;
     const gehaald = b.invoicedThisMonth >= b.revenueNeeded;
-    zinnen.push(
+    zinnen.push({ kind: gehaald ? 'breakeven-ok' : 'breakeven', text:
       gehaald
         ? `De vaste lasten van deze maand zijn gedekt: er is **${formatEuro(b.invoicedThisMonth)}** gefactureerd, het break-evenpunt ligt op ${formatEuro(b.revenueNeeded)}.`
-        : `Om quitte te spelen is **${formatEuro(b.revenueNeeded)}** omzet per maand nodig; er is deze maand ${formatEuro(b.invoicedThisMonth)} gefactureerd.`,
-    );
+        : `Om quitte te spelen is **${formatEuro(b.revenueNeeded)}** omzet per maand nodig; er is deze maand ${formatEuro(b.invoicedThisMonth)} gefactureerd.` });
   }
 
   // 5. Geld dat te laat is.
   if (i.overdue.count > 0) {
-    zinnen.push(
-      `Er staat **${formatEuro(i.overdue.amount)}** over de vervaldatum, verdeeld over ${i.overdue.count} ${i.overdue.count === 1 ? 'factuur' : 'facturen'}.`,
-    );
+    zinnen.push({
+      kind: 'overdue',
+      text: `Er staat **${formatEuro(i.overdue.amount)}** over de vervaldatum, verdeeld over **${i.overdue.count} ${i.overdue.count === 1 ? 'factuur' : 'facturen'}**.`,
+    });
   }
 
   return zinnen;

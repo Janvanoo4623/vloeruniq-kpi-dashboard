@@ -32,7 +32,7 @@ import { CalmDelta, Tile } from '@/components/overview/parts';
  * verschil op genoeg offertes (lib/signal.ts).
  */
 export default function OverzichtPage() {
-  const { snap, comparison, previous, range, aging, pipeline, adsDaily, openAtEnd, today, pricedCodes } = useDashboard();
+  const { snap, comparison, previous, range, aging, pipeline, adsDaily, openAtEnd, today, pricedCodes, meta } = useDashboard();
   const [gran, setGran] = useState<Granularity | null>(null);
   const granularity: Granularity = gran ?? ((snap?.weeks.length ?? 0) > 16 ? 'month' : 'week');
   const kpiSeries = useMemo(
@@ -71,7 +71,7 @@ export default function OverzichtPage() {
   return (
     <div className="space-y-6">
       <div className="animate-rise-in">
-        <Briefing zinnen={zinnen} callList={today.callList} date={date} pricedCodes={pricedCodes} />
+        <Briefing zinnen={zinnen} callList={today.callList} date={date} lastSyncAt={meta?.lastSyncAt ?? null} pricedCodes={pricedCodes} />
       </div>
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1fr_1.35fr]">
