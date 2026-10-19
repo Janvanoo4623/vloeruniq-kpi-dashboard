@@ -11,7 +11,7 @@ import { CHART } from '@/components/charts/theme';
 import { Empty, Panel, cn } from '@/components/ui';
 import { Pagination, usePaged } from '@/components/ui/Pagination';
 import HeroCard, { MiniStat } from '@/components/page/HeroCard';
-import HighlightChart from '@/components/page/HighlightChart';
+import HighlightChart, { kortEuro } from '@/components/page/HighlightChart';
 import { BENTO, DetailsLabel, InsightCard, StatTile, type Insight } from '@/components/overview/cards';
 
 const MAAND = ['jan', 'feb', 'mrt', 'apr', 'mei', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'dec'];
@@ -176,6 +176,7 @@ export default function ResultaatView({ data }: { data: ResultaatData }) {
             label: 'Resultaat',
             title: 'Resultaat per maand',
             fmt: (v) => formatEuro(v),
+            axisFmt: kortEuro,
             // Alleen complete maanden: daarvoor waren de kosten nog niet geboekt
             // en was het "resultaat" gewoon de hele omzet.
             points: laatste12.filter((m) => m.complete).map((m) => ({ label: kort(m.month), value: Math.round(resultaat(m)), current: m.running })),
@@ -186,6 +187,7 @@ export default function ResultaatView({ data }: { data: ResultaatData }) {
             label: 'Gefactureerd',
             title: 'Gefactureerd per maand',
             fmt: (v) => formatEuro(v),
+            axisFmt: kortEuro,
             points: laatste12.map((m) => ({ label: kort(m.month), value: Math.round(m.revenue), current: m.running, muted: !m.complete })),
           },
           {
@@ -193,6 +195,7 @@ export default function ResultaatView({ data }: { data: ResultaatData }) {
             label: 'Kosten',
             title: 'Kosten per maand',
             fmt: (v) => formatEuro(v),
+            axisFmt: kortEuro,
             points: laatste12.map((m) => ({ label: kort(m.month), value: Math.round(m.directCosts + m.expenses), current: m.running, muted: !m.complete })),
           },
         ]}

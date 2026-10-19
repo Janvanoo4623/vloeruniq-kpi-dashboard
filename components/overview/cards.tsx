@@ -210,8 +210,8 @@ export function StatTile({
           return (
             <span
               key={i}
-              className={cn('flex-1 rounded-full', laatste ? 'bg-brand' : 'bg-sunk')}
-              style={{ height: `${Math.max(10, (Math.max(0, b) / max) * 100)}%` }}
+              className={cn('flex-1 rounded-t-[4px] rounded-b-[1px]', laatste ? 'bg-brand' : 'bg-[#e6e2db]')}
+              style={{ height: `${Math.max(4, (Math.max(0, b) / max) * 100)}%` }}
             />
           );
         })}

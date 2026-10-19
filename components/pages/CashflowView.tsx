@@ -11,7 +11,7 @@ import QuotedVsInvoicedPanel from '@/components/pages/QuotedVsInvoicedPanel';
 import type { QuotedVsInvoiced } from '@/lib/customers';
 import type { CashForecast } from '@/lib/cash-forecast';
 import HeroCard, { MiniStat } from '@/components/page/HeroCard';
-import HighlightChart from '@/components/page/HighlightChart';
+import HighlightChart, { kortEuro } from '@/components/page/HighlightChart';
 import { BENTO, DetailsLabel, InsightCard, StatTile, type Insight } from '@/components/overview/cards';
 import { cn } from '@/components/ui';
 
@@ -112,6 +112,7 @@ export default function CashflowView({
               label: 'Saldo',
               title: 'Banksaldo aan het eind van de week',
               fmt: (v) => formatEuro(v),
+            axisFmt: kortEuro,
               total: forecast.endBalance,
               sub: 'over 8 weken — onder de streep is een tekort',
               points: forecast.weeks.map((w) => ({ label: w.label, value: w.balance })),
@@ -123,6 +124,7 @@ export default function CashflowView({
               label: 'Netto per week',
               title: 'Wat er per week bij- of afgaat',
               fmt: (v) => formatEuro(v),
+            axisFmt: kortEuro,
               total: forecast.endBalance - forecast.startBalance,
               sub: 'samen over 8 weken',
               points: forecast.weeks.map((w) => ({ label: w.label, value: w.net })),

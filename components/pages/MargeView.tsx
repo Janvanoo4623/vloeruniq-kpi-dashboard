@@ -15,7 +15,7 @@ import PriceSensitivityPanel from '@/components/pages/PriceSensitivityPanel';
 import type { PriceSensitivity } from '@/lib/price-sensitivity';
 import { AlertTriangle, Factory, Layers, Receipt, Ruler, TrendingUp } from 'lucide-react';
 import HeroCard, { MiniStat } from '@/components/page/HeroCard';
-import HighlightChart from '@/components/page/HighlightChart';
+import HighlightChart, { kortEuro } from '@/components/page/HighlightChart';
 import { DetailsLabel, InsightCard, StatTile, type Insight } from '@/components/overview/cards';
 
 /** Alles over marge op één plek: de curve, per product, en waar het misgaat. */
@@ -133,6 +133,7 @@ export default function MargeView({
             label: 'Marge €',
             title: 'Marge per week · laatste 12 weken',
             fmt: (v) => formatEuro(v),
+            axisFmt: kortEuro,
             points: weken.map((w) => ({ label: w.label, value: w.margin, current: w.current })),
           },
           {
@@ -140,6 +141,7 @@ export default function MargeView({
             label: 'Marge %',
             title: 'Marge % per week',
             fmt: (v) => formatPercent(v),
+            axisFmt: (v) => `${Math.round(v)}%`,
             total: (() => {
               const r = weken.filter((w) => !w.current).reduce((t, w) => t + w.revenue, 0);
               const m = weken.filter((w) => !w.current).reduce((t, w) => t + w.margin, 0);

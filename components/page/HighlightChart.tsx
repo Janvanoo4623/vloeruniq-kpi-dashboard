@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, type ReactNode } from 'react';
-import { Bar, BarChart, ReferenceLine, ResponsiveContainer, XAxis, YAxis } from 'recharts';
+import { Bar, BarChart, CartesianGrid, ReferenceLine, ResponsiveContainer, XAxis, YAxis } from 'recharts';
 import { cn } from '@/components/ui';
 import { BENTO } from '@/components/overview/cards';
 
@@ -27,6 +27,20 @@ export interface HighlightSeries {
   sub?: string;
   /** Welk punt standaard gemarkeerd is (anders: de laatste volle periode). */
   highlight?: number;
+  /** Korte notatie op de as (bv. €40k). Standaard: duizendtallen als "k". */
+  axisFmt?: (v: number) => string;
+}
+
+const kortGetal = (v: number) => (Math.abs(v) >= 1000 ? `${Math.round(v / 1000)}k` : `${Math.round(v)}`);
+export const kortEuro = (v: number) => `€${kortGetal(v)}`;
+
+/** Pad voor een staaf met alleen ronde hoeken aan de buitenkant (boven, of onder bij negatief). */
+function staafPad(x: number, y: number, w: number, h: number, r: number, onderRond: boolean): string {
+  const rr = Math.min(r, w / 2, h);
+  if (onderRond) {
+    return `M${x},${y} H${x + w} V${y + h - rr} Q${x + w},${y + h} ${x + w - rr},${y + h} H${x + rr} Q${x},${y + h} ${x},${y + h - rr} Z`;
+  }
+  return `M${x},${y + h} V${y + rr} Q${x},${y} ${x + rr},${y} H${x + w - rr} Q${x + w},${y} ${x + w},${y + rr} V${y + h} Z`;
 }
 
 /** Pilknoppen, zoals overal in de nieuwe stijl. */
@@ -110,9 +124,9 @@ export default function HighlightChart({
         <ResponsiveContainer width="100%" height="100%">
           <BarChart
             data={data}
-            margin={{ top: 44, right: 4, left: 4, bottom: 0 }}
-            barCategoryGap="30%"
-            maxBarSize={40}
+            margin={{ top: 40, right: 4, left: 0, bottom: 0 }}
+            barCategoryGap="26%"
+            maxBarSize={48}
             onMouseMove={(st) => {
               const i = Number(st?.activeTooltipIndex);
               if (Number.isFinite(i)) setHover(i);
@@ -120,27 +134,16 @@ export default function HighlightChart({
             onMouseLeave={() => setHover(null)}
           >
             <defs>
-              <pattern id="hcHatch" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
-                <rect width="7" height="7" fill="#f1eee9" />
-                <line x1="0" y1="0" x2="0" y2="7" stroke="#dcd6cd" strokeWidth="2.4" />
-              </pattern>
-              <pattern id="hcHatchLicht" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
-                <rect width="7" height="7" fill="#f7f5f2" />
-                <line x1="0" y1="0" x2="0" y2="7" stroke="#ebe7e0" strokeWidth="2.4" />
-              </pattern>
-              <pattern id="hcHatchRood" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
-                <rect width="7" height="7" fill="#f9e9e5" />
-                <line x1="0" y1="0" x2="0" y2="7" stroke="#e8bfb6" strokeWidth="2.4" />
-              </pattern>
               <linearGradient id="hcBrand" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor="#22cb63" />
-                <stop offset="100%" stopColor="#16a34f" />
+                <stop offset="100%" stopColor="#17a752" />
               </linearGradient>
               <linearGradient id="hcRood" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor="#c0503f" />
                 <stop offset="100%" stopColor="#a93b2c" />
               </linearGradient>
             </defs>
+            <CartesianGrid vertical={false} stroke="#ece8e1" strokeDasharray="3 5" />
             <XAxis
               dataKey="label"
               axisLine={false}
@@ -163,10 +166,18 @@ export default function HighlightChart({
                 );
               }}
             />
-            {/* Verborgen as, alleen zodat er bij een verliesmaand een echte
-                nullijn is en de staven daarop staan in plaats van te zweven. */}
-            <YAxis hide domain={heeftNegatief ? ['dataMin', 'dataMax'] : [0, 'dataMax']} />
-            {heeftNegatief && <ReferenceLine y={0} stroke="#d6d0c7" strokeDasharray="4 4" />}
+            {/* Een as met bedragen en een dun raster: zonder kon je alleen het
+                gemarkeerde getal aflezen. Bij een verliesmaand een volle nullijn. */}
+            <YAxis
+              width={46}
+              axisLine={false}
+              tickLine={false}
+              tickMargin={6}
+              tick={{ fill: '#a8a29e', fontSize: 11 }}
+              tickFormatter={s.axisFmt ?? kortGetal}
+              domain={heeftNegatief ? ['auto', 'auto'] : [0, 'auto']}
+            />
+            {heeftNegatief && <ReferenceLine y={0} stroke="#cfc8be" />}
             <Bar
               dataKey="v"
               animationDuration={700}
@@ -174,26 +185,26 @@ export default function HighlightChart({
                 const { x, y, width, height: h0, index } = props as { x: number; y: number; width: number; height: number; index: number };
                 const p = data[index];
                 const neg = (p?.v ?? 0) < 0;
-                // Recharts geeft bij een negatieve waarde een negatieve hoogte.
-                const hoogte = Math.abs(h0);
-                const h = Math.max(hoogte, width);
-                // Bij een negatieve waarde begint de staaf aan de nullijn (de
-                // bovenrand van wat Recharts doorgeeft, ongeacht het teken).
-                const top = neg ? Math.min(y, y + h0) : y + hoogte - h;
+                // Recharts geeft de hoogte bij een negatieve waarde soms negatief
+                // door; de bovenrand is dan de nullijn.
+                const h = Math.max(Math.abs(h0), 2);
+                const top = neg ? Math.min(y, y + h0) : y + Math.abs(h0) - h;
                 const isActief = index === actief;
+                // Effen kleuren: gemarkeerd in merkgroen (of rood bij verlies),
+                // de rest lichtgrijs; de lopende periode nog lichter.
                 const fill = isActief
                   ? neg
                     ? 'url(#hcRood)'
                     : 'url(#hcBrand)'
                   : neg
-                    ? 'url(#hcHatchRood)'
+                    ? '#efd2cb'
                     : p?.current || p?.muted
-                      ? 'url(#hcHatchLicht)'
-                      : 'url(#hcHatch)';
-                const ballonY = neg ? top + h + 32 : top - 12;
+                      ? '#efece7'
+                      : '#e2ddd5';
+                const ballonY = neg ? top + h + 32 : top - 10;
                 return (
                   <g>
-                    <rect x={x} y={top} width={width} height={h} rx={width / 2} fill={fill} />
+                    <path d={staafPad(x, top, width, h, 8, neg)} fill={fill} style={{ transition: 'fill .2s' }} />
                     {isActief && punt && (
                       <g transform={`translate(${x + width / 2}, ${ballonY})`}>
                         <rect x={-50} y={-26} width={100} height={24} rx={12} fill="#131313" />
