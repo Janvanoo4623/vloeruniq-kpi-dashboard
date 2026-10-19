@@ -1,7 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { Ban, ChevronDown, Tag } from 'lucide-react';
+import { Ban, ChevronDown, CircleCheck, Hammer, Tag } from 'lucide-react';
+import HeroCard, { MiniStat } from '@/components/page/HeroCard';
+import { BENTO, IconBadge } from '@/components/overview/cards';
 import type { ReviewItem } from '@/lib/review';
 import type { MissingPrice, UnmatchedQuotation } from '@/lib/missing-prices';
 import { formatEuro, formatNumber, formatProduct } from '@/lib/format';
@@ -64,23 +66,67 @@ export default function ControleView({
   const arbeidOpHetSpel = losVerkocht.reduce((s, r) => s + r.laborAtStake, 0);
   const omzetZonderMarge = missing.reduce((s, m) => s + m.revenue, 0);
 
+  const geenVloerOmzet = geenVloerOpen.reduce((t, u) => t + u.revenueExVat, 0);
+  const afgehandeld = klaar.length;
+  const voortgang = totaalOpen + afgehandeld > 0 ? afgehandeld / (totaalOpen + afgehandeld) : 0;
+
+  // De bakjes als werkvoorraad: wat het is, hoeveel, en wat ervan afhangt.
+  const bakjes: { key: TabKey; label: string; count: number; impact: string; tone: 'crit' | 'warn' | 'neutral'; Icon: typeof Ban }[] = [
+    { key: 'los', label: 'Waarschijnlijk los verkocht', count: losVerkocht.length, impact: `${formatEuro(arbeidOpHetSpel)} arbeid mogelijk verkeerd`, tone: 'crit', Icon: Hammer },
+    { key: 'prijs', label: 'Zonder inkoopprijs', count: missing.length, impact: `${formatEuro(omzetZonderMarge)} omzet zonder marge`, tone: 'warn', Icon: Tag },
+    { key: 'correct', label: 'Waarschijnlijk correct', count: correct.length, impact: 'alleen even bevestigen', tone: 'neutral', Icon: CircleCheck },
+    { key: 'geenvloer', label: 'Geen vloer herkend', count: geenVloerOpen.length, impact: `${formatEuro(geenVloerOmzet)} offertewaarde`, tone: 'neutral', Icon: Ban },
+  ];
+
   return (
     <div className="space-y-5">
-      <div className="rounded-2xl border border-accent-line bg-accent-soft px-5 py-3.5">
-        <p className="text-[13px] leading-relaxed text-accent">
-          {totaalOpen === 0 ? (
-            <>Alles nagekeken — er staat niets meer open.</>
-          ) : (
-            <>
-              <strong>{totaalOpen} punten open.</strong> {formatEuro(arbeidOpHetSpel)} aan arbeid
-              staat mogelijk verkeerd geboekt, en {formatEuro(omzetZonderMarge)} omzet heeft geen
-              marge omdat de inkoopprijs ontbreekt. Elk bakje hieronder werk je apart af.
-            </>
-          )}
-        </p>
+      {/* 1. Kerngetal en werkvoorraad */}
+      <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1.2fr_1fr]">
+        <HeroCard
+          label="Open punten"
+          status={totaalOpen === 0 ? 'alles nagekeken' : `${afgehandeld} afgehandeld`}
+          tone={totaalOpen === 0 ? 'good' : 'neutral'}
+          value={totaalOpen}
+          format={(v) => formatNumber(Math.round(v))}
+          sub="Wat de app niet zelf kan bepalen. Elk bakje werk je apart af; afgehandeld blijft afgehandeld."
+          progress={{ value: voortgang, label: `${Math.round(voortgang * 100)}% afgehandeld` }}
+        >
+          <MiniStat label="Arbeid op het spel" value={formatEuro(arbeidOpHetSpel)} sub="mogelijk ten onrechte gerekend" />
+          <MiniStat label="Omzet zonder marge" value={formatEuro(omzetZonderMarge)} sub="inkoopprijs ontbreekt" />
+        </HeroCard>
+
+        <div className={cn(BENTO, 'p-6')}>
+          <h3 className="text-[16px] font-semibold tracking-tight text-ink">Werkvoorraad</h3>
+          <ul className="mt-4 space-y-1">
+            {bakjes.map((b) => (
+              <li key={b.key}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setTab(b.key);
+                    document.getElementById('bakje')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  }}
+                  className={cn(
+                    '-mx-2 flex w-[calc(100%+1rem)] items-center gap-3 rounded-2xl px-2 py-2.5 text-left transition hover:bg-sunk',
+                    tab === b.key && 'bg-sunk',
+                  )}
+                >
+                  <IconBadge Icon={b.Icon} tone={b.count === 0 ? 'brand' : b.tone} />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-[13.5px] font-semibold text-ink">{b.label}</span>
+                    <span className="block truncate text-[11.5px] text-ink-faint">{b.count === 0 ? 'leeg — klaar' : b.impact}</span>
+                  </span>
+                  <span className="shrink-0 text-[20px] font-semibold tabular-nums text-ink">{b.count}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
       </div>
 
-      <div className="flex flex-wrap gap-1.5">
+      {/* 2. Het bakje */}
+      <div id="bakje" className="scroll-mt-24" />
+      <div className="flex flex-wrap rounded-full bg-surface p-1 shadow-[0_1px_2px_rgba(19,19,19,0.05),0_10px_24px_-18px_rgba(19,19,19,0.3)] sm:w-fit">
         {tabs.map((t) => {
           const aan = tab === t.key;
           return (
@@ -88,22 +134,13 @@ export default function ControleView({
               key={t.key}
               onClick={() => setTab(t.key)}
               className={cn(
-                'flex items-center gap-2 rounded-xl border px-3 py-2 text-[13px] transition',
-                aan
-                  ? 'border-line bg-surface font-semibold text-ink shadow-sm'
-                  : 'border-transparent text-ink-mute hover:bg-sunk hover:text-ink',
+                'flex items-center gap-2 rounded-full px-4 py-2 text-[13px] font-medium transition',
+                aan ? 'bg-night text-white shadow-sm' : 'text-ink-mute hover:text-ink',
               )}
             >
-              {t.urgent && t.count > 0 && !aan && (
-                <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-warn" />
-              )}
+              {t.urgent && t.count > 0 && !aan && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-warn" />}
               {t.label}
-              <span
-                className={cn(
-                  'rounded-md px-1.5 py-0.5 text-[10.5px] font-semibold tabular-nums',
-                  aan ? 'bg-sunk text-ink-soft' : 'bg-sunk/70 text-ink-faint',
-                )}
-              >
+              <span className={cn('rounded-full px-1.5 py-0.5 text-[10.5px] font-semibold tabular-nums', aan ? 'bg-white/15 text-white' : 'bg-sunk text-ink-faint')}>
                 {t.count}
               </span>
             </button>

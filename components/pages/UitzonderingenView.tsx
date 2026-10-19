@@ -4,9 +4,9 @@ import { Ban, Pencil, TrendingDown, TrendingUp } from 'lucide-react';
 import type { ExceptionsOverview } from '@/lib/exceptions';
 import { formatEuro, formatPercent, formatProduct } from '@/lib/format';
 import { STATUS_LABEL, STATUS_STYLE } from '@/components/QuotationModal';
-import { Badge, Empty, Panel, SectionLabel, cn } from '@/components/ui';
-import KpiCard from '@/components/KpiCard';
-import KpiRow from '@/components/KpiRow';
+import { Badge, Empty, Panel, cn } from '@/components/ui';
+import HeroCard, { MiniStat } from '@/components/page/HeroCard';
+import { DetailsLabel, InsightCard, type Insight } from '@/components/overview/cards';
 
 /**
  * Elke handmatige ingreep op één plek, mét het effect dat hij op de marge heeft.
@@ -18,34 +18,50 @@ export default function UitzonderingenView({ data }: { data: ExceptionsOverview 
   const noLaborCount = corrections.filter((c) => c.noLabor).length;
   const priceCount = corrections.filter((c) => c.prices.length > 0).length;
 
+  const grootste = [...corrections].filter((c) => c.effect != null).sort((x, y) => Math.abs(y.effect ?? 0) - Math.abs(x.effect ?? 0))[0];
+  const inzichten: Insight[] = [
+    {
+      Icon: Pencil,
+      tone: 'neutral',
+      text: `**${corrections.length}** offertes zijn met de hand bijgesteld${
+        [priceCount > 0 && `${priceCount}× een eigen inkoopprijs`, noLaborCount > 0 && `${noLaborCount}× los verkocht zonder leggen`].filter(Boolean).length > 0
+          ? ': ' + [priceCount > 0 && `${priceCount}× een eigen inkoopprijs`, noLaborCount > 0 && `${noLaborCount}× los verkocht zonder leggen`].filter(Boolean).join(', ')
+          : ''
+      }.`,
+    },
+  ];
+  if (grootste) {
+    inzichten.push({
+      Icon: (grootste.effect ?? 0) >= 0 ? TrendingUp : TrendingDown,
+      tone: 'neutral',
+      text: `Grootste effect: **${grootste.customerName || grootste.name}**, ${formatEuro(grootste.effect)} op de marge.`,
+    });
+  }
+  inzichten.push({
+    Icon: Ban,
+    tone: exclusions.length > 0 ? 'warn' : 'neutral',
+    text: exclusions.length > 0 ? `**${exclusions.length}** offertes zijn uitgesloten en tellen nergens mee.` : 'Er zijn geen offertes uitgesloten.',
+  });
+
   return (
-    <div className="space-y-6">
-      <section>
-        <SectionLabel>Wat er handmatig is bijgesteld — bedragen ex btw</SectionLabel>
-        <KpiRow>
-          <KpiCard
-            label="Gecorrigeerde offertes"
-            value={String(corrections.length)}
-            sub={`${priceCount}× prijs · ${noLaborCount}× los verkocht`}
-          />
-          <KpiCard
-            label="Effect op de marge"
-            value={formatEuro(totalEffect)}
-            sub="verschil t.o.v. zonder correcties"
-          />
-          <KpiCard
-            label="Uitgesloten offertes"
-            value={String(exclusions.length)}
-            sub="tellen nergens in mee"
-          />
-          <KpiCard
-            label="Totaal ingrepen"
-            value={String(corrections.length + exclusions.length)}
-            sub="hoe minder, hoe beter de bron klopt"
-            higherIsBetter={false}
-          />
-        </KpiRow>
-      </section>
+    <div className="space-y-5">
+      {/* 1. Kerngetal en duiding */}
+      <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1.2fr_1fr]">
+        <HeroCard
+          label="Effect van correcties op de marge"
+          status={`${corrections.length + exclusions.length} ingrepen`}
+          tone="neutral"
+          value={totalEffect}
+          format={(v) => formatEuro(v)}
+          sub="Het verschil met hoe de marge zou zijn zonder handmatige correcties · ex btw"
+        >
+          <MiniStat label="Gecorrigeerde offertes" value={String(corrections.length)} sub={[priceCount > 0 && `${priceCount}× prijs`, noLaborCount > 0 && `${noLaborCount}× los verkocht`].filter(Boolean).join(' · ') || 'geen'} />
+          <MiniStat label="Uitgesloten" value={String(exclusions.length)} sub="tellen nergens in mee" />
+        </HeroCard>
+        <InsightCard items={inzichten} footer={<p className="text-[12px] leading-relaxed text-ink-faint">Hoe minder ingrepen, hoe beter de bron klopt. Een correctie werkt direct en met terugwerkende kracht; een nieuwe sync overschrijft hem niet.</p>} />
+      </div>
+
+      <DetailsLabel>Alle ingrepen</DetailsLabel>
 
       <Panel
         title="Correcties per offerte"
