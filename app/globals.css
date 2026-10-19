@@ -100,6 +100,51 @@ body {
   outline: none;
 }
 
+/* ── Grafiek-polish, voor alle grafieken tegelijk ─────────────────────────
+   Lijnen: ronde uiteinden en een zachte gloed eronder (filter in
+   components/charts/Defs.tsx). Gestippelde hulplijnen (gemiddelde, marge %)
+   krijgen geen gloed: die moeten juist op de achtergrond blijven. */
+.recharts-line-curve,
+.recharts-area-curve {
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.recharts-line-curve:not([stroke-dasharray]),
+.recharts-area-curve:not([stroke-dasharray]) {
+  filter: url(#lineGlow);
+}
+
+/* Staven: de staaf onder de muis blijft vol, de rest wijkt een stap terug.
+   Zo lees je één week of maand zonder dat de rest meeschreeuwt. */
+.recharts-bar-rectangle path,
+.recharts-bar-rectangle rect {
+  transition: opacity 0.18s ease, filter 0.18s ease;
+}
+.recharts-wrapper:has(.recharts-bar-rectangle:hover) .recharts-bar-rectangle:not(:hover) path {
+  opacity: 0.55;
+}
+.recharts-bar-rectangle:hover path {
+  filter: brightness(1.06) saturate(1.1);
+}
+
+/* Het punt onder de muis: wit randje met een zachte schaduw, zodat het
+   loskomt van de lijn. */
+.recharts-active-dot circle {
+  filter: drop-shadow(0 2px 5px rgba(28, 25, 23, 0.22));
+}
+
+/* Rasterlijnen nog een tikje lichter: ze zijn hulp, geen inhoud. */
+.recharts-cartesian-grid-horizontal line {
+  stroke-opacity: 0.75;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .recharts-bar-rectangle path,
+  .recharts-bar-rectangle rect {
+    transition: none;
+  }
+}
+
 /* ── Afdrukken ────────────────────────────────────────────────────────────
    Het rapport op /export: één tabblad per pagina, en alles wat alleen op het
    scherm nut heeft (knoppen, links) verdwijnt.

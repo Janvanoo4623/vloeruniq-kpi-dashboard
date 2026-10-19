@@ -144,7 +144,8 @@ export default function KpiTrendChart({ data }: { data: KpiPoint[] }) {
           <defs>
             {KPI_DEFS.map((d) => (
               <linearGradient key={d.key} id={`kpi-${d.key}`} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor={d.color} stopOpacity={0.18} />
+                <stop offset="0%" stopColor={d.color} stopOpacity={0.32} />
+                <stop offset="60%" stopColor={d.color} stopOpacity={0.09} />
                 <stop offset="100%" stopColor={d.color} stopOpacity={0} />
               </linearGradient>
             ))}
@@ -165,7 +166,8 @@ export default function KpiTrendChart({ data }: { data: KpiPoint[] }) {
             />
           ))}
           <Tooltip
-            cursor={{ stroke: CHART.axis, strokeDasharray: '3 3' }}
+            // Een zachte band over de hele hoogte in plaats van een stippellijn.
+            cursor={{ stroke: 'rgba(28,25,23,0.06)', strokeWidth: 26 }}
             content={
               <ChartTooltip
                 format={(v, key) => formatValue(KPI_DEFS.find((d) => d.key === key)?.unit ?? 'count', v)}
@@ -173,7 +175,9 @@ export default function KpiTrendChart({ data }: { data: KpiPoint[] }) {
               />
             }
           />
-          {active.map((d) => (
+          {/* Alleen de eerste reeks krijgt een gevuld vlak; de rest is lijn.
+              Drie halfdoorzichtige vlakken over elkaar mengden tot grijsbruin. */}
+          {active.map((d, i) => (
             <Area
               key={d.key}
               yAxisId={d.unit}
@@ -181,10 +185,12 @@ export default function KpiTrendChart({ data }: { data: KpiPoint[] }) {
               dataKey={d.key}
               name={d.label}
               stroke={d.color}
-              strokeWidth={2.2}
-              fill={`url(#kpi-${d.key})`}
+              strokeWidth={2.5}
+              fill={i === 0 ? `url(#kpi-${d.key})` : 'transparent'}
               dot={false}
-              activeDot={{ r: 4.5, strokeWidth: 2, stroke: '#fff' }}
+              activeDot={{ r: 5, strokeWidth: 2.5, stroke: '#fff', fill: d.color }}
+              animationDuration={900}
+              animationEasing="ease-out"
               connectNulls
             />
           ))}

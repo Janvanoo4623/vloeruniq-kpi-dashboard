@@ -5,6 +5,7 @@ import { X } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import Sidebar, { MobileSidebar } from './Sidebar';
 import TopBar from './TopBar';
+import { GlobalChartDefs } from '@/components/charts/Defs';
 import { useDashboard } from './DashboardProvider';
 
 /**
@@ -27,6 +28,7 @@ export default function AppShell({
     // Op de telefoon geen marge en geen ronde hoeken: die kosten daar alleen maar
     // ruimte. Het kaartframe blijft vanaf sm.
     <div className="h-screen bg-shell sm:p-2.5">
+      <GlobalChartDefs />
       <div className="flex h-full overflow-hidden border-black/[0.06] bg-surface sm:rounded-[22px] sm:border sm:shadow-sm">
         <Sidebar badges={badges} />
         <MobileSidebar open={menu} onClose={() => setMenu(false)} badges={badges} />

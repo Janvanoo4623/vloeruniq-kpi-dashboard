@@ -83,9 +83,9 @@ export default function CashForecastPanel({ forecast }: { forecast: CashForecast
                 cursor={{ fill: CHART.cursor }}
                 content={<ChartTooltip format={(v) => formatEuro(v)} dotColors={{ in: KLEUR.in, out: KLEUR.out, saldo: KLEUR.saldo }} />}
               />
-              <Bar dataKey="in" name="Komt binnen" stackId="s" fill={KLEUR.in} fillOpacity={0.85} radius={[3, 3, 0, 0]} maxBarSize={26} />
-              <Bar dataKey="out" name="Gaat eruit" stackId="s" fill={KLEUR.out} fillOpacity={0.85} radius={[0, 0, 3, 3]} maxBarSize={26} />
-              <Line type="linear" dataKey="saldo" name="Saldo" stroke={KLEUR.saldo} strokeWidth={2.4} dot={{ r: 3, fill: KLEUR.saldo, strokeWidth: 0 }} />
+              <Bar dataKey="in" name="Komt binnen" stackId="s" fill="url(#gAccepted)" radius={[5, 5, 0, 0]} maxBarSize={28} animationDuration={800} />
+              <Bar dataKey="out" name="Gaat eruit" stackId="s" fill="url(#gAdsCost)" radius={[0, 0, 5, 5]} maxBarSize={28} animationDuration={800} />
+              <Line type="monotone" dataKey="saldo" name="Saldo" stroke={KLEUR.saldo} strokeWidth={2.6} dot={{ r: 3.5, fill: '#fff', stroke: KLEUR.saldo, strokeWidth: 2 }} activeDot={{ r: 5.5, fill: KLEUR.saldo, stroke: '#fff', strokeWidth: 2.5 }} />
             </ComposedChart>
           </ResponsiveContainer>
         </div>

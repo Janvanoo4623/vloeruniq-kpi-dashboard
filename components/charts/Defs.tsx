@@ -46,15 +46,31 @@ export function ChartDefs() {
       {BAR_GRADIENTS.map(({ id, color }) => (
         <linearGradient key={id} id={id} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor={color} stopOpacity={1} />
-          <stop offset="100%" stopColor={color} stopOpacity={0.55} />
+          <stop offset="100%" stopColor={color} stopOpacity={0.68} />
         </linearGradient>
       ))}
+      {/* Drie stops in plaats van twee: vol bovenin, snel zachter, dan weg.
+          Dat geeft het vlak diepte zonder dat de onderkant modderig wordt. */}
       {AREA_GRADIENTS.map(({ id, color, from = 0.25, to = 0 }) => (
         <linearGradient key={id} id={id} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={color} stopOpacity={from} />
+          <stop offset="0%" stopColor={color} stopOpacity={Math.min(0.42, from * 1.35)} />
+          <stop offset="55%" stopColor={color} stopOpacity={from * 0.35} />
           <stop offset="100%" stopColor={color} stopOpacity={to} />
         </linearGradient>
       ))}
+      {/* Gloed onder lijnen: de lijn zelf, vervaagd en half doorzichtig,
+          eronder gelegd. Werkt dus in elke kleur zonder per kleur een filter. */}
+      <filter id="lineGlow" x="-5%" y="-30%" width="110%" height="160%">
+        <feGaussianBlur in="SourceGraphic" stdDeviation="3.2" result="blur" />
+        <feComponentTransfer in="blur" result="soft">
+          <feFuncA type="linear" slope="0.38" />
+        </feComponentTransfer>
+        <feOffset in="soft" dy="2.5" result="shifted" />
+        <feMerge>
+          <feMergeNode in="shifted" />
+          <feMergeNode in="SourceGraphic" />
+        </feMerge>
+      </filter>
       {/* Donut: een zweem diepte zonder dat het een 3D-taart wordt. */}
       <radialGradient id="donutShade" cx="50%" cy="50%" r="50%">
         <stop offset="70%" stopColor="#000" stopOpacity={0} />
@@ -66,3 +82,17 @@ export function ChartDefs() {
 
 /** `fill`-waarde voor een staaf, met terugval op de vlakke kleur. */
 export const grad = (id: string) => `url(#${id})`;
+
+/**
+ * Eén verborgen set definities voor de hele app, bovenaan de schil. SVG-id's
+ * gelden documentbreed, dus elke grafiek — ook een die zelf geen <ChartDefs>
+ * heeft — kan url(#lineGlow) en de verlopen gebruiken. De CSS in globals.css
+ * hangt het filter aan elke lijn.
+ */
+export function GlobalChartDefs() {
+  return (
+    <svg width="0" height="0" aria-hidden style={{ position: 'absolute' }}>
+      <ChartDefs />
+    </svg>
+  );
+}

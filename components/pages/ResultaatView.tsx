@@ -262,7 +262,7 @@ function MaandGrafiek({ months, startMonth }: { months: ResultMonth[]; startMont
           <XAxis dataKey="month" tickFormatter={kort} tick={AXIS_TICK} axisLine={{ stroke: CHART.grid }} tickLine={false} tickMargin={8} />
           <YAxis tickFormatter={compactEuro} tick={AXIS_TICK} axisLine={false} tickLine={false} width={52} />
           <Tooltip
-            cursor={{ fill: CHART.cursor }}
+            cursor={{ fill: 'rgba(28,25,23,0.035)', radius: 8 }}
             content={
               <ChartTooltip
                 labelFormat={lang}
@@ -271,28 +271,29 @@ function MaandGrafiek({ months, startMonth }: { months: ResultMonth[]; startMont
               />
             }
           />
-          <Bar dataKey="revenue" name="Gefactureerd" stackId="omzet" fill={KLEUR.revenue} radius={[3, 3, 0, 0]} maxBarSize={22}>
+          <Bar dataKey="revenue" name="Gefactureerd" stackId="omzet" fill="url(#gAccepted)" radius={[5, 5, 1, 1]} maxBarSize={24} animationDuration={800}>
             {punten.map((p) => (
               <Cell key={p.month} fillOpacity={p.complete ? 0.9 : 0.3} />
             ))}
           </Bar>
-          <Bar dataKey="directCosts" name="Directe kosten" stackId="kosten" fill={KLEUR.direct} maxBarSize={22}>
+          <Bar dataKey="directCosts" name="Directe kosten" stackId="kosten" fill="url(#gOpen)" radius={[0, 0, 1, 1]} maxBarSize={24} animationDuration={800}>
             {punten.map((p) => (
               <Cell key={p.month} fillOpacity={p.complete ? 0.9 : 0.3} />
             ))}
           </Bar>
-          <Bar dataKey="expenses" name="Bedrijfskosten" stackId="kosten" fill={KLEUR.expenses} radius={[3, 3, 0, 0]} maxBarSize={22}>
+          <Bar dataKey="expenses" name="Bedrijfskosten" stackId="kosten" fill="url(#gAdsCost)" radius={[5, 5, 0, 0]} maxBarSize={24} animationDuration={800}>
             {punten.map((p) => (
               <Cell key={p.month} fillOpacity={p.complete ? 0.9 : 0.3} />
             ))}
           </Bar>
           <Line
-            type="linear"
+            type="monotone"
             dataKey="result"
             name="Resultaat"
             stroke={KLEUR.result}
-            strokeWidth={2.4}
-            dot={{ r: 3, fill: KLEUR.result, strokeWidth: 0 }}
+            strokeWidth={2.6}
+            dot={{ r: 3.5, fill: '#fff', stroke: KLEUR.result, strokeWidth: 2 }}
+            activeDot={{ r: 5.5, fill: KLEUR.result, stroke: '#fff', strokeWidth: 2.5 }}
             connectNulls={false}
           />
         </ComposedChart>
