@@ -7,7 +7,7 @@ import QuotationsTable from '@/components/QuotationsTable';
 import WeekOverviewTable from '@/components/WeekOverviewTable';
 import EmptyState from '@/components/pages/EmptyState';
 import HeroCard, { MiniStat } from '@/components/page/HeroCard';
-import HighlightChart, { kortEuro } from '@/components/page/HighlightChart';
+import HighlightChart, { kortEuro, laatsteWeekLoopt } from '@/components/page/HighlightChart';
 import { DetailsLabel, InsightCard, StatTile, type Insight } from '@/components/overview/cards';
 import { formatEuro, formatPercent, shortWeek } from '@/lib/format';
 
@@ -17,10 +17,11 @@ import { formatEuro, formatPercent, shortWeek } from '@/lib/format';
  * staat eronder, want dat is waar je op deze pagina eigenlijk voor komt.
  */
 export default function OffertesPage() {
-  const { snap, pricedCodes, series } = useDashboard();
+  const { snap, pricedCodes, series, range } = useDashboard();
   if (!snap) return <EmptyState />;
 
   const t = snap.revenue.totals;
+  const isLopend = (i: number) => laatsteWeekLoopt(range.to) && i === series.length - 1;
   const totaal = t.acceptedCount + t.openCount + t.refusedCount + t.expiredCount;
   const gewonnen = snap.quotations.filter((q) => q.status === 'accepted');
   const grootste = [...gewonnen].sort((a, b) => b.revenueExVat - a.revenueExVat)[0];
@@ -85,14 +86,14 @@ export default function OffertesPage() {
             title: 'Gewonnen per week',
             fmt: (v) => formatEuro(v),
             axisFmt: kortEuro,
-            points: series.map((w) => ({ label: shortWeek(w.week), value: w.acceptedRevenue })),
+            points: series.map((w, i) => ({ label: shortWeek(w.week), value: w.acceptedRevenue, current: isLopend(i) })),
           },
           {
             key: 'aantal',
             label: 'Aantal',
             title: 'Gewonnen offertes per week',
             fmt: (v) => String(Math.round(v)),
-            points: series.map((w) => ({ label: shortWeek(w.week), value: w.acceptedCount })),
+            points: series.map((w, i) => ({ label: shortWeek(w.week), value: w.acceptedCount, current: isLopend(i) })),
           },
           {
             key: 'verlopen',
@@ -100,7 +101,7 @@ export default function OffertesPage() {
             title: 'Verlopen per week',
             fmt: (v) => formatEuro(v),
             axisFmt: kortEuro,
-            points: series.map((w) => ({ label: shortWeek(w.week), value: w.expiredRevenue })),
+            points: series.map((w, i) => ({ label: shortWeek(w.week), value: w.expiredRevenue, current: isLopend(i) })),
           },
         ]}
       />

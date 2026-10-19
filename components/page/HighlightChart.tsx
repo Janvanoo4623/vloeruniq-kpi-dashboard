@@ -33,7 +33,18 @@ export interface HighlightSeries {
   reference?: { value: number; label: string };
 }
 
-const kortGetal = (v: number) => (Math.abs(v) >= 1000 ? `${Math.round(v / 1000)}k` : `${Math.round(v)}`);
+const kortGetal = (v: number) =>
+  Math.abs(v) >= 10000
+    ? `${Math.round(v / 1000)}k`
+    : Math.abs(v) >= 1000
+      ? `${(Math.round(v / 100) / 10).toString().replace('.', ',')}k`
+      : `${Math.round(v)}`;
+
+/**
+ * Eindigt de periode niet op een zondag, dan is de laatste week nog niet af.
+ * Grafieken markeren die dan lichter en niet als het "gemarkeerde" punt.
+ */
+export const laatsteWeekLoopt = (to: string) => new Date(to + 'T12:00:00Z').getUTCDay() !== 0;
 export const kortEuro = (v: number) => `€${kortGetal(v)}`;
 
 /** Pad voor een staaf met alleen ronde hoeken aan de buitenkant (boven, of onder bij negatief). */

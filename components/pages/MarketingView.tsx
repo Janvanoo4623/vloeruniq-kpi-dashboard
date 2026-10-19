@@ -1,17 +1,20 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { AlertTriangle, Link2 } from 'lucide-react';
+import { AlertTriangle, Link2, MousePointerClick, Target, TrendingDown, TrendingUp, Trophy, Wallet } from 'lucide-react';
 import { useDashboard } from '@/components/layout/DashboardProvider';
 import ChartCard from '@/components/ChartCard';
 import AdsWeekChart from '@/components/charts/AdsWeekChart';
 import AdsCampaignTable from '@/components/AdsCampaignTable';
 import AdsBudgetPanel from '@/components/AdsBudgetPanel';
 import AdsFunnel from '@/components/AdsFunnel';
-import AdsHero, { PLATFORM_COLOR, type PlatformReturn } from '@/components/AdsHero';
+import { PLATFORM_COLOR, type PlatformReturn } from '@/components/AdsHero';
+import HeroCard, { MiniStat } from '@/components/page/HeroCard';
+import HighlightChart, { kortEuro, laatsteWeekLoopt } from '@/components/page/HighlightChart';
+import { DetailsLabel, InsightCard, StatTile } from '@/components/overview/cards';
 import EmptyState from '@/components/pages/EmptyState';
 import { Panel, cn } from '@/components/ui';
-import { formatDateTime, formatEuro, formatNumber, formatPercent, timeAgo } from '@/lib/format';
+import { formatDateTime, formatEuro, formatNumber, formatPercent, shortWeek, timeAgo } from '@/lib/format';
 import { googleLeadsByWeek, leadStats, PLATFORM_LABEL, PLATFORM_SOURCE_LABEL, type AdsPlatform } from '@/lib/ads';
 import { PLATFORMS, type AdsPayload } from '@/lib/ads-payload';
 
@@ -29,7 +32,7 @@ type Tab = 'alles' | AdsPlatform;
  * is een afspraak die je hier zelf vastlegt.
  */
 export default function MarketingView({ initial }: { initial: AdsPayload }) {
-  const { snap, comparison, range, refreshCount } = useDashboard();
+  const { snap, range, refreshCount } = useDashboard();
   const [tab, setTab] = useState<Tab>('alles');
   const [fetched, setFetched] = useState<{ key: string; payload: AdsPayload | null; fout: string | null } | null>(null);
   const [versie, setVersie] = useState(0);
@@ -91,9 +94,14 @@ export default function MarketingView({ initial }: { initial: AdsPayload }) {
     cost: ads.platforms[p].totals.cost,
     leads: leads[p],
   }));
-  const prevNet =
-    comparison && ads.total.prevTotals ? comparison.revenue.totalMargin - ads.total.prevTotals.cost : null;
-
+  const tt = ads.total.totals;
+  const loopt = laatsteWeekLoopt(range.to);
+  const nWeken = ads.total.byWeek.length;
+  const isLopend = (i: number) => loopt && i === nWeken - 1;
+  const volleWeken = loopt ? ads.total.byWeek.slice(0, -1) : ads.total.byWeek;
+  const kosten = tt.cost;
+  const gewonnen = heroPlatforms.reduce((t, p) => t + p.leads.count, 0);
+  const gewonnenOmzet = heroPlatforms.reduce((t, p) => t + p.leads.revenue, 0);
   // Loopt een gekoppeld platform achter op de gekozen periode?
   const achterstanden = connected
     .map((p) => {
@@ -104,7 +112,7 @@ export default function MarketingView({ initial }: { initial: AdsPayload }) {
     .filter((x) => x.fout || (x.dagen != null && x.dagen > 2));
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {fout && <p className="rounded-xl border border-crit/25 bg-crit-soft px-3.5 py-2.5 text-[12.5px] text-crit">{fout}</p>}
 
       {achterstanden.map((x) => (
@@ -123,13 +131,83 @@ export default function MarketingView({ initial }: { initial: AdsPayload }) {
         </p>
       ))}
 
-      <div className={cn(laden && 'opacity-60 transition')}>
-        <AdsHero totalMargin={totals.totalMargin} platforms={heroPlatforms} prevNet={prevNet} deltaLabel={deltaLabel} />
+      <div className={cn('space-y-5', laden && 'opacity-60 transition')}>
+        {/* 1. Kerngetal en rendement per kanaal */}
+        <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1.2fr_1fr]">
+          <HeroCard
+            label="Marge na marketing"
+            status={totals.totalMargin > 0 ? `${formatPercent(Math.round((kosten / totals.totalMargin) * 1000) / 10)} van de marge naar advertenties` : undefined}
+            tone="neutral"
+            value={totals.totalMargin - kosten}
+            format={(v) => formatEuro(v)}
+            valueTone={totals.totalMargin - kosten < 0 ? 'crit' : undefined}
+            sub={<>{formatEuro(totals.totalMargin)} marge in deze periode, min {formatEuro(kosten)} aan advertenties</>}
+            progress={{
+              value: totals.totalMargin > 0 ? Math.max(0, (totals.totalMargin - kosten) / totals.totalMargin) : 0,
+              label: 'deel van de marge dat overblijft',
+            }}
+          >
+            {heroPlatforms.slice(0, 2).map((p) => (
+              <MiniStat key={p.platform} label={PLATFORM_LABEL[p.platform]} value={formatEuro(p.cost)} sub="kosten in de periode" />
+            ))}
+          </HeroCard>
+          <InsightCard
+            title="Rendement per kanaal"
+            items={heroPlatforms.map((p) => {
+              const rendement = p.leads.margin - p.cost;
+              return {
+                Icon: rendement >= 0 ? TrendingUp : TrendingDown,
+                tone: rendement >= 0 ? ('brand' as const) : ('crit' as const),
+                text: `**${PLATFORM_LABEL[p.platform]}: ${formatEuro(rendement)}** — ${p.leads.count} gewonnen via "${PLATFORM_SOURCE_LABEL[p.platform]}", ${formatEuro(p.leads.revenue)} omzet, ${formatEuro(p.leads.margin)} marge${p.cost > 0 ? `, ${formatNumber(Math.round((p.leads.revenue / p.cost) * 10) / 10)}× de inzet` : ''}.`,
+              };
+            })}
+            footer={<p className="text-[12px] leading-relaxed text-ink-faint">Rendement = marge uit de leads van dat kanaal min wat het kostte. Een deal met twee leadbronnen telt bij beide mee.</p>}
+          />
+        </div>
+
+        {/* 2. Tegels */}
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
+          <StatTile Icon={Wallet} label="Advertentiekosten" value={formatEuro(tt.cost)} sub={`${formatEuro(tt.cpc, true)} per klik`} bars={volleWeken.map((w) => w.cost)} />
+          <StatTile Icon={MousePointerClick} label="Klikken" value={formatNumber(tt.clicks)} sub={`${formatPercent(tt.ctr)} klikt door`} bars={volleWeken.map((w) => w.clicks)} />
+          <StatTile Icon={Target} label="Conversies" value={formatNumber(Math.round(tt.conversions))} sub={`${formatEuro(tt.cpa)} per conversie`} bars={volleWeken.map((w) => w.conversions)} />
+          <StatTile Icon={Trophy} label="Gewonnen via advertenties" value={String(gewonnen)} sub={`${formatEuro(gewonnenOmzet)} omzet`} />
+        </div>
+
+        {/* 3. Hoofdgrafiek */}
+        <HighlightChart
+          series={[
+            {
+              key: 'kosten',
+              label: 'Kosten',
+              title: 'Advertentiekosten per week',
+              fmt: (v) => formatEuro(v),
+              axisFmt: kortEuro,
+              points: ads.total.byWeek.map((w, i) => ({ label: shortWeek(w.week), value: Math.round(w.cost), current: isLopend(i) })),
+            },
+            {
+              key: 'conv',
+              label: 'Conversies',
+              title: 'Conversies per week',
+              fmt: (v) => formatNumber(Math.round(v)),
+              points: ads.total.byWeek.map((w, i) => ({ label: shortWeek(w.week), value: Math.round(w.conversions), current: isLopend(i) })),
+            },
+            {
+              key: 'klik',
+              label: 'Klikken',
+              title: 'Klikken per week',
+              fmt: (v) => formatNumber(Math.round(v)),
+              points: ads.total.byWeek.map((w, i) => ({ label: shortWeek(w.week), value: w.clicks, current: isLopend(i) })),
+            },
+          ]}
+        />
       </div>
+
+      {/* 4. Verdieping */}
+      <DetailsLabel />
 
       {/* Kanaalkeuze */}
       <div className="flex flex-wrap items-center gap-2">
-        <div className="flex rounded-xl border border-line bg-surface p-1 shadow-sm">
+        <div className="flex rounded-full bg-surface p-1 shadow-[0_1px_2px_rgba(19,19,19,0.05),0_10px_24px_-18px_rgba(19,19,19,0.3)]">
           {(['alles', ...PLATFORMS] as Tab[]).map((t) => {
             const actief = tab === t;
             const niet = t !== 'alles' && !ads.platforms[t].connected;
@@ -139,8 +217,8 @@ export default function MarketingView({ initial }: { initial: AdsPayload }) {
                 type="button"
                 onClick={() => setTab(t)}
                 className={cn(
-                  'flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-[13px] font-medium transition',
-                  actief ? 'bg-ink text-white' : 'text-ink-mute hover:text-ink',
+                  'flex items-center gap-1.5 rounded-full px-4 py-2 text-[13px] font-medium transition',
+                  actief ? 'bg-night text-white shadow-sm' : 'text-ink-mute hover:text-ink',
                 )}
               >
                 {t !== 'alles' && <i className="inline-block h-2 w-2 rounded-[2px]" style={{ background: PLATFORM_COLOR[t] }} />}
