@@ -30,6 +30,14 @@
   --color-oak: #b4762a;
   --color-oak-soft: #f8efe1;
 
+  /* Merk (sinds 2026-10-19): de kleuren van het Vloeruniq-logo. Zwart draagt
+     het gewicht (knoppen, actieve navigatie, de statement-kaart), het groen is
+     het accent. Voor tekst op wit is het felle groen te licht: brand-ink. */
+  --color-night: #131313;
+  --color-brand: #22cb63;
+  --color-brand-ink: #10884a;
+  --color-brand-soft: #e3f7ec;
+
   /* Betekenis */
   --color-good: #2f7a4e;
   --color-good-soft: #e6f1ea;

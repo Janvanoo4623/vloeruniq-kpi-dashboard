@@ -289,3 +289,75 @@ export function computeTileTrends(
   }
   return out;
 }
+
+// ── Staven voor de hoofdgrafiek op Overzicht ────────────────────────────
+
+export interface BarPoint {
+  key: string; // 2026-W42 of 2026-10
+  label: string; // "W42" of "okt"
+  revenue: number;
+  margin: number;
+  m2: number;
+  count: number;
+  /** De lopende week of maand: nog niet compleet. */
+  current: boolean;
+}
+
+export interface OverviewBars {
+  weeks: BarPoint[];
+  months: BarPoint[];
+}
+
+const MAAND_KORT = ['jan', 'feb', 'mrt', 'apr', 'mei', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'dec'];
+
+/**
+ * Twaalf weken en twaalf maanden geaccepteerde offertes, los van de
+ * periodekiezer: de hoofdgrafiek op Overzicht laat het ritme zien, en daar
+ * zijn de vier of vijf weken van "afgelopen 30 dagen" te weinig voor.
+ */
+export function computeOverviewBars(quotations: QuotationRow[], exclusions: Set<string>, asOf: string): OverviewBars {
+  const nu = new Date(asOf + 'T00:00:00Z');
+  const dow = (nu.getUTCDay() + 6) % 7;
+  const dezeMaandag = nu.getTime() - dow * DAY;
+
+  const weeks: BarPoint[] = [];
+  for (let i = 11; i >= 0; i--) {
+    const start = dezeMaandag - i * 7 * DAY;
+    const d = new Date(start + 3 * DAY); // donderdag bepaalt het ISO-weeknummer
+    const jan4 = new Date(Date.UTC(d.getUTCFullYear(), 0, 4));
+    const wk = 1 + Math.round(((d.getTime() - jan4.getTime()) / DAY - 3 + ((jan4.getUTCDay() + 6) % 7)) / 7);
+    weeks.push({ key: new Date(start).toISOString().slice(0, 10), label: `W${wk}`, revenue: 0, margin: 0, m2: 0, count: 0, current: i === 0 });
+  }
+  const months: BarPoint[] = [];
+  for (let i = 11; i >= 0; i--) {
+    const m = new Date(Date.UTC(nu.getUTCFullYear(), nu.getUTCMonth() - i, 1));
+    months.push({
+      key: m.toISOString().slice(0, 7),
+      label: MAAND_KORT[m.getUTCMonth()],
+      revenue: 0,
+      margin: 0,
+      m2: 0,
+      count: 0,
+      current: i === 0,
+    });
+  }
+  const eersteWeek = Date.parse(weeks[0].key);
+  const add = (p: BarPoint, q: QuotationRow) => {
+    p.revenue += q.revenueExVat;
+    p.margin += q.margin ?? 0;
+    p.m2 += q.totalM2;
+    p.count += 1;
+  };
+  for (const q of quotations) {
+    if (q.status !== 'accepted' || !q.dateAccepted || exclusions.has(q.id) || q.dateAccepted > asOf) continue;
+    const t = Date.parse(q.dateAccepted);
+    if (t >= eersteWeek) {
+      const w = weeks[Math.floor((t - eersteWeek) / (7 * DAY))];
+      if (w) add(w, q);
+    }
+    const m = months.find((x) => x.key === q.dateAccepted.slice(0, 7));
+    if (m) add(m, q);
+  }
+  const rond = (p: BarPoint) => ({ ...p, revenue: r0(p.revenue), margin: r0(p.margin), m2: r0(p.m2) });
+  return { weeks: weeks.map(rond), months: months.map(rond) };
+}

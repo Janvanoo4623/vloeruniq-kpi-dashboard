@@ -11,7 +11,7 @@ import type { PeriodData } from '@/lib/period-data';
 import type { AdsDayPoint } from '@/lib/kpi-series';
 import type { OpenStockPoint } from '@/lib/open-stock';
 import type { InvoicedMargin } from '@/lib/invoiced-margin';
-import type { BreakEven, CallList, MonthProgress, TileTrends } from '@/lib/today';
+import type { BreakEven, CallList, MonthProgress, OverviewBars, TileTrends } from '@/lib/today';
 
 /** Wat van de kalender afhangt, niet van de periode (lib/today.ts). */
 export interface TodayData {
@@ -20,6 +20,8 @@ export interface TodayData {
   breakEven: BreakEven | null;
   /** Lopend 4-wekentotaal over een halfjaar, voor de tegels op Overzicht. */
   trends: TileTrends;
+  /** Twaalf weken en twaalf maanden, voor de hoofdgrafiek op Overzicht. */
+  bars: OverviewBars;
 }
 import { presetRange, type RangeState } from '@/components/DateRangePicker';
 import { DEFAULT_PRESET } from '@/lib/default-range';

@@ -12,7 +12,7 @@ import {
 } from '@/lib/db';
 import { getMoneybirdPL } from '@/lib/moneybird';
 import { DEFAULT_START, START_KEY, invoicedByMonth } from '@/lib/resultaat';
-import { EMPTY_GOALS, computeBreakEven, computeCallList, computeMonthProgress, computeTileTrends, type Goals } from '@/lib/today';
+import { EMPTY_GOALS, computeBreakEven, computeCallList, computeMonthProgress, computeTileTrends, computeOverviewBars, type Goals } from '@/lib/today';
 import { computeAging } from '@/lib/teamleader/invoices';
 import { buildPeriodData } from '@/lib/period-data';
 import { DEFAULT_PRESET, presetRangeServer } from '@/lib/default-range';
@@ -76,6 +76,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const adsVoorTrend = (await getAdsRows(adsSinds, today)) ?? [];
   const today_ = {
     trends: computeTileTrends(resolvedQuotations, exclusions, adsVoorTrend, today),
+    bars: computeOverviewBars(resolvedQuotations, exclusions, today),
     callList: computeCallList(resolvedQuotations, exclusions, today),
     month: computeMonthProgress(resolvedQuotations, exclusions, today, { ...EMPTY_GOALS, ...goals }),
     breakEven: computeBreakEven(pl, invoicedByMonth(invoices), startMonth, today),
