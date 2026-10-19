@@ -1,5 +1,6 @@
 // Supabase data-access layer. All reads/writes go through here so the rest of
 // the app stays storage-agnostic. Server-side only.
+import { cache } from 'react';
 import { supabase } from './supabase';
 import { deriveDateParts } from './teamleader/dates';
 import type { PriceRow, CostRow } from './pricing';
@@ -636,7 +637,16 @@ function rowToDeal(r: Row): RunTimeRow {
   };
 }
 
-async function readAll(table: string): Promise<Row[]> {
+/**
+ * Een hele tabel, per verzoek één keer. De layout en de pagina lazen dezelfde
+ * tabellen (offertes, facturen, deals) elk opnieuw — tot vier keer per weergave.
+ * React `cache()` deelt het resultaat binnen één server-render; een volgend
+ * verzoek leest weer vers, dus een prijswijziging werkt direct door. Buiten een
+ * server-render (scripts, route handlers) is cache() een gewone aanroep.
+ */
+const readAll = cache((table: string) => readAllUncached(table));
+
+async function readAllUncached(table: string): Promise<Row[]> {
   const out: Row[] = [];
   const size = 1000;
   for (let from = 0; ; from += size) {
