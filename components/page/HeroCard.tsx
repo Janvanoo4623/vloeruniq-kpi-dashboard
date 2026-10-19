@@ -124,14 +124,30 @@ export default function HeroCard({
 }
 
 /** Subcijfer in de zwarte kaart. */
-export function MiniStat({ label, value, sub, bar }: { label: string; value: ReactNode; sub?: ReactNode; bar?: number | null }) {
+export function MiniStat({
+  label,
+  value,
+  sub,
+  bar,
+  barTone = 'brand',
+}: {
+  label: string;
+  value: ReactNode;
+  sub?: ReactNode;
+  bar?: number | null;
+  /** Groen alleen als meer beter is; anders neutraal wit. */
+  barTone?: 'brand' | 'neutral';
+}) {
   return (
     <div className="rounded-2xl bg-white/[0.06] px-4 py-3">
       <p className="text-[12px] text-white/55">{label}</p>
       <p className="mt-0.5 text-[20px] font-semibold tracking-tight tabular-nums">{value}</p>
       {bar != null && (
         <div className="mt-2 h-1.5 w-full rounded-full bg-white/10">
-          <span className="block h-full rounded-full bg-brand/80" style={{ width: `${Math.min(100, Math.max(0, bar) * 100)}%` }} />
+          <span
+            className={cn('block h-full rounded-full', barTone === 'brand' ? 'bg-brand/80' : 'bg-white/45')}
+            style={{ width: `${Math.min(100, Math.max(0, bar) * 100)}%` }}
+          />
         </div>
       )}
       {sub && <p className="mt-1.5 text-[11px] text-white/45">{sub}</p>}

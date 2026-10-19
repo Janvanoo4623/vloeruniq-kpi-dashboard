@@ -10,17 +10,18 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
-import { Info, Phone } from 'lucide-react';
+import { Archive, CircleCheck, Phone, PieChart, Scale, TimerOff, TrendingDown } from 'lucide-react';
 import type { LostOverview } from '@/lib/lost';
 import { formatEuro, formatNumber, formatPercent } from '@/lib/format';
 import { AXIS_TICK, CHART } from '@/components/charts/theme';
 import { ChartDefs, grad } from '@/components/charts/Defs';
 import { ChartTooltip } from '@/components/charts/ChartTooltip';
 import { ChartLegend } from '@/components/charts/ChartLegend';
-import { Badge, Empty, Panel, SectionLabel, cn } from '@/components/ui';
+import { Badge, Empty, Panel, cn } from '@/components/ui';
 import { Pagination, usePaged } from '@/components/ui/Pagination';
-import KpiCard from '@/components/KpiCard';
-import KpiRow from '@/components/KpiRow';
+import HeroCard, { MiniStat } from '@/components/page/HeroCard';
+import HighlightChart, { kortEuro } from '@/components/page/HighlightChart';
+import { DetailsLabel, InsightCard, StatTile, type Insight } from '@/components/overview/cards';
 
 const maandLabel = (m: string) => {
   const [j, mm] = m.split('-');
@@ -66,50 +67,89 @@ export default function VerlorenView({
   const rijp = months.filter((m) => m.month < maturityCutoff);
   const groterVerlies = medianLost != null && medianWon != null && medianLost > medianWon;
 
-  return (
-    <div className="space-y-6">
-      <section>
-        <SectionLabel>Over de hele historie — bedragen ex btw</SectionLabel>
-        <KpiRow>
-          <KpiCard
-            label="Niet doorgegaan"
-            value={formatEuro(totalLostRevenue)}
-            sub={`${formatNumber(totalLostCount)} offertes`}
-            signal="crit"
-            higherIsBetter={false}
-          />
-          <KpiCard
-            label="Nog te bellen"
-            value={formatEuro(recentRevenue)}
-            sub={`${recentCount} offertes van de afgelopen 90 dagen`}
-            signal={recentCount > 0 ? 'warn' : undefined}
-          />
-          <KpiCard
-            label="Stilletjes verlopen"
-            value={formatPercent(expiredShare)}
-            sub="de rest is actief geweigerd"
-          />
-          <KpiCard
-            label="Mediane gemiste offerte"
-            value={formatEuro(medianLost)}
-            sub={`gewonnen is ${formatEuro(medianWon)}`}
-            signal={groterVerlies ? 'warn' : undefined}
-            higherIsBetter={false}
-          />
-        </KpiRow>
-      </section>
+  const laatste = rijp.slice(-12);
+  const verloren12 = laatste.reduce((t, m) => t + m.lostRevenue, 0);
+  const gewonnen12 = laatste.reduce((t, m) => t + m.wonRevenue, 0);
+  const aandeel12 = verloren12 + gewonnen12 > 0 ? (verloren12 / (verloren12 + gewonnen12)) * 100 : null;
+  const top = biggest.find((q) => q.daysAgo <= 90) ?? biggest[0];
+  const kort = (m: string) => maandLabel(m).split(' ')[0];
 
-      {groterVerlies && (
-        <div className="flex items-start gap-2.5 rounded-2xl border border-warn/25 bg-warn-soft px-5 py-3.5">
-          <Info size={15} strokeWidth={2.2} className="mt-0.5 shrink-0 text-warn" />
-          <p className="text-[13px] leading-relaxed text-warn">
-            <strong>De offertes die je misloopt zijn gemiddeld gróter dan de offertes die je wint</strong>{' '}
-            — mediaan {formatEuro(medianLost)} tegenover {formatEuro(medianWon)}. En {formatPercent(expiredShare)}{' '}
-            daarvan is niet afgewezen maar simpelweg verlopen. Dat is geen prijsprobleem maar een
-            opvolgprobleem: er is nooit een tweede gesprek geweest.
-          </p>
-        </div>
-      )}
+  const inzichten: Insight[] = [];
+  if (groterVerlies) {
+    inzichten.push({
+      Icon: Scale,
+      tone: 'warn',
+      text: `De offertes die je misloopt zijn **gróter** dan die je wint: mediaan **${formatEuro(medianLost)}** tegen ${formatEuro(medianWon)}.`,
+    });
+  }
+  inzichten.push({
+    Icon: TimerOff,
+    tone: 'neutral',
+    text: `**${formatPercent(expiredShare)}** is niet afgewezen maar simpelweg verlopen. Geen prijsprobleem, een opvolgprobleem: er is nooit een tweede gesprek geweest.`,
+  });
+  if (top) {
+    inzichten.push({
+      Icon: Phone,
+      tone: 'brand',
+      text: `Grootste die nog warm is: **${top.customerName || top.name}**${top.city ? ` in ${top.city}` : ''}, **${formatEuro(top.revenueExVat)}**, ${top.daysAgo} dagen geleden.`,
+    });
+  }
+
+  return (
+    <div className="space-y-5">
+      {/* 1. Kerngetal en duiding */}
+      <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1.2fr_1fr]">
+        <HeroCard
+          label="Nog te bellen"
+          status={`${recentCount} offertes, laatste 90 dagen`}
+          tone={recentCount > 0 ? 'warn' : 'neutral'}
+          value={recentRevenue}
+          format={(v) => formatEuro(v)}
+          sub="Verlopen of geweigerd, maar recent genoeg om nog te kantelen · ex btw"
+          href="/pijplijn#belijst"
+          hrefLabel="Naar de belijst"
+        >
+          <MiniStat label="Mediane gemiste offerte" value={formatEuro(medianLost)} sub={`gewonnen: ${formatEuro(medianWon)}`} />
+          <MiniStat label="Stilletjes verlopen" value={formatPercent(expiredShare)} sub="de rest is actief geweigerd" bar={expiredShare / 100} barTone="neutral" />
+        </HeroCard>
+        <InsightCard items={inzichten} />
+      </div>
+
+      {/* 2. Tegels */}
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
+        <StatTile Icon={TrendingDown} label="Verloren, 12 maanden" value={formatEuro(verloren12)} sub="uitgeharde maanden" bars={laatste.map((m) => m.lostRevenue)} />
+        <StatTile Icon={CircleCheck} label="Gewonnen, 12 maanden" value={formatEuro(gewonnen12)} sub="dezelfde maanden" bars={laatste.map((m) => m.wonRevenue)} />
+        <StatTile Icon={PieChart} label="Aandeel verloren" value={formatPercent(aandeel12)} sub="van alle beslist offertebedrag" />
+        <StatTile Icon={Archive} label="Niet doorgegaan, totaal" value={formatEuro(totalLostRevenue)} sub={`${formatNumber(totalLostCount)} offertes sinds het begin`} />
+      </div>
+
+      {/* 3. Hoofdgrafiek */}
+      <HighlightChart
+        series={[
+          {
+            key: 'verloren',
+            label: 'Verloren €',
+            title: 'Verloren per maand',
+            fmt: (v) => formatEuro(v),
+            axisFmt: kortEuro,
+            points: laatste.map((m) => ({ label: kort(m.month), value: m.lostRevenue })),
+          },
+          {
+            key: 'aandeel',
+            label: 'Aandeel',
+            title: 'Aandeel verloren per maand',
+            fmt: (v) => formatPercent(v),
+            axisFmt: (v) => `${Math.round(v)}%`,
+            total: aandeel12 ?? 0,
+            sub: 'over de laatste 12 uitgeharde maanden',
+            points: laatste.map((m) => ({ label: kort(m.month), value: m.lostShare ?? 0 })),
+          },
+        ]}
+        footnote={`De laatste ${maturityDays} dagen staan er niet in: daar kan een offerte nog verlopen`}
+      />
+
+      {/* 4. Verdieping */}
+      <DetailsLabel />
 
       <Panel
         title="Gewonnen tegenover verloren, per maand"

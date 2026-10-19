@@ -8,13 +8,14 @@ import {
   WinRateTrendChart,
 } from '@/components/charts/WinRateCharts';
 import { useDashboard } from '@/components/layout/DashboardProvider';
-import KpiCard from '@/components/KpiCard';
-import KpiRow from '@/components/KpiRow';
 import ChartCard from '@/components/ChartCard';
 import PipelineCard from '@/components/PipelineCard';
 import CountsByWeekChart from '@/components/charts/CountsByWeekChart';
 import EmptyState from '@/components/pages/EmptyState';
-import { SectionLabel } from '@/components/ui';
+import { FileText, Hourglass, Snowflake, Sparkles } from 'lucide-react';
+import HeroCard, { MiniStat } from '@/components/page/HeroCard';
+import HighlightChart from '@/components/page/HighlightChart';
+import { CallCard, DetailsLabel, StatTile } from '@/components/overview/cards';
 import CallListPanel from '@/components/pages/CallListPanel';
 
 /** Wat er nog binnen kán komen uit offertes die open staan. */
@@ -32,37 +33,70 @@ export default function PijplijnView({
   const { snap, pipeline, pricedCodes, series, today } = useDashboard();
   if (!snap) return <EmptyState />;
 
+  const tier = (i: number) => pipeline.ageTiers[i] ?? { label: '', count: 0, value: 0 };
+  const maand = (m: string) => ['jan', 'feb', 'mrt', 'apr', 'mei', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'dec'][Number(m.slice(5, 7)) - 1];
+  const trend = winRateTrend.slice(-12);
+
   return (
-    <div className="space-y-6">
-      <section>
-        <SectionLabel>Open offertes — huidige stand, bedragen ex btw</SectionLabel>
-        <KpiRow>
-          <KpiCard label="Open waarde" value={formatEuro(pipeline.openValue)} sub={`${pipeline.openCount} offertes`} />
-          <KpiCard
-            label="Verwachte omzet"
-            value={pipeline.expectedValue == null ? '—' : formatEuro(pipeline.expectedValue)}
-            sub="open waarde × winkans"
+    <div className="space-y-5">
+      {/* 1. Kerngetal en de belijst */}
+      <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1.2fr_1fr]">
+        <HeroCard
+          label="Verwachte omzet uit open offertes"
+          status={pipeline.winRate != null ? `winkans ${formatPercent(pipeline.winRate)}` : undefined}
+          tone="neutral"
+          value={pipeline.expectedValue ?? 0}
+          format={(v) => formatEuro(v)}
+          sub={<>{formatEuro(pipeline.openValue)} open in {pipeline.openCount} offertes × de historische winkans</>}
+          href="/offertes"
+          hrefLabel="Naar alle offertes"
+        >
+          <MiniStat label="Open waarde" value={formatEuro(pipeline.openValue)} sub={`${pipeline.openCount} offertes, ex btw`} />
+          <MiniStat
+            label="Waarvan vers (0–30 dagen)"
+            value={formatEuro(tier(0).value)}
+            sub="hoe jonger, hoe groter de kans"
+            bar={pipeline.openValue > 0 ? tier(0).value / pipeline.openValue : null}
           />
-          <KpiCard
-            label="Winkans"
-            value={formatPercent(pipeline.winRate)}
-            // De gekozen definitie hoort náást het getal, niet weggestopt in de
-            // instellingen -- anders weet je over een half jaar niet wat je leest.
-            sub={
-              pipeline.maturedTotal > 0
-                ? `${pipeline.maturedAccepted} van ${pipeline.maturedTotal} · ${definition}`
-                : 'te weinig historie'
-            }
-          />
-          <KpiCard
-            label="Langer dan 60 dagen open"
-            value={formatEuro(pipeline.ageTiers.find((t) => t.label.includes('60'))?.value ?? 0)}
-            sub="hoe ouder, hoe kleiner de kans"
-            higherIsBetter={false}
-            signal={(pipeline.ageTiers.find((t) => t.label.includes('60'))?.count ?? 0) > 0 ? 'warn' : undefined}
-          />
-        </KpiRow>
-      </section>
+        </HeroCard>
+        <CallCard callList={today.callList} pricedCodes={pricedCodes} />
+      </div>
+
+      {/* 2. Tegels: de stapel naar leeftijd */}
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
+        <StatTile Icon={FileText} label="Open offertes" value={String(pipeline.openCount)} sub={`${formatEuro(pipeline.openValue)} samen`} />
+        <StatTile Icon={Sparkles} label="Vers, 0–30 dagen" value={formatEuro(tier(0).value)} sub={`${tier(0).count} offertes — hier zit de kans`} />
+        <StatTile Icon={Hourglass} label="31–60 dagen" value={formatEuro(tier(1).value)} sub={`${tier(1).count} offertes — nu nabellen`} />
+        <StatTile Icon={Snowflake} label="Ouder dan 60 dagen" value={formatEuro(tier(2).value)} sub={`${tier(2).count} offertes — waarschijnlijk verloren`} />
+      </div>
+
+      {/* 3. Hoofdgrafiek */}
+      <HighlightChart
+        series={[
+          {
+            key: 'winkans',
+            label: 'Winkans',
+            title: 'Winkans per maand',
+            fmt: (v) => formatPercent(v),
+            axisFmt: (v) => `${Math.round(v)}%`,
+            total: pipeline.winRate ?? 0,
+            sub: `over alle uitgewerkte offertes · ${definition}`,
+            points: trend.map((p) => ({ label: maand(p.month), value: p.winRate ?? 0, muted: p.provisional })),
+          },
+          {
+            key: 'besluit',
+            label: 'Beslist',
+            title: 'Uitgewerkte offertes per maand',
+            fmt: (v) => String(Math.round(v)),
+            sub: 'gewonnen en verloren samen',
+            points: trend.map((p) => ({ label: maand(p.month), value: p.decided, muted: p.provisional })),
+          },
+        ]}
+        footnote="De laatste maanden staan lichter: daar kunnen offertes nog kantelen"
+      />
+
+      {/* 4. Verdieping */}
+      <DetailsLabel />
 
       <CallListPanel callList={today.callList} pricedCodes={pricedCodes} />
 
