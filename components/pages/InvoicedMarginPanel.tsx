@@ -70,36 +70,35 @@ export default function InvoicedMarginPanel({
 
   return (
     <Panel title={titel} subtitle={subtitel} bodyClassName="p-0">
-      <div className="grid gap-6 px-5 pt-5 pb-4 md:grid-cols-[1.2fr_1fr]">
+      {/* Twee getallen naast elkaar, zelfde gewicht in de vorm, zodat het
+          verschil tussen factuur- en offertedatum het verhaal is. */}
+      <div className="grid gap-8 px-6 pb-5 pt-4 sm:grid-cols-2">
         <div>
-          <p className="text-[12px] font-medium text-ink-mute">Marge op wat er gefactureerd is</p>
-          <p className="mt-1 text-[34px] font-bold leading-none tracking-tight tabular-nums text-ink">
-            {formatEuro(data.margin)}
-          </p>
-          <p className="mt-2 text-[12.5px] text-ink-mute">
+          <p className="text-[13px] font-medium text-ink-soft">Op wat er gefactureerd is</p>
+          <p className="mt-1.5 text-[34px] font-semibold leading-none tracking-[-0.03em] tabular-nums text-ink">{formatEuro(data.margin)}</p>
+          <p className="mt-2 text-[12px] text-ink-faint">
             {data.marginPct != null ? `${formatPercent(data.marginPct)} van ` : 'over '}
             {formatEuro(data.parts.ok.amount)} gefactureerd met bekende marge
           </p>
         </div>
-        <div className="rounded-xl bg-sunk px-4 py-3">
-          <p className="text-[12px] font-medium text-ink-mute">Ter vergelijking</p>
-          <p className="mt-1 text-[20px] font-semibold tabular-nums text-ink-soft">{formatEuro(quotationMargin)}</p>
-          <p className="mt-1 text-[11.5px] leading-relaxed text-ink-faint">
-            marge op de offertes die in deze periode zijn gewonnen — wat de rest van het dashboard toont.
-            Het verschil is vooral tijd: werk dat eerder verkocht is wordt nu gefactureerd.
+        <div className="sm:border-l sm:border-hair sm:pl-8">
+          <p className="text-[13px] font-medium text-ink-soft">Op wat er gewonnen is</p>
+          <p className="mt-1.5 text-[34px] font-semibold leading-none tracking-[-0.03em] tabular-nums text-ink-mute">{formatEuro(quotationMargin)}</p>
+          <p className="mt-2 text-[12px] text-ink-faint">
+            wat de rest van het dashboard toont — het verschil is vooral tijd: eerder verkocht werk wordt nu gefactureerd
           </p>
         </div>
       </div>
 
-      <div className="px-5 pb-4">
+      <div className="px-6 pb-5">
         <div className="mb-2 flex items-baseline justify-between gap-3 text-[12px]">
           <span className="text-ink-mute">
             Gefactureerd in deze periode: <strong className="text-ink">{formatEuro(data.invoicedExcl)}</strong>
           </span>
         </div>
-        <div className="flex h-2 w-full overflow-hidden rounded-full bg-sunk">
+        <div className="flex h-2.5 w-full gap-[3px] overflow-hidden rounded-full bg-sunk">
           {DEEL.map((d) => (
-            <span key={d.key} className={cn('block h-full', d.bar)} style={{ width: `${aandeel(data.parts[d.key].amount)}%` }} />
+            <span key={d.key} className={cn('block h-full first:rounded-l-full last:rounded-r-full', d.bar)} style={{ width: `${aandeel(data.parts[d.key].amount)}%` }} />
           ))}
         </div>
         <ul className="mt-2.5 flex flex-wrap gap-x-5 gap-y-1.5 text-[12px]">
@@ -124,14 +123,14 @@ export default function InvoicedMarginPanel({
       {data.rows.length === 0 ? (
         <Empty className="border-t border-hair">Geen facturen in deze periode.</Empty>
       ) : (
-        <div className="overflow-x-auto border-t border-hair">
+        <div className="overflow-x-auto px-6 pb-2">
           <table className="w-full border-collapse text-sm">
-            <thead className="bg-sunk text-xs text-ink-mute">
+            <thead className="text-xs text-ink-mute">
               <tr className="border-b border-line">
-                <th className="px-5 py-2 text-left font-medium">Datum</th>
+                <th className="py-2 pr-3 text-left font-medium">Datum</th>
                 <th className="px-3 py-2 text-left font-medium">Klant</th>
                 <th className="px-3 py-2 text-right font-medium">Gefactureerd</th>
-                <th className="px-5 py-2 text-right font-medium">Marge</th>
+                <th className="py-2 pl-3 text-right font-medium">Marge</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-hair">
@@ -143,7 +142,7 @@ export default function InvoicedMarginPanel({
                     onClick={() => r.quotationId && openOfferte(r.quotationId)}
                     className={cn('hover:bg-sunk', klikbaar && 'cursor-pointer', laden === r.quotationId && 'opacity-60')}
                   >
-                    <td className="whitespace-nowrap px-5 py-2 tabular-nums text-ink-mute">{datum(r.invoiceDate)}</td>
+                    <td className="whitespace-nowrap py-2 pr-3 tabular-nums text-ink-mute">{datum(r.invoiceDate)}</td>
                     <td className="px-3 py-2">
                       <div className="flex max-w-[260px] items-center gap-1.5 truncate text-ink">
                         {r.customerName || '—'}
@@ -157,7 +156,7 @@ export default function InvoicedMarginPanel({
                       </div>
                     </td>
                     <td className="px-3 py-2 text-right tabular-nums text-ink-soft">{formatEuro(r.amount)}</td>
-                    <td className="px-5 py-2 text-right tabular-nums">
+                    <td className="py-2 pl-3 text-right tabular-nums">
                       {r.margin != null ? (
                         <span className={r.margin < 0 ? 'text-crit' : 'text-ink'}>{formatEuro(r.margin)}</span>
                       ) : r.reason === 'geen-inkoopprijs' ? (
