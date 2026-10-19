@@ -172,6 +172,64 @@ body {
   --hero-shadow: 0 24px 56px -28px rgba(20, 154, 74, 0.65);
 }
 
+/* ── Tabellen op telefoonbreedte als kaartjes ─────────────────────────────
+   De labels zet components/layout/TableLabels.tsx. Eerste cel = titel, de
+   rest = "kolomnaam ........ waarde". Een tabel met data-keep blijft tabel. */
+@media (max-width: 639px) {
+  table.tabel-kaarten:not([data-keep]) {
+    min-width: 0 !important;
+  }
+  table.tabel-kaarten:not([data-keep]) thead {
+    display: none;
+  }
+  table.tabel-kaarten:not([data-keep]),
+  table.tabel-kaarten:not([data-keep]) tbody,
+  table.tabel-kaarten:not([data-keep]) tfoot,
+  table.tabel-kaarten:not([data-keep]) tr {
+    display: block;
+    width: 100%;
+  }
+  table.tabel-kaarten:not([data-keep]) tr {
+    padding: 10px 2px;
+    border-bottom: 1px solid var(--color-hair);
+  }
+  table.tabel-kaarten:not([data-keep]) td {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 2px 0 !important;
+    max-width: none !important;
+    white-space: normal;
+    text-align: right;
+    border: 0 !important;
+  }
+  table.tabel-kaarten:not([data-keep]) td::before {
+    content: attr(data-label);
+    flex-shrink: 0;
+    text-align: left;
+    font-size: 11.5px;
+    color: var(--color-ink-faint);
+  }
+  table.tabel-kaarten:not([data-keep]) td:first-child {
+    justify-content: flex-start;
+    text-align: left;
+    padding-bottom: 4px !important;
+    font-weight: 600;
+  }
+  table.tabel-kaarten:not([data-keep]) td:first-child::before,
+  table.tabel-kaarten:not([data-keep]) td[data-label='']::before {
+    display: none;
+  }
+  table.tabel-kaarten:not([data-keep]) td[data-label=''] {
+    justify-content: flex-end;
+  }
+  table.tabel-kaarten:not([data-keep]) td > * {
+    min-width: 0;
+    max-width: 100%;
+  }
+}
+
 /* Recharts — de tooltip gebruikt onze eigen kaart, dus de standaardschil weg. */
 .recharts-default-tooltip {
   border-radius: 0.75rem !important;

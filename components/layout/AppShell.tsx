@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import Sidebar, { MobileSidebar } from './Sidebar';
 import TopBar from './TopBar';
 import SubNav from './SubNav';
+import TableLabels from './TableLabels';
 import { GlobalChartDefs } from '@/components/charts/Defs';
 import { useDashboard } from './DashboardProvider';
 
@@ -30,6 +31,7 @@ export default function AppShell({
     // ruimte. Het kaartframe blijft vanaf sm.
     <div className="h-screen bg-shell sm:p-2.5">
       <GlobalChartDefs />
+      <TableLabels />
       <div className="flex h-full overflow-hidden border-black/[0.06] bg-surface sm:rounded-[22px] sm:border sm:shadow-sm">
         <Sidebar badges={badges} />
         <MobileSidebar open={menu} onClose={() => setMenu(false)} badges={badges} />
