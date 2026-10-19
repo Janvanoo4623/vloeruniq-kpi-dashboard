@@ -17,7 +17,7 @@ import { formatEuro, formatPercent, shortWeek } from '@/lib/format';
  * staat eronder, want dat is waar je op deze pagina eigenlijk voor komt.
  */
 export default function OffertesPage() {
-  const { snap, pricedCodes, series, range } = useDashboard();
+  const { snap, pricedCodes, series, range, pipeline } = useDashboard();
   if (!snap) return <EmptyState />;
 
   const t = snap.revenue.totals;
@@ -31,7 +31,7 @@ export default function OffertesPage() {
     {
       Icon: Percent,
       tone: 'neutral',
-      text: `Van de beslisten werd **${formatPercent(t.conversionPct)}** gewonnen; ${t.expiredCount} offertes liepen af zonder antwoord.`,
+      text: `Van wat in deze periode beslist is werd **${formatPercent(t.conversionPct)}** gewonnen. Dat ligt bij een recente periode altijd hoger dan de echte winkans (**${formatPercent(pipeline.winRate)}**, zie Pijplijn): offertes verlopen pas na een tijd, dus de verliezers zijn nog niet allemaal binnen.`,
     },
   ];
   if (grootste) {
@@ -63,7 +63,12 @@ export default function OffertesPage() {
           href="/pijplijn"
           hrefLabel="Naar de pijplijn"
         >
-          <MiniStat label="Conversie" value={formatPercent(t.conversionPct)} sub="gewonnen van de beslisten" bar={t.conversionPct / 100} />
+          <MiniStat
+            label="Gewonnen van de beslisten"
+            value={formatPercent(t.conversionPct)}
+            sub={pipeline.winRate != null ? `historische winkans: ${formatPercent(pipeline.winRate)}` : 'in deze periode'}
+            bar={t.conversionPct / 100}
+          />
           <MiniStat label="Nog open" value={formatEuro(t.openRevenue)} sub={`${t.openCount} offertes`} />
         </HeroCard>
         <InsightCard items={inzichten} />

@@ -161,7 +161,7 @@ export default function OverzichtPage() {
         ) : (
           <StatTile
             Icon={Percent}
-            label="Conversie"
+            label="Gewonnen van de beslisten"
             href="/pijplijn"
             value={formatPercent(totals.conversionPct)}
             delta={<CalmDelta pct={deltaPct(totals.conversionPct, cmp?.conversionPct)} label={vergelijk} sample={sample} />}
