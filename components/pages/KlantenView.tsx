@@ -14,15 +14,16 @@ import {
 } from 'recharts';
 import { Info } from 'lucide-react';
 import { useDashboard } from '@/components/layout/DashboardProvider';
-import { formatEuro, formatNumber, formatPercent } from '@/lib/format';
+import { formatDays, formatEuro, formatNumber, formatPercent } from '@/lib/format';
 import { AXIS_TICK, CHART } from '@/components/charts/theme';
 import { ChartDefs, grad } from '@/components/charts/Defs';
 import { ChartTooltip } from '@/components/charts/ChartTooltip';
 import { ChartLegend } from '@/components/charts/ChartLegend';
-import { Empty, Panel, SectionLabel, cn } from '@/components/ui';
+import { Empty, Panel, cn } from '@/components/ui';
+import { Clock, Crown, FileQuestion, Hourglass, Repeat, Users } from 'lucide-react';
+import HeroCard, { MiniStat } from '@/components/page/HeroCard';
+import { DetailsLabel, InsightCard, StatTile, type Insight } from '@/components/overview/cards';
 import { Pagination, usePaged } from '@/components/ui/Pagination';
-import KpiCard from '@/components/KpiCard';
-import KpiRow from '@/components/KpiRow';
 
 
 
@@ -53,35 +54,59 @@ export default function KlantenView() {
     naam: c.name,
   }));
 
-  return (
-    <div className="space-y-6">
-      <section>
-        <SectionLabel>Gefactureerd in deze periode, ex btw</SectionLabel>
-        <KpiRow>
-          <KpiCard
-            label="Klanten"
-            value={formatNumber(customers.length)}
-            sub={`${repeatCustomers} kwamen meer dan één keer terug`}
-          />
-          <KpiCard
-            label="Gefactureerd"
-            value={formatEuro(totalRevenue)}
-            sub="over de hele historie"
-          />
-          <KpiCard
-            label="Helft van de omzet"
-            value={`${customersForHalf} klanten`}
-            sub={`${formatPercent(Math.round((customersForHalf / customers.length) * 1000) / 10)} van je klantenbestand`}
-          />
-          <KpiCard
-            label="Top 10"
-            value={formatPercent(top10Share)}
-            sub="aandeel van je tien grootste klanten"
-            signal={top10Share >= 40 ? 'warn' : undefined}
-          />
-        </KpiRow>
-      </section>
+  const grootste = customers[0];
+  const traagste = payments.slowest[0];
+  const inzichten: Insight[] = [];
+  if (grootste) {
+    inzichten.push({
+      Icon: Crown,
+      tone: 'neutral',
+      text: `Grootste klant: **${grootste.name}**, **${formatEuro(grootste.revenue)}** — ${formatPercent(totalRevenue > 0 ? Math.round((grootste.revenue / totalRevenue) * 1000) / 10 : null)} van de omzet in deze periode.`,
+    });
+  }
+  if (unquoted.count > 0) {
+    inzichten.push({
+      Icon: FileQuestion,
+      tone: unquoted.share > 20 ? 'warn' : 'neutral',
+      text: `**${formatPercent(unquoted.share)}** van de facturatie (${formatEuro(unquoted.revenue)}) komt niet uit een offerte: losse verkoop of meerwerk.`,
+    });
+  }
+  if (traagste?.avgDaysToPay != null) {
+    inzichten.push({
+      Icon: Hourglass,
+      tone: traagste.avgDaysToPay > 30 ? 'warn' : 'neutral',
+      text: `Traagste betaler: **${traagste.name}**, gemiddeld **${formatDays(traagste.avgDaysToPay)}** na de factuur.`,
+    });
+  }
 
+  return (
+    <div className="space-y-5">
+      {/* 1. Kerngetal en duiding */}
+      <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1.2fr_1fr]">
+        <HeroCard
+          label="Aandeel van je tien grootste klanten"
+          status={`${customersForHalf} klanten = de helft van de omzet`}
+          tone={top10Share >= 40 ? 'warn' : 'neutral'}
+          value={top10Share}
+          format={(v) => formatPercent(Math.round(v * 10) / 10)}
+          sub="Hoe afhankelijk je bent van een handvol klanten · gefactureerd in deze periode, ex btw"
+          progress={{ value: top10Share / 100, tone: 'neutral', label: top10Share >= 40 ? 'meer dan 40% bij tien klanten: kwetsbaar' : 'gespreid genoeg' }}
+        >
+          <MiniStat label="Klanten" value={formatNumber(customers.length)} sub={`${repeatCustomers} kwamen terug`} />
+          <MiniStat label="Gefactureerd" value={formatEuro(totalRevenue)} sub="in deze periode" />
+        </HeroCard>
+        <InsightCard items={inzichten} />
+      </div>
+
+      {/* 2. Tegels */}
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
+        <StatTile Icon={Users} label="Klanten" value={formatNumber(customers.length)} sub="met een factuur in de periode" />
+        <StatTile Icon={Repeat} label="Terugkerend" value={formatNumber(repeatCustomers)} sub="meer dan één factuur" />
+        <StatTile Icon={Clock} label="Betaaltermijn" value={formatDays(payments.medianDays)} sub={`mediaan · ${formatPercent(payments.onTimePct)} op tijd`} />
+        <StatTile Icon={FileQuestion} label="Zonder offerte" value={formatEuro(unquoted.revenue)} sub={`${unquoted.count} facturen`} />
+      </div>
+
+      {/* 3. Hoofdgrafiek */}
       <Panel
         title="Hoe afhankelijk ben je van een paar klanten?"
         subtitle="Klanten op omzet gesorteerd; de lijn toont hoeveel procent van de omzet je met de eerste zoveel klanten te pakken hebt"
@@ -141,6 +166,9 @@ export default function KlantenView() {
           </AreaChart>
         </ResponsiveContainer>
       </Panel>
+
+      {/* 4. Verdieping */}
+      <DetailsLabel />
 
       <Panel
         title="Klanten op omzet"

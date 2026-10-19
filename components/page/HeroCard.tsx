@@ -35,7 +35,7 @@ export default function HeroCard({
   status?: string;
   sub?: ReactNode;
   /** 0–1, met optioneel een streepje waar je "zou moeten staan". */
-  progress?: { value: number; marker?: number; label?: ReactNode; right?: ReactNode };
+  progress?: { value: number; marker?: number; label?: ReactNode; right?: ReactNode; tone?: 'brand' | 'neutral' };
   /** Subcijfers onderin (MiniStat). */
   children?: ReactNode;
   href?: string;
@@ -98,7 +98,10 @@ export default function HeroCard({
         <div className="relative mt-5">
           <div className="relative h-2.5 w-full rounded-full bg-white/10">
             <span
-              className="block h-full rounded-full bg-gradient-to-r from-brand/70 to-brand transition-[width] duration-700 ease-out"
+              className={cn(
+                'block h-full rounded-full transition-[width] duration-700 ease-out',
+                progress.tone === 'neutral' ? 'bg-white/45' : 'bg-gradient-to-r from-brand/70 to-brand',
+              )}
               style={{ width: `${Math.min(100, Math.max(0, progress.value) * 100)}%` }}
             />
             {progress.marker != null && (

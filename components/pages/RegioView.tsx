@@ -7,10 +7,12 @@ import type { NieuwbouwOverview } from '@/lib/nieuwbouw';
 import MarktaandeelPanel from './MarktaandeelPanel';
 import NieuwbouwPanel from './NieuwbouwPanel';
 import { formatEuro, formatNumber, formatPercent } from '@/lib/format';
-import { Empty, Panel, SectionLabel, cn } from '@/components/ui';
+import { Empty, Panel, cn } from '@/components/ui';
+import { Compass, MapPin, Percent, TrendingDown, TrendingUp } from 'lucide-react';
+import HeroCard, { MiniStat } from '@/components/page/HeroCard';
+import HighlightChart, { kortEuro } from '@/components/page/HighlightChart';
+import { DetailsLabel, InsightCard, StatTile, type Insight } from '@/components/overview/cards';
 import { Pagination, usePaged } from '@/components/ui/Pagination';
-import KpiCard from '@/components/KpiCard';
-import KpiRow from '@/components/KpiRow';
 
 type SortKey = 'revenue' | 'winRate' | 'marginPct' | 'quotes';
 
@@ -65,34 +67,84 @@ export default function RegioView({
 
   const maxWin = Math.max(1, ...rated.map((r) => r.winRate ?? 0));
 
+  const opOmzet = [...regions].sort((x, y) => y.revenue - x.revenue);
+  const thuis = opOmzet[0];
+  const thuisMarkt = marketShare.rows.find((r) => r.plaatsen.some((p) => p.toLowerCase() === thuis?.name.toLowerCase()));
+  const metVraag = marketShare.rows.filter((r) => r.perThousand != null && r.moves > 0);
+  const mediaanPer = metVraag.length ? [...metVraag].sort((x, y) => (x.perThousand ?? 0) - (y.perThousand ?? 0))[Math.floor(metVraag.length / 2)].perThousand ?? 0 : 0;
+  const ruimte = [...metVraag].filter((r) => (r.perThousand ?? 0) < mediaanPer).sort((x, y) => y.moves - x.moves)[0];
+
+  const inzichten: Insight[] = [];
+  if (best) inzichten.push({ Icon: TrendingUp, tone: 'brand', text: `Beste winkans: **${best.name}**, **${formatPercent(best.winRate)}** (${best.won} van ${best.quotes}).` });
+  if (worst && worst !== best) inzichten.push({ Icon: TrendingDown, tone: 'warn', text: `Laagste winkans: **${worst.name}**, **${formatPercent(worst.winRate)}** (${worst.won} van ${worst.quotes}).` });
+  if (ruimte) {
+    inzichten.push({
+      Icon: Compass,
+      tone: 'neutral',
+      text: `Meeste ruimte: **${ruimte.gemeente}** — ${formatNumber(ruimte.moves)} verhuizingen en maar ${String(ruimte.perThousand).replace('.', ',')} offertes per 1.000. Daar zou marketing het verschil kunnen maken.`,
+    });
+  }
+
   return (
-    <div className="space-y-6">
-      <section>
-        <SectionLabel>Over alle offertes, niet alleen de gekozen periode — omzet ex btw</SectionLabel>
-        <KpiRow>
-          <KpiCard
-            label="Plaatsen"
-            value={String(regions.length)}
-            sub={`${rated.length} met minimaal ${minSample} offertes`}
+    <div className="space-y-5">
+      {/* 1. Kerngetal en duiding */}
+      <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1.2fr_1fr]">
+        <HeroCard
+          label={thuis ? `Thuismarkt: ${thuis.name}` : 'Regio'}
+          status={thuis && totalRevenue > 0 ? `${formatPercent(Math.round((thuis.revenue / totalRevenue) * 1000) / 10)} van de omzet` : undefined}
+          tone="good"
+          value={thuis?.revenue ?? 0}
+          format={(v) => formatEuro(v)}
+          sub="Geaccepteerde omzet over alle offertes, niet alleen de gekozen periode · ex btw"
+        >
+          <MiniStat label="Winkans daar" value={formatPercent(thuis?.winRate)} sub={thuis ? `${thuis.won} van ${thuis.quotes} offertes` : undefined} bar={thuis?.winRate != null ? thuis.winRate / 100 : null} />
+          <MiniStat
+            label="Per 1.000 verhuizingen"
+            value={thuisMarkt?.perThousand != null ? String(thuisMarkt.perThousand).replace('.', ',') : '—'}
+            sub={thuisMarkt ? `offertes in ${thuisMarkt.gemeente}` : 'geen CBS-gemeente gevonden'}
           />
-          <KpiCard
-            label="Beste winkans"
-            value={best ? formatPercent(best.winRate) : '—'}
-            sub={best ? `${best.name} · ${best.won} van ${best.quotes}` : undefined}
-          />
-          <KpiCard
-            label="Laagste winkans"
-            value={worst ? formatPercent(worst.winRate) : '—'}
-            sub={worst ? `${worst.name} · ${worst.won} van ${worst.quotes}` : undefined}
-            higherIsBetter={false}
-          />
-          <KpiCard
-            label="Beste marge"
-            value={bestMargin ? formatPercent(bestMargin.marginPct) : '—'}
-            sub={bestMargin ? bestMargin.name : undefined}
-          />
-        </KpiRow>
-      </section>
+        </HeroCard>
+        <InsightCard items={inzichten} />
+      </div>
+
+      {/* 2. Tegels */}
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
+        <StatTile Icon={MapPin} label="Plaatsen" value={String(regions.length)} sub={`${rated.length} met minimaal ${minSample} offertes`} />
+        <StatTile Icon={TrendingUp} label="Beste winkans" value={best ? formatPercent(best.winRate) : '—'} sub={best ? best.name : undefined} />
+        <StatTile Icon={TrendingDown} label="Laagste winkans" value={worst ? formatPercent(worst.winRate) : '—'} sub={worst ? worst.name : undefined} />
+        <StatTile Icon={Percent} label="Beste marge" value={bestMargin ? formatPercent(bestMargin.marginPct) : '—'} sub={bestMargin ? bestMargin.name : undefined} />
+      </div>
+
+      {/* 3. Hoofdgrafiek */}
+      <HighlightChart
+        series={[
+          {
+            key: 'omzet',
+            label: 'Omzet',
+            title: 'Omzet per plaats · top 10',
+            fmt: (v) => formatEuro(v),
+            axisFmt: kortEuro,
+            total: opOmzet.slice(0, 10).reduce((t, r) => t + r.revenue, 0),
+            sub: `${formatPercent(totalRevenue > 0 ? Math.round((opOmzet.slice(0, 10).reduce((t, r) => t + r.revenue, 0) / totalRevenue) * 1000) / 10 : null)} van alle omzet`,
+            points: opOmzet.slice(0, 10).map((r) => ({ label: r.name, value: r.revenue })),
+            highlight: 0,
+          },
+          {
+            key: 'winkans',
+            label: 'Winkans',
+            title: 'Winkans per plaats · top 10 op omzet',
+            fmt: (v) => formatPercent(v),
+            axisFmt: (v) => `${Math.round(v)}%`,
+            total: rated.length ? Math.round((rated.reduce((t, r) => t + r.won, 0) / rated.reduce((t, r) => t + r.quotes, 0)) * 1000) / 10 : 0,
+            sub: 'gemiddeld over de plaatsen met genoeg offertes',
+            points: opOmzet.slice(0, 10).map((r) => ({ label: r.name, value: r.winRate ?? 0, muted: r.winRate == null })),
+            highlight: 0,
+          },
+        ]}
+      />
+
+      {/* 4. Verdieping */}
+      <DetailsLabel />
 
       <MarktaandeelPanel data={marketShare} />
 
