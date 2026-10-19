@@ -135,27 +135,46 @@ export default async function ExportPage({
   const adsTot = ads.total.totals;
   const adsVorig = ads.total.prevTotals;
 
-  const periode = `${from} t/m ${to}`;
+  const MAANDEN = ['januari', 'februari', 'maart', 'april', 'mei', 'juni', 'juli', 'augustus', 'september', 'oktober', 'november', 'december'];
+  const leesbaar = (d: string, metJaar: boolean) =>
+    `${Number(d.slice(8, 10))} ${MAANDEN[Number(d.slice(5, 7)) - 1]}${metJaar ? ` ${d.slice(0, 4)}` : ''}`;
+  const periode = `${leesbaar(from, from.slice(0, 4) !== to.slice(0, 4))} t/m ${leesbaar(to, true)}`;
   const inPeriode = [...snap.quotations].sort((a, b) => b.revenueExVat - a.revenueExVat);
 
   return (
-    <div className="mx-auto max-w-[900px] bg-white px-4 py-6 text-ink sm:px-8 sm:py-8 print:px-0 print:py-0">
+    <div className="mx-auto max-w-[900px] bg-white px-4 py-8 text-ink sm:px-10 sm:py-12 print:px-0 print:py-0">
       <PrintKnop />
 
       {/* ── Voorblad ─────────────────────────────────────────────────── */}
-      <header className="mb-8 border-b border-line pb-5">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-faint">
-          Vloeruniq · KPI-rapport
+      <header className="mb-10">
+        <div className="flex items-center justify-between gap-4">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/brand/logo.svg" alt="Vloeruniq" width={130} height={24} className="h-6 w-auto" />
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-faint">KPI-rapport</p>
+        </div>
+        <h1 className="mt-8 text-[34px] font-semibold leading-tight tracking-[-0.03em]">{periode}</h1>
+        <p className="mt-1.5 text-[13px] text-ink-mute">
+          {vorige ? `Vergeleken met ${vorige.from} t/m ${vorige.to}.` : 'Zonder vergelijkingsperiode.'} Offertebedragen ex btw,
+          openstaande facturen incl btw. Laatst gesynchroniseerd {formatDateTime(meta?.lastSyncAt)}.
         </p>
-        <h1 className="mt-1 text-[26px] font-bold tracking-tight">{periode}</h1>
-        <p className="mt-1 text-[13px] text-ink-mute">
-          {vorige
-            ? `Vergeleken met ${vorige.from} t/m ${vorige.to}.`
-            : 'Zonder vergelijkingsperiode.'}{' '}
-          Offertebedragen ex btw, openstaande facturen incl btw. Laatst gesynchroniseerd{' '}
-          {formatDateTime(meta?.lastSyncAt)}.
-        </p>
-        <p className="no-print mt-3 text-[12px] text-ink-faint">
+
+        {/* De vier cijfers die het verhaal vertellen, in de stijl van de statement-kaart. */}
+        <div data-hero="mint" className="hero mt-6 grid grid-cols-2 gap-px overflow-hidden rounded-[24px] sm:grid-cols-4 print:[print-color-adjust:exact]">
+          {[
+            ['Omzet geaccepteerd', formatEuro(t.acceptedRevenue), `${formatNumber(t.acceptedCount)} offertes`],
+            ['Marge', formatEuro(t.totalMargin), `${formatPercent(t.avgMarginPct)} van de omzet`],
+            ['Verkochte m²', formatNumber(t.m2Sold), `${formatEuro(perM2.marginPerM2, true)} marge per m²`],
+            ['Openstaand', formatEuro(aging.totalOutstanding), 'onbetaalde facturen, incl btw'],
+          ].map(([label, waarde, sub]) => (
+            <div key={label} className="px-5 py-5">
+              <p className="text-[12px] text-[color:var(--hero-muted)]">{label}</p>
+              <p className="mt-1 text-[24px] font-semibold tracking-tight tabular-nums">{waarde}</p>
+              <p className="mt-0.5 text-[11px] text-[color:var(--hero-faint)]">{sub}</p>
+            </div>
+          ))}
+        </div>
+
+        <p className="no-print mt-4 text-[12px] text-ink-faint">
           <Link href="/" className="underline underline-offset-2">
             ← Terug naar het dashboard
           </Link>
@@ -170,7 +189,7 @@ export default async function ExportPage({
             ['Totale marge', formatEuro(t.totalMargin), v && formatEuro(v.totalMargin)],
             ['Gemiddelde marge', formatPercent(t.avgMarginPct), v && formatPercent(v.avgMarginPct)],
             ['Omzet open', formatEuro(t.openRevenue), v && formatEuro(v.openRevenue)],
-            ['Conversie', formatPercent(t.conversionPct), v && formatPercent(v.conversionPct)],
+            ['Gewonnen van de beslisten', formatPercent(t.conversionPct), v && formatPercent(v.conversionPct)],
             ['M² verkocht', formatNumber(t.m2Sold), v && formatNumber(v.m2Sold)],
             [
               'Gem. doorlooptijd',
@@ -566,9 +585,12 @@ function Blad({
   children: React.ReactNode;
 }) {
   return (
-    <section className="print-blad mb-10">
-      <h2 className="text-[17px] font-bold tracking-tight">{titel}</h2>
-      {ondertitel && <p className="mt-0.5 text-[12.5px] text-ink-mute">{ondertitel}</p>}
+    <section className="print-blad mb-12">
+      <div className="flex items-center gap-3 border-b border-line pb-2">
+        <span className="h-5 w-1.5 rounded-full bg-brand print:[print-color-adjust:exact]" />
+        <h2 className="text-[20px] font-semibold tracking-tight">{titel}</h2>
+      </div>
+      {ondertitel && <p className="mt-2 text-[12.5px] text-ink-mute">{ondertitel}</p>}
       <div className="mt-3 space-y-4">{children}</div>
     </section>
   );
