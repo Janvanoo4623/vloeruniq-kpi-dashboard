@@ -1,15 +1,24 @@
-import { getAllDeals, getAllQuotations, getAppSetting } from '@/lib/db';
+import { getAllDeals, getAllQuotations, getAppSetting, getExclusions } from '@/lib/db';
 import { planningOverview } from '@/lib/insights';
+import { computePlanning } from '@/lib/planning';
 import PlanningView from '@/components/pages/PlanningView';
 
 export const dynamic = 'force-dynamic';
 
 export default async function PlanningPage() {
   const asOf = new Date().toISOString().split('T')[0];
-  const [deals, quotations, capacity] = await Promise.all([
+  const [deals, quotations, capacity, exclusions] = await Promise.all([
     getAllDeals(),
     getAllQuotations(),
     getAppSetting<{ m2PerWeek: number | null }>('capacity', { m2PerWeek: null }).catch(() => ({ m2PerWeek: null })),
+    getExclusions(),
   ]);
-  return <PlanningView planning={planningOverview(deals, quotations, asOf)} asOf={asOf} capacityPerWeek={capacity.m2PerWeek} />;
+  return (
+    <PlanningView
+      planning={planningOverview(deals, quotations, asOf)}
+      plan={computePlanning(deals, quotations, exclusions, asOf, capacity.m2PerWeek)}
+      asOf={asOf}
+      capacityPerWeek={capacity.m2PerWeek}
+    />
+  );
 }

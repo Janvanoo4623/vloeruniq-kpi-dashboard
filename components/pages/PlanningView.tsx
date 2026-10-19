@@ -15,14 +15,15 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Check, Info, Pencil } from 'lucide-react';
 import type { PlanningOverview } from '@/lib/insights';
+import type { PlanningData } from '@/lib/planning';
+import PlanningTop from '@/components/pages/PlanningTop';
+import { DetailsLabel } from '@/components/overview/cards';
 import { formatEuro, formatNumber } from '@/lib/format';
 import { AXIS_TICK, CHART } from '@/components/charts/theme';
 import { ChartDefs } from '@/components/charts/Defs';
 import { ChartTooltip } from '@/components/charts/ChartTooltip';
 import { ChartLegend } from '@/components/charts/ChartLegend';
-import { Empty, Panel, SectionLabel, cn } from '@/components/ui';
-import KpiCard from '@/components/KpiCard';
-import KpiRow from '@/components/KpiRow';
+import { Empty, Panel, cn } from '@/components/ui';
 
 const monthLabel = (m: string) => {
   const [y, mm] = m.split('-');
@@ -41,15 +42,17 @@ const WEKEN_PER_MAAND = 52 / 12;
 
 export default function PlanningView({
   planning,
+  plan,
   asOf,
   capacityPerWeek,
 }: {
   planning: PlanningOverview;
+  plan: PlanningData;
   asOf: string;
   /** m² die de ploegen samen per week kunnen leggen; null = niet ingesteld. */
   capacityPerWeek: number | null;
 }) {
-  const { months, backlogJobs, backlogM2, backlogRevenue, sample } = planning;
+  const { months, sample } = planning;
   const nowMonth = asOf.substring(0, 7);
   const future = months.filter((m) => !m.past);
   const avgFuture =
@@ -59,33 +62,10 @@ export default function PlanningView({
   const voorstel = Math.round(Math.max(0, ...months.filter((m) => m.past).map((m) => m.m2)) / WEKEN_PER_MAAND);
 
   return (
-    <div className="space-y-6">
-      <section>
-        <SectionLabel>Nog uit te voeren — omzet ex btw</SectionLabel>
-        <KpiRow>
-          <KpiCard
-            label="Orderportefeuille"
-            value={formatEuro(backlogRevenue)}
-            sub={`${backlogJobs} klussen met een datum in de toekomst`}
-          />
-          <KpiCard
-            label="Nog te leggen"
-            value={`${formatNumber(backlogM2)} m²`}
-            sub="over alle ingeplande klussen"
-          />
-          <KpiCard
-            label="Eerstvolgende maand"
-            value={future[0] ? `${formatNumber(future[0].m2)} m²` : '—'}
-            sub={future[0] ? `${future[0].jobs} klussen in ${monthLabel(future[0].month)}` : undefined}
-          />
-          <KpiCard
-            label="Gebaseerd op"
-            value={String(sample)}
-            sub="deals met een uitvoerdatum"
-            signal={sample < 100 ? 'warn' : undefined}
-          />
-        </KpiRow>
-      </section>
+    <div className="space-y-5">
+      <PlanningTop plan={plan} />
+
+      <DetailsLabel />
 
       <Panel
         title="m² per uitvoeringsmaand"

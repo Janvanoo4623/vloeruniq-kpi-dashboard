@@ -29,6 +29,8 @@ export interface HighlightSeries {
   highlight?: number;
   /** Korte notatie op de as (bv. €40k). Standaard: duizendtallen als "k". */
   axisFmt?: (v: number) => string;
+  /** Horizontale lijn, bv. de capaciteit. */
+  reference?: { value: number; label: string };
 }
 
 const kortGetal = (v: number) => (Math.abs(v) >= 1000 ? `${Math.round(v / 1000)}k` : `${Math.round(v)}`);
@@ -178,6 +180,16 @@ export default function HighlightChart({
               domain={heeftNegatief ? ['auto', 'auto'] : [0, 'auto']}
             />
             {heeftNegatief && <ReferenceLine y={0} stroke="#cfc8be" />}
+            {s.reference && (
+              <ReferenceLine
+                y={s.reference.value}
+                stroke="#131313"
+                strokeDasharray="5 5"
+                strokeOpacity={0.55}
+                ifOverflow="extendDomain"
+                label={{ value: s.reference.label, position: 'insideTopRight', fill: '#57534e', fontSize: 11 }}
+              />
+            )}
             <Bar
               dataKey="v"
               animationDuration={700}
