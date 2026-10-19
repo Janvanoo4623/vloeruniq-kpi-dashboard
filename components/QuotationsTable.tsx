@@ -153,6 +153,11 @@ export default function QuotationsTable({
                   >
                     {STATUS_LABEL[q.status]}
                   </span>
+                  {q.wonByInvoice && (
+                    <span className="mt-0.5 block text-[10.5px] text-ink-faint" title="Staat in Teamleader op verlopen, maar er is gefactureerd">
+                      volgens factuur
+                    </span>
+                  )}
                 </td>
                 <td className="px-3 py-2 text-right tabular-nums text-ink">
                   {formatEuro(q.revenueExVat, true)}

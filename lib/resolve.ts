@@ -43,6 +43,13 @@ export interface ResolveInput {
   prices: PriceRow[];
   costs: CostRow[];
   overrides: Record<string, QuotationOverride>;
+  /**
+   * Per deal: totaal gefactureerd (ex btw, zonder creditnota's). Ontbreekt dit,
+   * dan blijft de status uit Teamleader staan.
+   */
+  invoicedPerDeal?: Record<string, number>;
+  /** Per deal: de datum waarop hij in Teamleader gewonnen is (closed_at). */
+  dealWonAt?: Record<string, string>;
 }
 
 /**
@@ -252,7 +259,7 @@ export function resolveQuotations(rows: QuotationRow[], input: ResolveInput): Qu
   const configCache = new Map<string, PriceConfig>();
   const costCache = new Map<string, ReturnType<typeof costsForDate>>();
 
-  return rows.map((q) => {
+  const resolved = rows.map((q) => {
     const date = priceDate(q);
     let config = configCache.get(date);
     if (!config) {
@@ -265,6 +272,54 @@ export function resolveQuotations(rows: QuotationRow[], input: ResolveInput): Qu
       costCache.set(date, rates);
     }
     return recompute(q, config, rates, overrides?.[q.id]);
+  });
+  return applyInvoiceWins(resolved, input);
+}
+
+/**
+ * Gefactureerd = gewonnen. 73 offertes stonden op 'verlopen' terwijl er op hun
+ * deal gefactureerd was (gemeten 2026-10-20): de klant zei ja, maar niemand zette
+ * de offerte in Teamleader op geaccepteerd. Ze telden als verloren, en dat
+ * drukte de conversie, de winkans en de cijfers op Verloren.
+ *
+ * Per deal met facturen en zonder geaccepteerde offerte wordt één versie
+ * gewonnen: die waarvan het bedrag het dichtst bij het gefactureerde ligt (een
+ * deal heeft vaak meerdere offerteversies). Als beslisdatum de datum waarop de
+ * deal in Teamleader gewonnen is, anders de eigen beslisdatum van de offerte.
+ * Een handmatig gezette status (veldcorrectie) gaat altijd vóór.
+ */
+function applyInvoiceWins(rows: QuotationRow[], input: ResolveInput): QuotationRow[] {
+  const gefactureerd = input.invoicedPerDeal;
+  if (!gefactureerd) return rows;
+  const perDeal = new Map<string, QuotationRow[]>();
+  for (const q of rows) {
+    if (!q.dealId || q.deletedAtSource) continue;
+    (perDeal.get(q.dealId) ?? perDeal.set(q.dealId, []).get(q.dealId)!).push(q);
+  }
+  const winnaar = new Set<string>();
+  for (const [deal, qs] of perDeal) {
+    const totaal = gefactureerd[deal];
+    if (!totaal || totaal <= 0) continue;
+    if (qs.some((q) => q.status === 'accepted')) continue;
+    const kandidaten = qs.filter((q) => !input.overrides?.[q.id]?.fields?.status);
+    if (kandidaten.length === 0) continue;
+    const best = [...kandidaten].sort(
+      (a, b) => Math.abs(a.revenueExVat - totaal) - Math.abs(b.revenueExVat - totaal) || b.dateCreated.localeCompare(a.dateCreated),
+    )[0];
+    winnaar.add(best.id);
+  }
+  if (winnaar.size === 0) return rows;
+  return rows.map((q) => {
+    if (!winnaar.has(q.id)) return q;
+    const dateAccepted = input.dealWonAt?.[q.dealId] || q.dateAccepted || q.dateCreated;
+    return {
+      ...q,
+      status: 'accepted',
+      sourceStatus: q.status,
+      wonByInvoice: true,
+      dateAccepted,
+      ...deriveDateParts(dateAccepted),
+    };
   });
 }
 

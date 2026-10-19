@@ -59,7 +59,8 @@ export interface InvoicedMargin {
   parts: Record<InvoiceMarginReason, InvoiceMarginPart>;
   /**
    * Offertes die gefactureerd zijn maar in Teamleader niet op 'geaccepteerd'
-   * staan. Dat zijn gewonnen offertes die als verlopen meetellen in de conversie.
+   * staan. Sinds applyInvoiceWins (lib/resolve.ts) tellen ze als gewonnen;
+   * in Teamleader moeten ze nog worden rechtgezet.
    */
   notAccepted: number;
   rows: InvoiceMarginRow[];
@@ -153,7 +154,7 @@ export function invoicedMargin(
     }
 
     const q = qs?.[0] ?? null;
-    if (q && q.status !== 'accepted') notAccepted.add(q.id);
+    if (q && (q.status !== 'accepted' || q.wonByInvoice)) notAccepted.add(q.id);
     invoicedExcl += inv.totalExcl;
     parts[reason].amount += inv.totalExcl;
     parts[reason].count += 1;
@@ -167,7 +168,7 @@ export function invoicedMargin(
       reason,
       quotationId: q?.id ?? null,
       quotationName: q?.name ?? null,
-      quotationStatus: q?.status ?? null,
+      quotationStatus: q ? (q.wonByInvoice ? (q.sourceStatus ?? 'expired') : q.status) : null,
     });
   }
 

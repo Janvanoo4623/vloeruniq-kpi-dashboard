@@ -189,6 +189,14 @@ export default function QuotationModal({
               >
                 {STATUS_LABEL[q.status]}
               </span>
+              {q.wonByInvoice && (
+                <span
+                  className="shrink-0 rounded-full bg-sunk px-2 py-0.5 text-xs text-ink-mute ring-1 ring-line"
+                  title={`In Teamleader staat deze offerte op ${STATUS_LABEL[q.sourceStatus ?? 'expired'].toLowerCase()}, maar er is op de deal gefactureerd. Zet hem in Teamleader op geaccepteerd om dit recht te trekken.`}
+                >
+                  gewonnen volgens factuur
+                </span>
+              )}
               {heeftCorrecties && (
                 <span className="shrink-0 rounded-full bg-oak-soft px-2 py-0.5 text-xs text-oak ring-1 ring-oak/30">
                   Handmatig aangepast

@@ -781,12 +781,27 @@ export { num as _num, numOrNull as _numOrNull };
  * zodat een prijswijziging overal tegelijk doorwerkt. Zie lib/resolve.ts.
  */
 export async function getResolveInput(): Promise<import('./resolve').ResolveInput> {
-  const [prices, costs, overrides] = await Promise.all([
+  const [prices, costs, overrides, facturen, deals] = await Promise.all([
     getPriceRows(),
     getCostRows(),
     getOverrides(),
+    // Wat nodig is om "gefactureerd = gewonnen" te bepalen (lib/resolve.ts).
+    // Via readAll: PostgREST geeft per verzoek maximaal 1000 rijen terug.
+    readAll('invoices').then((data) => ({ data, error: null as unknown })).catch((error) => ({ data: [] as Row[], error })),
+    readAll('deals').then((data) => ({ data, error: null as unknown })).catch((error) => ({ data: [] as Row[], error })),
   ]);
-  return { prices, costs, overrides };
+  const invoicedPerDeal: Record<string, number> = {};
+  if (!facturen.error) {
+    for (const r of facturen.data) {
+      if (!r.deal_id) continue;
+      const total = num(r.total_excl);
+      if (r.status === 'draft' || total <= 0) continue;
+      invoicedPerDeal[r.deal_id as string] = (invoicedPerDeal[r.deal_id as string] ?? 0) + total;
+    }
+  }
+  const dealWonAt: Record<string, string> = {};
+  if (!deals.error) for (const r of deals.data) if (r.date_accepted) dealWonAt[r.id as string] = r.date_accepted as string;
+  return { prices, costs, overrides, invoicedPerDeal: facturen.error ? undefined : invoicedPerDeal, dealWonAt };
 }
 
 // ── Handmatig openstaand bedrag per factuur ─────────────────────────────

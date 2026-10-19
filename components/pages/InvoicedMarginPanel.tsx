@@ -117,7 +117,7 @@ export default function InvoicedMarginPanel({
           hoort bij wat hij factureert: een aanbetaling van 40% draagt 40% van de marge. Facturen zonder deal
           (losse verkoop) hebben geen inkoopprijzen en tellen daarom niet mee in het percentage.
           {data.notAccepted > 0 &&
-            ` ${data.notAccepted === 1 ? 'Eén gefactureerde offerte staat' : `${data.notAccepted} gefactureerde offertes staan`} in Teamleader nog op verlopen — in de conversie ${data.notAccepted === 1 ? 'telt die' : 'tellen die'} als verloren.`}
+            ` ${data.notAccepted === 1 ? 'Eén gefactureerde offerte staat' : `${data.notAccepted} gefactureerde offertes staan`} in Teamleader nog op verlopen. Het dashboard telt ${data.notAccepted === 1 ? 'hem' : 'ze'} als gewonnen, omdat er gefactureerd is; zet ${data.notAccepted === 1 ? 'hem' : 'ze'} in Teamleader op geaccepteerd.`}
         </p>
       </div>
 

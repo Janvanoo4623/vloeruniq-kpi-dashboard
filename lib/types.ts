@@ -42,6 +42,15 @@ export interface QuotationRow {
    * 90-daagse sync ziet oudere offertes niet en mag er dus niets uit afleiden.
    */
   deletedAtSource?: boolean;
+  /**
+   * Staat in Teamleader op verlopen/geweigerd/open, maar er is op de deal
+   * gefactureerd — dus eigenlijk gewonnen. Bij het lezen omgezet naar
+   * 'accepted' (lib/resolve.ts, applyInvoiceWins); dit vlag laat zien dat het
+   * een afleiding is en niet de status uit Teamleader.
+   */
+  wonByInvoice?: boolean;
+  /** De status zoals Teamleader hem heeft, als wonByInvoice hem heeft overschreven. */
+  sourceStatus?: QuotationStatus;
   needsReview?: boolean; // >=1 floor line whose text doesn't say if leggen is included
   products: string[]; // matched floor products (P-numbers / names), distinct, in order
   lines?: QuotationLine[]; // per-product line stats (populated at sync time, stored in DB)
