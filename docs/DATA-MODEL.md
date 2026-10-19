@@ -494,3 +494,20 @@ parketpanelen (A013436) en lijm (A014159), index 2021=100.
 
 **Merk**: logo en sfeerfoto van vloeruniq.nl in `public/brand/`, favicon van hun site. Huisgroen
 #22CB63 bewust níet als accent: groen betekent in het dashboard "goed".
+
+---
+
+## Twee correcties bij het lezen — 2026-10-20
+
+**Gefactureerd = gewonnen** (`applyInvoiceWins` in `lib/resolve.ts`). Een deal met facturen en zonder
+geaccepteerde offerte krijgt één gewonnen versie: die waarvan het bedrag het dichtst bij het
+gefactureerde ligt. Beslisdatum: closed_at van de deal, anders de eigen beslisdatum. Een handmatige
+statuscorrectie gaat vóór. Vlag `wonByInvoice` + `sourceStatus`; in de UI "gewonnen volgens factuur".
+Gemeten: 73 offertes (allemaal 'expired'), €269.502; conversie over de historie 45,7% → 54,2%.
+`getResolveInput()` levert daarvoor `invoicedPerDeal` en `dealWonAt`.
+
+**Marge naar rato bij onvolledige dekking** (`recompute` in `lib/resolve.ts`). Was: vloeromzet − kosten
+van alleen de beprijsde regels (onbeprijsde regels = pure winst; Pieter Boot 76% bij 40% dekking).
+Nu: (beprijsde omzet − kosten) / beprijsde omzet × vloeromzet. Bij 100% dekking identiek.
+Diff 2026-10-20 over alle 889 offertes: 44 gewijzigd, alle 44 met dekking < 100%; 845 op de cent gelijk.
+Totale marge geaccepteerd €499.902 → €470.025 (−6,0%). Wijkt hiermee bewust af van de oude Sheet.

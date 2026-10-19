@@ -204,6 +204,7 @@ function recompute(
   let material = 0;
   let laborTotal = 0;
   let m2WithMatch = 0;
+  let pricedRevenue = 0;
   let hasMatch = false;
 
   const newLines: QuotationLine[] = lines.map((l) => {
@@ -220,6 +221,7 @@ function recompute(
     material += (purchase + rates.underlay) * l.m2;
     laborTotal += labor * l.m2;
     m2WithMatch += l.m2;
+    pricedRevenue += l.revenue;
     hasMatch = true;
     return {
       ...l,
@@ -235,7 +237,15 @@ function recompute(
   }
 
   const cost = material + laborTotal;
-  const margin = round2(basis.omzetVloer - cost);
+  // Naar rato (sinds 2026-10-20). Eerst: de héle vloeromzet min alleen de
+  // kosten van de beprijsde regels — een regel zonder inkoopprijs telde dan als
+  // pure winst, en een offerte met 40% beprijsde m² kwam op 76% marge uit.
+  // Nu: de marge van de beprijsde regels, als percentage doorgetrokken over de
+  // hele vloeromzet. Bij volledige dekking verandert er niets.
+  const margin =
+    pricedRevenue > 0 && pricedRevenue < basis.omzetVloer
+      ? round2(((pricedRevenue - cost) / pricedRevenue) * basis.omzetVloer)
+      : round2(basis.omzetVloer - cost);
   const marginPct = basis.omzetVloer > 0 ? round1((margin / basis.omzetVloer) * 100) : null;
   const matchCoverage = basis.totalM2 > 0 ? round1((m2WithMatch / basis.totalM2) * 100) : null;
   return {
