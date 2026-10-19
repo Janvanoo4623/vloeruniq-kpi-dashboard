@@ -15,7 +15,7 @@ a live web dashboard the business owner and his client can view on any device.
 1. **Syncs** data from the Teamleader Focus API (quotations, deals, customers, custom fields).
 2. **Computes** KPIs: revenue by status, conversion rate, m² sold, margin (via P-number /
    product-name → purchase-price matching), average run time, and revenue per lead source.
-3. **Stores** the computed snapshot in a datastore (local JSON file in dev, Upstash Redis in prod).
+3. **Stores** raw quotations, deals and invoices in **Supabase** (Postgres); see `docs/SUPABASE.md`.
 4. **Renders** an interactive dashboard (charts, tables) that reads only the snapshot — so pages
    load instantly and never block on the slow Teamleader fetch.
 5. **Writes back** run-time ("doorlooptijd") values to Teamleader, mirroring the original script.
@@ -26,6 +26,9 @@ a live web dashboard the business owner and his client can view on any device.
    profit & loss report (`lib/moneybird.ts`, stored in `app_settings.moneybird_pl`, refreshed with
    Vernieuwen/cron, no Teamleader lock). Revenue stays **Teamleader** invoices — Combidesk copies
    them into Moneybird, so never sum both. See `docs/DATA-MODEL.md` "Resultaat".
+8. **Read-time corrections** (since 2026-10-20, `lib/resolve.ts`): a quotation whose deal has
+   invoices counts as won even if Teamleader says expired (`wonByInvoice`), and margin on
+   partially priced quotations is pro rata. See `docs/DATA-MODEL.md` "Twee correcties".
 
 ## Read these first
 
@@ -36,6 +39,8 @@ a live web dashboard the business owner and his client can view on any device.
 - `docs/API.md` — Teamleader endpoints used + this app's internal API routes.
 - `docs/DEPLOYMENT.md` — Vercel + Upstash + env vars + password auth.
 - `docs/ROADMAP.md` — build phases and status.
+- `docs/UI.md` — **navigation (9 sections), the page template, colour and chart rules.** Read before
+  adding or rebuilding a page.
 
 ## Critical rules for working in this repo
 
@@ -65,6 +70,8 @@ a live web dashboard the business owner and his client can view on any device.
   price edit works immediately and its `effective_from` decides how far back it reaches. When you
   touch that resolver, diff every stored margin before and after and make each change explainable
   from a price or cost row — that check is what proved the port correct on all 843 quotations.
+  `npm test` covers the resolver, invoice margin, call list, break-even and cash forecast; add a
+  case when you change one of them.
 
 ## Commands
 
@@ -75,6 +82,7 @@ npm run sync:ads   # Google Ads dagcijfers -> Supabase ads_daily, verder terug d
 npm run ads:token  # test de GAQL-koppeling uit .env.local en zet hem in Supabase (app_settings.ads_gaql) voor Vernieuwen/cron op Vercel
 npm run ads:meta-token  # idem voor Meta Ads (META_ACCESS_TOKEN + META_AD_ACCOUNT_ID), laadt meteen 90 dagen (--days N)
 npm run moneybird:token  # test MONEYBIRD_TOKEN uit .env.local, zet hem in Supabase (app_settings.moneybird) en laadt de W&V per maand
+npm test           # tests on the calculation modules (node:test via tsx) — run after touching lib/
 npm run build      # production build
 npm run lint       # eslint
 ```
