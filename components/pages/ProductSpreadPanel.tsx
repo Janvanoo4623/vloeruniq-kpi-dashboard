@@ -125,14 +125,14 @@ export default function ProductSpreadPanel({ products }: { products: ProductSpre
                       <span
                         className={cn(
                           'absolute top-1/2 h-1.5 -translate-y-1/2 rounded-full',
-                          verlies ? 'bg-warn/35' : 'bg-accent/25',
+                          verlies ? 'bg-warn/35' : 'bg-brand/30',
                         )}
                         style={{ left: `${links}%`, width: `${Math.max(1, rechts - links)}%` }}
                       />
                       <span
                         className={cn(
                           'absolute top-1/2 h-3.5 w-[3px] -translate-x-1/2 -translate-y-1/2 rounded-full',
-                          verlies ? 'bg-warn' : 'bg-accent',
+                          verlies ? 'bg-warn' : 'bg-brand-ink',
                         )}
                         style={{ left: `${med}%` }}
                         title={`mediaan ${formatEuro(p.medianMarginPerM2, true)}/m²`}

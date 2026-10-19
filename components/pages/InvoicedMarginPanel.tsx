@@ -9,7 +9,7 @@ import { Pagination, usePaged } from '@/components/ui/Pagination';
 import QuotationModal from '@/components/QuotationModal';
 
 const DEEL: { key: InvoiceMarginReason; label: string; bar: string }[] = [
-  { key: 'ok', label: 'Marge bekend', bar: 'bg-accent' },
+  { key: 'ok', label: 'Marge bekend', bar: 'bg-brand' },
   // Oranje omdat je hier iets aan kunt doen: de inkoopprijs aanvullen.
   { key: 'geen-inkoopprijs', label: 'Offerte zonder inkoopprijs', bar: 'bg-warn' },
   { key: 'geen-offerte', label: 'Zonder offerte', bar: 'bg-ink-faint/40' },

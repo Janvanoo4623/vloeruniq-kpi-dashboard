@@ -81,7 +81,7 @@ export default function ProductsTable({ rows }: { rows: ProductStat[] }) {
                     </span>
                     <span className="hidden h-1.5 w-24 overflow-hidden rounded-full bg-sunk sm:block">
                       <span
-                        className="block h-full rounded-full bg-accent"
+                        className="block h-full rounded-full bg-brand"
                         style={{ width: `${(p.revenue / maxRevenue) * 100}%` }}
                       />
                     </span>

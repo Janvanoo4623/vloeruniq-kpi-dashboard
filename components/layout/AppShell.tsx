@@ -40,7 +40,7 @@ export default function AppShell({
               verversing onderweg is: je ziet dát er iets gebeurt zonder dat de
               pagina wegvalt. */}
           <div className="relative h-[2px] shrink-0 overflow-hidden" aria-hidden>
-            {(dataLoading || refreshing) && <span className="absolute inset-y-0 w-1/3 animate-loading-bar rounded-full bg-accent" />}
+            {(dataLoading || refreshing) && <span className="absolute inset-y-0 w-1/3 animate-loading-bar rounded-full bg-brand" />}
           </div>
 
           {message && (

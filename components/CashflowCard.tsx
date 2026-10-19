@@ -7,7 +7,7 @@ import type { AgingBucket, AgingInvoice, OverdueInvoice, QuotationRow } from '@/
 import { formatEuro, formatNumber } from '@/lib/format';
 import QuotationModal from './QuotationModal';
 
-const COLORS = ['bg-accent', 'bg-warn', 'bg-orange-500', 'bg-crit', 'bg-crit'];
+const COLORS = ['bg-brand', 'bg-warn', 'bg-orange-500', 'bg-crit', 'bg-crit'];
 
 export default function CashflowCard({
   buckets,

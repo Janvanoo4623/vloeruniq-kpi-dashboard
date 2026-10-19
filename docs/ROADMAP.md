@@ -116,3 +116,16 @@ ontgrendeld. Werkt pas vooruit: historische deals hebben geen click-ID.
 - [x] Hele app: accent = zwart, grafieken = merkgroen, kaarten = bento, knoppen en schakelaars = pillen, grotere KPI-getallen.
 - [ ] Periodekiezer en Instellingen-kaarten nog in de oude vorm.
 - [ ] Per pagina één zwarte statement-kaart voor het kerngetal (Resultaat, Marketing, Cashflow)?
+
+## Elke pagina in het sjabloon — 2026-10-19/20
+Elke pagina: (1) zwarte statement-kaart met het kerngetal (`components/page/HeroCard`) naast "In het kort"
+(`InsightCard`) of een actielijst; (2) hooguit vier tegels (`StatTile`); (3) één hoofdgrafiek
+(`components/page/HighlightChart`: rechte staven, ronde bovenhoeken, effen grijs, raster, nullijn,
+gemarkeerde staaf met ballon); (4) "Verdieping" (`DetailsLabel`) met de bestaande tabellen en grafieken.
+- [x] Overzicht, Financieel (Resultaat, Marge, Cashflow), Planning, Verkoop (Pijplijn, Offertes, Verloren),
+      Controleren (Te doen, Uitzonderingen), Marketing (Kanalen, Leadbronnen), Klanten (Klanten, Regio), Trends.
+- [x] Planning: weken werk, agenda 3 weken, gewonnen-niet-ingepland (`lib/planning.ts`).
+- [x] Zwart = bediening (knoppen, navigatie), merkgroen = data (balken, gemarkeerde staaf).
+- [ ] Instellingen heeft geen statement-kaart (werkpagina); alleen restyle.
+- [ ] Offertes toont "conversie" over de periode (gewonnen/beslist), Pijplijn "winkans" over de
+      uitgeharde historie — twee definities naast elkaar; eventueel één naam/uitleg kiezen.

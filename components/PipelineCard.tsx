@@ -6,7 +6,7 @@ import type { QuotationRow } from '@/lib/types';
 import { formatEuro, formatPercent } from '@/lib/format';
 import QuotationModal from './QuotationModal';
 
-const TIER_COLORS = ['bg-accent', 'bg-warn', 'bg-crit'];
+const TIER_COLORS = ['bg-brand', 'bg-warn', 'bg-crit'];
 
 export default function PipelineCard({
   pipeline,

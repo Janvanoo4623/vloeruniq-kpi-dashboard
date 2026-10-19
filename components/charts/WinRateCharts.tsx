@@ -65,7 +65,7 @@ export function WinRateBySizeChart({ data }: { data: WinRateBucket[] }) {
                   width: `${pct ?? 0}%`,
                   backgroundImage: below
                     ? 'linear-gradient(90deg, var(--color-warn) 0%, color-mix(in oklab, var(--color-warn) 60%, white) 100%)'
-                    : 'linear-gradient(90deg, var(--color-accent) 0%, color-mix(in oklab, var(--color-accent) 60%, white) 100%)',
+                    : 'linear-gradient(90deg, var(--color-brand) 0%, color-mix(in oklab, var(--color-brand) 60%, white) 100%)',
                 }}
               />
             </div>

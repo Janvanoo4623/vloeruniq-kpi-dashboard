@@ -9,7 +9,6 @@ import {
 } from '@/components/charts/WinRateCharts';
 import { useDashboard } from '@/components/layout/DashboardProvider';
 import ChartCard from '@/components/ChartCard';
-import PipelineCard from '@/components/PipelineCard';
 import CountsByWeekChart from '@/components/charts/CountsByWeekChart';
 import EmptyState from '@/components/pages/EmptyState';
 import { FileText, Hourglass, Snowflake, Sparkles } from 'lucide-react';
@@ -100,12 +99,6 @@ export default function PijplijnView({
 
       <CallListPanel callList={today.callList} pricedCodes={pricedCodes} />
 
-      <ChartCard
-        title="Pijplijn"
-        subtitle="Gewogen met de historische winkans, plus de oudste open offertes"
-      >
-        <PipelineCard pipeline={pipeline} pricedCodes={pricedCodes} />
-      </ChartCard>
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
         <ChartCard

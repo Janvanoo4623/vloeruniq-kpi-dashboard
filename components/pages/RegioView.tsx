@@ -207,7 +207,7 @@ export default function RegioView({
                         </span>
                         <span className="h-1.5 w-[90px] shrink-0 overflow-hidden rounded-full bg-sunk">
                           <span
-                            className="block h-full rounded-full bg-accent"
+                            className="block h-full rounded-full bg-brand"
                             style={{ width: `${((r.winRate ?? 0) / maxWin) * 100}%` }}
                           />
                         </span>

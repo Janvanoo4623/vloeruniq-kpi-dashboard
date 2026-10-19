@@ -74,19 +74,19 @@ export default function Settings({ initial }: { initial: State }) {
     // De paginakop staat al in de bovenbalk; een tweede kop en een knop "terug
     // naar dashboard" stamden uit de tijd dat dit een losse pagina was.
     <div className="mx-auto w-full max-w-5xl">
-      <div className="rounded-xl border border-line bg-surface px-4 py-3 text-xs leading-relaxed text-ink-mute">
+      <div className="rounded-2xl bg-surface/70 px-5 py-3.5 text-xs leading-relaxed text-ink-mute">
         Bij elke prijs- of kostenwijziging kies je zelf vanaf wanneer hij geldt. <strong>Vanaf
         vandaag</strong> laat oude offertes met hun eigen prijs staan; <strong>met terugwerkende
         kracht</strong> rekent de hele historie opnieuw door. Het effect is meteen zichtbaar, een
         synchronisatie is er niet meer voor nodig.
       </div>
 
-      <div className="mt-4 flex rounded-full bg-sunk p-1 text-sm w-fit">
+      <div className="mt-4 flex max-w-full overflow-x-auto rounded-full bg-sunk p-1 text-sm sm:w-fit">
         {TABS.map((t) => (
           <button
             key={t.key}
             onClick={() => setTab(t.key)}
-            className={`rounded-full px-4 py-1.5 font-medium transition ${
+            className={`shrink-0 whitespace-nowrap rounded-full px-4 py-1.5 font-medium transition ${
               tab === t.key ? 'bg-night text-white shadow-sm' : 'text-ink-mute hover:text-ink'
             }`}
           >
@@ -127,7 +127,7 @@ const vandaag = () => new Date().toISOString().split('T')[0];
 type Post = (payload: Record<string, unknown>, okMessage?: string) => Promise<boolean>;
 
 function Card({ children }: { children: React.ReactNode }) {
-  return <div className="rounded-2xl border border-line bg-white p-5 shadow-sm">{children}</div>;
+  return <div className="rounded-[28px] bg-surface p-6 shadow-[0_1px_2px_rgba(19,19,19,0.04),0_18px_44px_-28px_rgba(19,19,19,0.28)]">{children}</div>;
 }
 
 // ── Vanaf wanneer geldt een wijziging ────────────────────────────────────

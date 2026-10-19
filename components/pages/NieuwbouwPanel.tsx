@@ -107,7 +107,7 @@ export default function NieuwbouwPanel({ data }: { data: NieuwbouwOverview }) {
                 <td className="px-3 py-2.5">
                   <span className="block h-1.5 w-full max-w-[140px] overflow-hidden rounded-full bg-sunk">
                     <span
-                      className="block h-full rounded-full bg-accent"
+                      className="block h-full rounded-full bg-brand"
                       style={{ width: `${(r.permitsJaar / maxPermits) * 100}%` }}
                     />
                   </span>

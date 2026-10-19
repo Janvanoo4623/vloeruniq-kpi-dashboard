@@ -201,7 +201,7 @@ function Bezetting({ m2, cap }: { m2: number; cap: number }) {
     <td className="px-5 py-2.5">
       <div className="flex items-center gap-2">
         <span className="h-1.5 w-24 overflow-hidden rounded-full bg-sunk">
-          <span className={cn('block h-full rounded-full', pct >= 90 ? 'bg-warn' : 'bg-accent')} style={{ width: `${Math.min(100, pct)}%` }} />
+          <span className={cn('block h-full rounded-full', pct >= 90 ? 'bg-warn' : 'bg-brand')} style={{ width: `${Math.min(100, pct)}%` }} />
         </span>
         <span className={cn('tabular-nums', pct >= 90 ? 'font-semibold text-warn' : 'text-ink-soft')}>{Math.round(pct)}%</span>
       </div>

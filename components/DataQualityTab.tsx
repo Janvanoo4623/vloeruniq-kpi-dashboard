@@ -132,7 +132,7 @@ function Sparkline({ waarden }: { waarden: number[] }) {
       <polyline
         points={punten}
         fill="none"
-        stroke="var(--color-accent)"
+        stroke="var(--color-brand-ink)"
         strokeWidth="1.8"
         strokeLinejoin="round"
         strokeLinecap="round"

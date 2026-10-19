@@ -97,7 +97,7 @@ export default function MarktaandeelPanel({ data }: { data: MarketShareOverview 
                         </span>
                         <span className="h-1.5 w-[110px] shrink-0 overflow-hidden rounded-full bg-sunk">
                           <span
-                            className={cn('block h-full rounded-full', laag ? 'bg-warn' : 'bg-accent')}
+                            className={cn('block h-full rounded-full', laag ? 'bg-warn' : 'bg-brand')}
                             style={{ width: `${((r.perThousand ?? 0) / max) * 100}%` }}
                           />
                         </span>

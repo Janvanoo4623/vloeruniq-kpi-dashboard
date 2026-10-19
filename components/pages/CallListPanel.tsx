@@ -61,7 +61,7 @@ export default function CallListPanel({ callList, pricedCodes }: { callList: Cal
                       <td className="px-5 py-2.5">
                         <div className="flex items-center gap-2">
                           <span className="h-1.5 w-24 overflow-hidden rounded-full bg-sunk">
-                            <span className="block h-full rounded-full bg-accent" style={{ width: `${(c.expected / max) * 100}%` }} />
+                            <span className="block h-full rounded-full bg-brand" style={{ width: `${(c.expected / max) * 100}%` }} />
                           </span>
                           <span className="tabular-nums text-ink">{formatEuro(c.expected)}</span>
                         </div>
