@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "test": "tsx --test tests/*.test.ts",
     "sync": "tsx scripts/sync.ts",
     "seed:demo": "tsx scripts/seed-demo.ts",
     "import:config": "tsx scripts/import-config.ts",
