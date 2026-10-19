@@ -102,6 +102,76 @@ body {
   }
 }
 
+/* ── De statement-kaart (HeroCard, StatementCard) ─────────────────────────
+   Alle kleuren via variabelen, zodat er één thema-knop is (HERO_THEME in
+   components/page/HeroCard.tsx). "night" = zwart met groen, "mint" = licht
+   groen met donkere tekst, "green" = vol merkgroen met witte tekst. */
+.hero {
+  background: var(--hero-bg);
+  color: var(--hero-fg);
+  box-shadow: var(--hero-shadow);
+}
+.hero[data-hero='night'] {
+  --hero-bg: #131313;
+  --hero-fg: #ffffff;
+  --hero-muted: rgba(255, 255, 255, 0.6);
+  --hero-faint: rgba(255, 255, 255, 0.45);
+  --hero-soft: rgba(255, 255, 255, 0.75);
+  --hero-track: rgba(255, 255, 255, 0.1);
+  --hero-surface: rgba(255, 255, 255, 0.06);
+  --hero-marker: rgba(255, 255, 255, 0.7);
+  --hero-fill: #22cb63;
+  --hero-neutral: rgba(255, 255, 255, 0.45);
+  --hero-glow: rgba(34, 203, 99, 0.25);
+  --hero-pattern: #ffffff;
+  --hero-pattern-opacity: 0.07;
+  --hero-good-bg: rgba(34, 203, 99, 0.15);
+  --hero-good-fg: #22cb63;
+  --hero-warn: #f3c66b;
+  --hero-crit: #f2a294;
+  --hero-shadow: 0 24px 60px -30px rgba(19, 19, 19, 0.7);
+}
+.hero[data-hero='mint'] {
+  --hero-bg: linear-gradient(135deg, #f1fbf5 0%, #dcf6e7 55%, #c9f0da 100%);
+  --hero-fg: #0f2a1b;
+  --hero-muted: rgba(15, 42, 27, 0.62);
+  --hero-faint: rgba(15, 42, 27, 0.48);
+  --hero-soft: rgba(15, 42, 27, 0.78);
+  --hero-track: rgba(15, 42, 27, 0.09);
+  --hero-surface: rgba(255, 255, 255, 0.62);
+  --hero-marker: rgba(15, 42, 27, 0.55);
+  --hero-fill: #16a34f;
+  --hero-neutral: rgba(15, 42, 27, 0.35);
+  --hero-glow: rgba(255, 255, 255, 0.7);
+  --hero-pattern: #10884a;
+  --hero-pattern-opacity: 0.09;
+  --hero-good-bg: rgba(22, 163, 79, 0.14);
+  --hero-good-fg: #10884a;
+  --hero-warn: #8a5f12;
+  --hero-crit: #a93b2c;
+  --hero-shadow: 0 1px 2px rgba(15, 42, 27, 0.05), 0 22px 50px -30px rgba(16, 136, 74, 0.45);
+}
+.hero[data-hero='green'] {
+  --hero-bg: linear-gradient(135deg, #34d977 0%, #20b95b 55%, #149a4a 100%);
+  --hero-fg: #ffffff;
+  --hero-muted: rgba(255, 255, 255, 0.8);
+  --hero-faint: rgba(255, 255, 255, 0.68);
+  --hero-soft: rgba(255, 255, 255, 0.92);
+  --hero-track: rgba(255, 255, 255, 0.24);
+  --hero-surface: rgba(255, 255, 255, 0.15);
+  --hero-marker: #ffffff;
+  --hero-fill: #ffffff;
+  --hero-neutral: rgba(255, 255, 255, 0.6);
+  --hero-glow: rgba(255, 255, 255, 0.28);
+  --hero-pattern: #ffffff;
+  --hero-pattern-opacity: 0.12;
+  --hero-good-bg: rgba(255, 255, 255, 0.22);
+  --hero-good-fg: #ffffff;
+  --hero-warn: #fff1c2;
+  --hero-crit: #ffe0d9;
+  --hero-shadow: 0 24px 56px -28px rgba(20, 154, 74, 0.65);
+}
+
 /* Recharts — de tooltip gebruikt onze eigen kaart, dus de standaardschil weg. */
 .recharts-default-tooltip {
   border-radius: 0.75rem !important;
