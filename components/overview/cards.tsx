@@ -178,14 +178,14 @@ export function StatTile({
 }: {
   Icon: LucideIcon;
   label: string;
-  href: string;
+  href?: string;
   value: ReactNode;
-  delta: ReactNode;
-  deltaLabel: string;
-  bars: number[];
+  delta?: ReactNode;
+  deltaLabel?: string;
+  bars?: number[];
   sub?: string;
 }) {
-  const max = Math.max(1, ...bars);
+  const max = Math.max(1, ...(bars ?? []));
   return (
     <div className={cn(BENTO, 'flex flex-col p-5')}>
       <div className="flex items-center justify-between gap-2">
@@ -193,26 +193,71 @@ export function StatTile({
           <IconBadge Icon={Icon} />
           <span className="truncate text-[13.5px] font-medium text-ink-soft">{label}</span>
         </span>
-        <OpenLink href={href} label={`Naar ${label.toLowerCase()}`} />
+        {href && <OpenLink href={href} label={`Naar ${label.toLowerCase()}`} />}
       </div>
       <p className="mt-5 text-[34px] font-semibold leading-none tracking-[-0.03em] tabular-nums text-ink">{value}</p>
-      <div className="mt-2.5 flex flex-wrap items-center gap-1.5 text-[11.5px] text-ink-faint">
-        {delta}
-        <span>{deltaLabel}</span>
-      </div>
-      {sub && <p className="mt-1 text-[11.5px] text-ink-faint">{sub}</p>}
-      <div className="mt-5 flex h-10 items-end gap-[3px]" aria-hidden>
+      {(delta || deltaLabel) && (
+        <div className="mt-2.5 flex flex-wrap items-center gap-1.5 text-[11.5px] text-ink-faint">
+          {delta}
+          {deltaLabel && <span>{deltaLabel}</span>}
+        </div>
+      )}
+      {sub && <p className="mt-1.5 text-[11.5px] leading-snug text-ink-faint">{sub}</p>}
+      {bars && bars.length > 0 && (
+      <div className="mt-auto flex h-10 items-end gap-[3px] pt-5" aria-hidden>
         {bars.map((b, i) => {
           const laatste = i === bars.length - 1;
           return (
             <span
               key={i}
               className={cn('flex-1 rounded-full', laatste ? 'bg-brand' : 'bg-sunk')}
-              style={{ height: `${Math.max(10, (b / max) * 100)}%` }}
+              style={{ height: `${Math.max(10, (Math.max(0, b) / max) * 100)}%` }}
             />
           );
         })}
       </div>
+      )}
+    </div>
+  );
+}
+
+export type InsightTone = 'neutral' | 'brand' | 'warn' | 'crit';
+export interface Insight {
+  Icon: LucideIcon;
+  tone?: InsightTone;
+  /** Tekst; getallen tussen **…** worden vet. */
+  text: string;
+}
+
+/**
+ * "In het kort" voor elke pagina: twee tot vier regels met een rond icoon.
+ * De pagina bepaalt zelf wat erin staat; dit is alleen de vorm.
+ */
+export function InsightCard({ title = 'In het kort', items, footer }: { title?: string; items: Insight[]; footer?: ReactNode }) {
+  return (
+    <div className={cn(BENTO, 'flex h-full flex-col p-6')}>
+      <h3 className="text-[16px] font-semibold tracking-tight text-ink">{title}</h3>
+      <ul className="mt-5 space-y-4">
+        {items.map((it, i) => (
+          <li key={i} className="flex items-start gap-3">
+            <IconBadge Icon={it.Icon} tone={it.tone ?? 'neutral'} />
+            <p className="pt-[7px] text-[13.5px] leading-relaxed text-ink-soft">
+              <Rich text={it.text} />
+            </p>
+          </li>
+        ))}
+      </ul>
+      {footer && <div className="mt-auto pt-5">{footer}</div>}
+    </div>
+  );
+}
+
+/** Kop boven het detailgedeelte van een pagina: alles hieronder is verdieping. */
+export function DetailsLabel({ children = 'Verdieping' }: { children?: ReactNode }) {
+  return (
+    <div className="flex items-center gap-3 pt-4">
+      <span className="text-[12px] font-semibold uppercase tracking-[0.12em] text-ink-faint">{children}</span>
+      <span className="h-px flex-1 bg-line" />
     </div>
   );
 }
