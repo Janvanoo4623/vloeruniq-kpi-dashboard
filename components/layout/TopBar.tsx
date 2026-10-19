@@ -3,7 +3,7 @@
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { FileDown, LogOut, Menu, RefreshCw } from 'lucide-react';
-import { navItemFor } from '@/lib/nav';
+import { navItemFor, sectionFor } from '@/lib/nav';
 import { formatDateTime, timeAgo } from '@/lib/format';
 import DateRangePicker from '@/components/DateRangePicker';
 import { Button } from '@/components/ui';
@@ -19,6 +19,9 @@ export default function TopBar({ onMenu }: { onMenu?: () => void }) {
   const router = useRouter();
   const { range, setRange, dataLoading, refresh, refreshing, meta } = useDashboard();
   const item = navItemFor(pathname);
+  const section = sectionFor(pathname);
+  // Op Overzicht staat de grote begroeting al als titel; dubbel hoeft niet.
+  const toonTitel = pathname !== '/';
 
   async function logout() {
     await fetch('/api/logout', { method: 'POST' });
@@ -41,12 +44,16 @@ export default function TopBar({ onMenu }: { onMenu?: () => void }) {
             <Menu size={18} strokeWidth={2} />
           </button>
           <div className="min-w-0 flex-1">
-            <h1 className="truncate text-[15px] font-bold tracking-tight text-ink">
-              {item?.title ?? 'Vloeruniq'}
-            </h1>
-            <p className="mt-0.5 truncate text-[11.5px] text-ink-mute">
-              {item?.subtitle ?? 'KPI-dashboard'}
-            </p>
+            {toonTitel && (
+              <>
+                <h1 className="truncate text-[17px] font-semibold tracking-tight text-ink">
+                  {section?.label ?? item?.title ?? 'Vloeruniq'}
+                </h1>
+                <p className="mt-0.5 truncate text-[12px] text-ink-mute">
+                  {item?.subtitle ?? section?.subtitle ?? 'KPI-dashboard'}
+                </p>
+              </>
+            )}
           </div>
         </div>
 
@@ -70,7 +77,7 @@ export default function TopBar({ onMenu }: { onMenu?: () => void }) {
             target="_blank"
             title="Exporteren: alle tabbladen als printbaar rapport"
             aria-label="Exporteren"
-            className="flex shrink-0 items-center gap-1.5 rounded-lg border border-line px-2.5 py-2 text-[13px] font-medium text-ink-mute transition hover:text-ink"
+            className="flex shrink-0 items-center gap-1.5 rounded-full bg-surface px-3.5 py-2 text-[13px] font-medium text-ink-mute ring-1 ring-line transition hover:text-ink hover:ring-ink/20"
           >
             <FileDown size={14} strokeWidth={2} />
             <span className="hidden xl:inline">Export</span>

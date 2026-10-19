@@ -27,13 +27,13 @@ export default function PriceSensitivityPanel({ data }: { data: PriceSensitivity
       title="Wat als de prijs per m² iets omhoog gaat?"
       subtitle="Over de gewonnen offertes van de afgelopen twaalf maanden, ex btw"
       right={
-        <div className="flex rounded-lg border border-line bg-surface p-0.5 text-[12px]">
+        <div className="flex rounded-full bg-sunk p-1 text-[12px]">
           {STAPPEN.map((s) => (
             <button
               key={s}
               type="button"
               onClick={() => setStap(s)}
-              className={cn('rounded-md px-2.5 py-1 font-medium tabular-nums transition', stap === s ? 'bg-ink text-white' : 'text-ink-mute hover:text-ink')}
+              className={cn('rounded-full px-2.5 py-1 font-medium tabular-nums transition', stap === s ? 'bg-night text-white shadow-sm' : 'text-ink-mute hover:text-ink')}
             >
               +{formatEuro(s, s % 1 !== 0)}
             </button>

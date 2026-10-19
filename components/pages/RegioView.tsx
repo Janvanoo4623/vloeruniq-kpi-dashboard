@@ -102,7 +102,7 @@ export default function RegioView({
         title="Winkans en marge per plaats"
         subtitle={`Een percentage verschijnt pas vanaf ${minSample} uitgewerkte offertes — daaronder zegt het niets`}
         right={
-          <div className="flex rounded-lg border border-line p-0.5 text-[11.5px]">
+          <div className="flex rounded-full bg-sunk p-1 text-[11.5px]">
             {(
               [
                 ['revenue', 'Omzet'],
@@ -118,8 +118,8 @@ export default function RegioView({
                   gepagineerd.reset();
                 }}
                 className={cn(
-                  'rounded-md px-2 py-1 font-medium transition',
-                  sort === k ? 'bg-ink text-white' : 'text-ink-mute hover:text-ink',
+                  'rounded-full px-2 py-1 font-medium transition',
+                  sort === k ? 'bg-night text-white shadow-sm' : 'text-ink-mute hover:text-ink',
                 )}
               >
                 {label}

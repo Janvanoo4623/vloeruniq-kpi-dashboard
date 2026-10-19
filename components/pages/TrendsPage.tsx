@@ -29,13 +29,13 @@ export default function TrendsPage({ market }: { market: MarketData }) {
         title="KPI's naast elkaar"
         subtitle="Kies een vraag of stel zelf samen; euro's links, aantallen en procenten rechts"
         action={
-          <div className="flex rounded-lg border border-line bg-surface p-0.5 text-[11.5px]">
+          <div className="flex rounded-full bg-sunk p-1 text-[11.5px]">
             {(['week', 'month'] as Granularity[]).map((g) => (
               <button
                 key={g}
                 type="button"
                 onClick={() => setGran(g)}
-                className={cn('rounded-md px-2.5 py-1 font-medium transition', granularity === g ? 'bg-ink text-white' : 'text-ink-mute hover:text-ink')}
+                className={cn('rounded-full px-2.5 py-1 font-medium transition', granularity === g ? 'bg-night text-white shadow-sm' : 'text-ink-mute hover:text-ink')}
               >
                 {g === 'week' ? 'Week' : 'Maand'}
               </button>

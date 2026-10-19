@@ -81,13 +81,13 @@ export default function Settings({ initial }: { initial: State }) {
         synchronisatie is er niet meer voor nodig.
       </div>
 
-      <div className="mt-4 flex rounded-lg border border-line p-0.5 text-sm w-fit">
+      <div className="mt-4 flex rounded-full bg-sunk p-1 text-sm w-fit">
         {TABS.map((t) => (
           <button
             key={t.key}
             onClick={() => setTab(t.key)}
-            className={`rounded-md px-3 py-1.5 font-medium transition ${
-              tab === t.key ? 'bg-ink text-white' : 'text-ink-mute hover:text-ink'
+            className={`rounded-full px-4 py-1.5 font-medium transition ${
+              tab === t.key ? 'bg-night text-white shadow-sm' : 'text-ink-mute hover:text-ink'
             }`}
           >
             {t.label}
@@ -175,15 +175,15 @@ function IngangKiezer({
   return (
     <div className="mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-hair bg-sunk/50 px-3 py-2">
       <span className="text-xs font-medium text-ink-soft">Wijziging geldt</span>
-      <div className="flex rounded-md border border-line bg-white p-0.5">
+      <div className="flex rounded-full bg-sunk p-1">
         {opties.map((o) => (
           <button
             key={o.key}
             type="button"
             title={o.titel}
             onClick={() => setKeuze(o.key)}
-            className={`rounded px-2.5 py-1 text-xs font-medium transition ${
-              keuze === o.key ? 'bg-ink text-white' : 'text-ink-mute hover:text-ink'
+            className={`rounded-full px-3 py-1 text-xs font-medium transition ${
+              keuze === o.key ? 'bg-night text-white shadow-sm' : 'text-ink-mute hover:text-ink'
             }`}
           >
             {o.label}
@@ -276,7 +276,7 @@ function PricesTab({ prices, post, busy }: { prices: CurrentPrice[]; post: Post;
                         );
                         if (ok) setEdits((s) => ({ ...s, [p.code]: '' }));
                       }}
-                      className={`rounded-md bg-accent px-2.5 py-1 text-xs font-medium text-white transition hover:bg-accent/90 disabled:opacity-40 ${changed ? 'animate-fade-in' : 'invisible'}`}
+                      className={`rounded-full bg-accent px-3 py-1 text-xs font-medium text-white transition hover:bg-accent/90 disabled:opacity-40 ${changed ? 'animate-fade-in' : 'invisible'}`}
                     >
                       Opslaan
                     </button>
@@ -401,7 +401,7 @@ function CostsTab({ costs, post, busy }: { costs: CurrentCost[]; post: Post; bus
                   );
                   if (ok) setEdits((s) => ({ ...s, [key]: '' }));
                 }}
-                className={`ml-auto rounded-md bg-accent px-2.5 py-1 text-xs font-medium text-white transition hover:bg-accent/90 disabled:opacity-40 ${changed ? 'animate-fade-in' : 'invisible'}`}
+                className={`ml-auto rounded-full bg-accent px-3 py-1 text-xs font-medium text-white transition hover:bg-accent/90 disabled:opacity-40 ${changed ? 'animate-fade-in' : 'invisible'}`}
               >
                 Opslaan
               </button>

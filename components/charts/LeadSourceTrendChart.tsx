@@ -46,7 +46,7 @@ export default function LeadSourceTrendChart({ data }: { data: LeadSourceTrend }
       <ChartLegend
         items={sources.map((s) => ({ label: s, color: kleurVan(s) }))}
         right={
-          <div className="flex rounded-lg border border-line p-0.5 text-[11.5px]">
+          <div className="flex rounded-full bg-sunk p-1 text-[11.5px]">
             {(
               [
                 ['euro', 'In euro’s'],
@@ -57,8 +57,8 @@ export default function LeadSourceTrendChart({ data }: { data: LeadSourceTrend }
                 key={k}
                 onClick={() => setModus(k)}
                 className={cn(
-                  'rounded-md px-2 py-1 font-medium transition',
-                  modus === k ? 'bg-ink text-white' : 'text-ink-mute hover:text-ink',
+                  'rounded-full px-2 py-1 font-medium transition',
+                  modus === k ? 'bg-night text-white shadow-sm' : 'text-ink-mute hover:text-ink',
                 )}
               >
                 {label}

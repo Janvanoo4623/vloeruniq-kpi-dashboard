@@ -11,11 +11,10 @@ export function Card({ className, children }: { className?: string; children: Re
   return (
     <div
       className={cn(
-        'rounded-2xl border border-line bg-surface',
-        // Twee lagen schaduw: een haarscherpe contactlijn plus een brede, zachte
-        // slagschaduw. Eén enkele blur ziet er op een warme ondergrond altijd
-        // grijzig uit; deze combinatie geeft de kaart gewicht zonder vuil te worden.
-        'shadow-[0_1px_2px_rgba(28,25,23,0.04),0_10px_30px_-18px_rgba(28,25,23,0.32)]',
+        // Bento (restyle 2026-10-19): geen rand, grote hoeken, één zachte
+        // slagschaduw plus een haarlijn-contactschaduw. Zelfde vorm als op Overzicht.
+        'rounded-[28px] bg-surface',
+        'shadow-[0_1px_2px_rgba(19,19,19,0.04),0_18px_44px_-28px_rgba(19,19,19,0.28)]',
         className,
       )}
     >
@@ -36,18 +35,10 @@ export function CardHeader({
   className?: string;
 }) {
   return (
-    <div
-      className={cn(
-        'flex items-start justify-between gap-4 border-b border-hair px-5 py-4',
-        // Nauwelijks zichtbaar verloop onder de kop, zodat de kop optisch bij de
-        // kaart hoort in plaats van er als een aparte balk bovenop te liggen.
-        'bg-gradient-to-b from-sunk/50 to-transparent',
-        className,
-      )}
-    >
+    <div className={cn('flex items-start justify-between gap-4 px-6 pb-1 pt-6', className)}>
       <div className="min-w-0">
-        <h3 className="text-[13px] font-semibold tracking-tight text-ink">{title}</h3>
-        {subtitle && <p className="mt-0.5 text-xs text-ink-mute">{subtitle}</p>}
+        <h3 className="text-[16px] font-semibold tracking-tight text-ink">{title}</h3>
+        {subtitle && <p className="mt-1 text-[12.5px] leading-relaxed text-ink-mute">{subtitle}</p>}
       </div>
       {right && <div className="shrink-0">{right}</div>}
     </div>
@@ -55,7 +46,7 @@ export function CardHeader({
 }
 
 export function CardBody({ className, children }: { className?: string; children: ReactNode }) {
-  return <div className={cn('p-5', className)}>{children}</div>;
+  return <div className={cn('p-6 pt-4', className)}>{children}</div>;
 }
 
 /** Kaart met kop + body in één — de vorm die de meeste panelen gebruiken. */
@@ -154,8 +145,8 @@ export function SectionLabel({ children, right }: { children: ReactNode; right?:
 
 // ── Knoppen ──────────────────────────────────────────────────────────────
 const BUTTON_VARIANTS = {
-  primary: 'bg-accent text-white hover:bg-accent/90 shadow-sm',
-  secondary: 'border border-line bg-surface text-ink-soft hover:text-ink hover:border-ink-faint',
+  primary: 'bg-night text-white hover:bg-night/90 shadow-[0_8px_18px_-10px_rgba(19,19,19,0.7)]',
+  secondary: 'bg-surface text-ink-soft ring-1 ring-line hover:text-ink hover:ring-ink/20',
   ghost: 'text-ink-mute hover:text-ink hover:bg-sunk',
 } as const;
 
@@ -168,7 +159,7 @@ export function Button({
     <button
       {...props}
       className={cn(
-        'inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-[13px] font-medium transition disabled:opacity-50',
+        'inline-flex items-center gap-2 whitespace-nowrap rounded-full px-4 py-2 text-[13px] font-medium transition disabled:opacity-50',
         BUTTON_VARIANTS[variant],
         className,
       )}

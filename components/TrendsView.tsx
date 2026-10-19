@@ -16,6 +16,8 @@ import {
 import { buildTimeSeries, type Granularity } from '@/lib/series';
 import type { Snapshot } from '@/lib/types';
 import { formatEuro, formatPercent, formatDays, formatNumber } from '@/lib/format';
+import KpiCard from './KpiCard';
+import KpiRow from './KpiRow';
 import ChartCard from './ChartCard';
 import OpenStockChart from './charts/OpenStockChart';
 import type { OpenStockPoint } from '@/lib/open-stock';
@@ -48,23 +50,23 @@ export default function TrendsView({ snapshot, openStock }: { snapshot: Snapshot
   return (
     <div>
       {/* Samenvatting over de geselecteerde periode (o.b.v. geaccepteerde offertes) */}
-      <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-        <SummaryStat label="Omzet geaccepteerd" value={formatEuro(t.acceptedRevenue)} sub="ex. btw" />
-        <SummaryStat label="Totale marge" value={formatEuro(t.totalMargin)} sub="op vloeromzet" />
-        <SummaryStat label="Gem. marge" value={formatPercent(t.avgMarginPct)} sub="gewogen" />
-        <SummaryStat label="Gem. doorlooptijd" value={formatDays(rt.avgRunTimeDays)} sub={`${rt.dealsTracked} deals`} />
-        <SummaryStat label="M² verkocht" value={formatNumber(t.m2Sold)} sub={`${t.acceptedCount} offertes`} />
-      </div>
+      <KpiRow className="mb-5">
+        <KpiCard label="Omzet geaccepteerd" value={formatEuro(t.acceptedRevenue)} sub="ex btw" />
+        <KpiCard label="Totale marge" value={formatEuro(t.totalMargin)} sub="op vloeromzet" />
+        <KpiCard label="Gem. marge" value={formatPercent(t.avgMarginPct)} sub="gewogen" />
+        <KpiCard label="Gem. doorlooptijd" value={formatDays(rt.avgRunTimeDays)} sub={`${rt.dealsTracked} deals`} />
+        <KpiCard label="M² verkocht" value={formatNumber(t.m2Sold)} sub={`${t.acceptedCount} offertes`} />
+      </KpiRow>
 
       <div className="mb-4 flex items-center justify-end gap-2">
         <span className="text-xs text-ink-faint">Weergave:</span>
-        <div className="flex rounded-lg border border-line bg-white p-0.5 text-xs">
+        <div className="flex rounded-full bg-sunk p-1 text-xs">
           {(['week', 'month'] as Granularity[]).map((g) => (
             <button
               key={g}
               onClick={() => setGran(g)}
-              className={`rounded-md px-3 py-1 font-medium transition ${
-                gran === g ? 'bg-ink text-white' : 'text-ink-mute hover:text-ink'
+              className={`rounded-full px-3 py-1 font-medium transition ${
+                gran === g ? 'bg-night text-white shadow-sm' : 'text-ink-mute hover:text-ink'
               }`}
             >
               {g === 'week' ? 'Per week' : 'Per maand'}
@@ -195,16 +197,6 @@ export default function TrendsView({ snapshot, openStock }: { snapshot: Snapshot
           </ResponsiveContainer>
         </ChartCard>
       </div>
-    </div>
-  );
-}
-
-function SummaryStat({ label, value, sub }: { label: string; value: string; sub?: string }) {
-  return (
-    <div className="rounded-xl border border-line bg-surface px-3.5 py-3 shadow-[0_1px_2px_rgba(28,25,23,0.04)]">
-      <div className="text-[11px] font-semibold text-ink-soft">{label}</div>
-      <div className="mt-1.5 text-[19px] font-bold leading-none tabular-nums text-ink">{value}</div>
-      {sub && <div className="mt-1 text-[11px] text-ink-faint">{sub}</div>}
     </div>
   );
 }

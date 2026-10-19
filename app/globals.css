@@ -24,9 +24,12 @@
   --color-hair: #f0ece5;
 
   /* Accenten */
-  --color-accent: #0e6b63;
-  --color-accent-soft: #e2efed;
-  --color-accent-line: #b9d8d4;
+  /* Sinds de restyle van 2026-10-19 is het accent het zwart van het logo:
+     knoppen, actieve schakelaars en links. Het merkgroen (hieronder) is voor
+     de highlight; petrol is verdwenen. */
+  --color-accent: #131313;
+  --color-accent-soft: #f0eeea;
+  --color-accent-line: #dcd7cf;
   --color-oak: #b4762a;
   --color-oak-soft: #f8efe1;
 

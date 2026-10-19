@@ -51,7 +51,7 @@ export default function ProductSpreadPanel({ products }: { products: ProductSpre
       title="Waar geef je weg?"
       subtitle="Marge per m² per product — van de slechtste tot de beste offerte, met de mediaan als streep"
       right={
-        <div className="flex rounded-lg border border-line p-0.5 text-[11.5px]">
+        <div className="flex rounded-full bg-sunk p-1 text-[11.5px]">
           {(
             [
               ['marge', 'Laagste marge'],
@@ -66,8 +66,8 @@ export default function ProductSpreadPanel({ products }: { products: ProductSpre
                 gepagineerd.reset();
               }}
               className={cn(
-                'rounded-md px-2 py-1 font-medium transition',
-                sorteer === k ? 'bg-ink text-white' : 'text-ink-mute hover:text-ink',
+                'rounded-full px-2 py-1 font-medium transition',
+                sorteer === k ? 'bg-night text-white shadow-sm' : 'text-ink-mute hover:text-ink',
               )}
             >
               {label}

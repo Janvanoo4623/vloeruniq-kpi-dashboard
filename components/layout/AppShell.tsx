@@ -5,6 +5,7 @@ import { X } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import Sidebar, { MobileSidebar } from './Sidebar';
 import TopBar from './TopBar';
+import SubNav from './SubNav';
 import { GlobalChartDefs } from '@/components/charts/Defs';
 import { useDashboard } from './DashboardProvider';
 
@@ -64,6 +65,7 @@ export default function AppShell({
             >
               {/* Bij elke paginawissel komt de inhoud zacht omhoog (0,2 s). Klein,
                   maar het verschil tussen een website en een app. */}
+              <SubNav />
               <div key={pathname} className="animate-rise-in">
                 {children}
               </div>

@@ -109,3 +109,10 @@ ontgrendeld. Werkt pas vooruit: historische deals hebben geen click-ID.
 - [ ] Wekelijkse samenvatting per mail/WhatsApp aan Jan.
 - [ ] Maanddoelen invullen (Jan), capaciteit in m²/week invullen (Jan).
 - [ ] Inkoopfacturen in Moneybird afletteren — 12 stuks (€61k) staan nog 'te laat', vertekent de cashprognose.
+
+## Restyle "Vloeruniq zwart + groen" — 2026-10-19
+- [x] Overzicht: begroeting, zwarte statement-kaart, bento-kaarten, pilstaafjes, hoofdgrafiek met gemarkeerde staaf.
+- [x] Navigatie 15 → 9 onderdelen (`SIDEBAR` in `lib/nav.ts`), met pilschakelaar (`SubNav`) tussen de pagina's van een onderdeel. Oude adressen blijven werken.
+- [x] Hele app: accent = zwart, grafieken = merkgroen, kaarten = bento, knoppen en schakelaars = pillen, grotere KPI-getallen.
+- [ ] Periodekiezer en Instellingen-kaarten nog in de oude vorm.
+- [ ] Per pagina één zwarte statement-kaart voor het kerngetal (Resultaat, Marketing, Cashflow)?

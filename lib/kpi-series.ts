@@ -35,9 +35,9 @@ export interface KpiDef {
 // Kleuren uit de huispalet-lijn (theme.ts), in vaste volgorde: een KPI houdt
 // zijn kleur ook als je een andere uitzet — kleur volgt de KPI, niet de rang.
 export const KPI_DEFS: KpiDef[] = [
-  { key: 'acceptedRevenue', label: 'Omzet geaccepteerd', unit: 'eur', color: '#0e6b63', defaultOn: true, additive: true },
+  { key: 'acceptedRevenue', label: 'Omzet geaccepteerd', unit: 'eur', color: '#1aa957', defaultOn: true, additive: true },
   { key: 'openRevenue', label: 'Omzet open', unit: 'eur', color: '#b4762a', defaultOn: true, additive: true },
-  { key: 'margin', label: 'Marge', unit: 'eur', color: '#2f7a4e', additive: true },
+  { key: 'margin', label: 'Marge', unit: 'eur', color: '#2a2a28', additive: true },
   { key: 'marginPct', label: 'Marge %', unit: 'pct', color: '#a8761b', additive: false },
   { key: 'm2', label: 'M² verkocht', unit: 'count', color: '#8a6f4e', additive: true },
   { key: 'acceptedCount', label: 'Offertes geaccepteerd', unit: 'count', color: '#4a8f9c', additive: true },

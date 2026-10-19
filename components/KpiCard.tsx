@@ -63,9 +63,9 @@ export default function KpiCard({
   // dat is de plek waar je kijkt — en de verschil-pil wordt groen of rood.
   if (inRow) {
     return (
-      <div className={cn('min-w-0 px-5 py-4', className)}>
+      <div className={cn('min-w-0 px-6 py-5', className)}>
         <div className="flex items-start justify-between gap-2">
-          <p className="text-[12px] font-medium leading-tight text-ink-mute">{label}</p>
+          <p className="text-[13px] font-medium leading-tight text-ink-soft">{label}</p>
           {showDelta && (
             <span
               title={deltaLabel}
@@ -81,7 +81,7 @@ export default function KpiCard({
         </div>
         <p
           className={cn(
-            'mt-1.5 text-[22px] font-bold leading-tight tracking-tight tabular-nums',
+            'mt-3 text-[30px] font-semibold leading-none tracking-[-0.03em] tabular-nums',
             // Alleen een echt alarm kleurt het getal; "let op" in oranje op
             // drie van de vier cijfers maakte van elke rij een waarschuwing.
             signal === 'crit' ? 'text-crit' : 'text-ink',
@@ -89,7 +89,7 @@ export default function KpiCard({
         >
           {value}
         </p>
-        {sub && <p className="mt-1 text-[11.5px] leading-snug text-ink-faint">{sub}</p>}
+        {sub && <p className="mt-2 text-[12px] leading-snug text-ink-faint">{sub}</p>}
       </div>
     );
   }

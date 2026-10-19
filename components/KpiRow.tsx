@@ -20,9 +20,9 @@ export default function KpiRow({ children, className }: { children: ReactNode; c
         <div
           className={cn(
             'grid grid-cols-2 [&>*]:border-hair',
-            n >= 4 ? 'lg:grid-cols-4' : n === 3 ? 'lg:grid-cols-3' : 'lg:grid-cols-2',
+            n >= 5 ? 'lg:grid-cols-5' : n === 4 ? 'lg:grid-cols-4' : n === 3 ? 'lg:grid-cols-3' : 'lg:grid-cols-2',
             // Scheidingslijnen: verticaal op brede schermen, raster op smalle.
-            'lg:divide-x lg:divide-hair max-lg:[&>*:nth-child(odd)]:border-r max-lg:[&>*:nth-child(-n+2)]:border-b',
+            'lg:divide-x lg:divide-hair max-lg:[&>*:nth-child(odd)]:border-r max-lg:[&>*:not(:nth-last-child(-n+2))]:border-b',
           )}
         >
           {children}

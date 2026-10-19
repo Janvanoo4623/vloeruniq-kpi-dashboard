@@ -74,13 +74,13 @@ export default function KpiTrendChart({ data }: { data: KpiPoint[] }) {
   return (
     <div>
       <div className="mb-3 flex flex-wrap items-center gap-2">
-        <div className="flex rounded-lg border border-line bg-surface p-0.5 text-[12px]">
+        <div className="flex rounded-full bg-sunk p-1 text-[12px]">
           {presets.map((p) => (
             <button
               key={p.key}
               type="button"
               onClick={() => setOn(new Set(p.kpis))}
-              className={cn('rounded-md px-3 py-1 font-medium transition', actief === p.key ? 'bg-ink text-white' : 'text-ink-mute hover:text-ink')}
+              className={cn('rounded-full px-3 py-1 font-medium transition', actief === p.key ? 'bg-night text-white shadow-sm' : 'text-ink-mute hover:text-ink')}
             >
               {p.label}
             </button>

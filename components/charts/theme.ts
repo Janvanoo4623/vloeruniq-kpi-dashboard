@@ -11,20 +11,20 @@ export const CHART = {
   text: '#857f78', // ink-mute
   cursor: 'rgba(28,25,23,0.04)',
 
-  accepted: '#0e6b63', // accent — binnengehaald
+  accepted: '#1aa957', // merkgroen (iets dieper dan #22cb63, leesbaar op wit) — binnengehaald
   open: '#b4762a', // oak — nog open
   refused: '#a93b2c', // crit — geweigerd
   expired: '#a8a29e', // ink-faint — verlopen: verloren, maar niemand zei nee
 
-  margin: '#2f7a4e', // good — marge in euro's
+  margin: '#2a2a28', // bijna-zwart — marge in euro's; groen is al 'binnengehaald'
   marginPct: '#a8761b', // warn — marge in procenten
-  runTime: '#0e6b63', // accent — doorlooptijd
+  runTime: '#1aa957', // doorlooptijd
   deals: '#e7e2da', // line — achtergrondstaven
 
   // Marketing: kosten zijn geld dat weggaat, dus geen accent en geen rood —
   // leisteen, neutraal. Conversies krijgen het accent: dat is wat binnenkomt.
   adsCost: '#6b7f8e',
-  adsConversions: '#0e6b63',
+  adsConversions: '#1aa957',
   // Meta naast Google: ook gedempt, maar een andere tint, zodat de gestapelde
   // balk in de rekensom twee herkenbare delen heeft zonder dat er rood in komt.
   metaCost: '#5f6ea0',
@@ -35,7 +35,7 @@ export const CHART = {
  * uit in tinten die daar naast passen; rood blijft eruit, dat betekent iets.
  */
 export const SOURCE_COLORS = [
-  '#0e6b63', // petrol
+  '#1aa957', // merkgroen
   '#b4762a', // eiken
   '#2f7a4e', // groen
   '#4a8f9c', // blauwgroen
@@ -54,7 +54,7 @@ export const AXIS_TICK = { fill: CHART.text, fontSize: 11.5 } as const;
  * een neutraal grijs; Social media (Meta) dezelfde tint als Meta op Marketing.
  */
 const VASTE_BRONKLEUR: Record<string, string> = {
-  google: '#0e6b63',
+  google: '#1aa957',
   'social media': '#5f6ea0',
   'mond op mond reclame': '#b4762a',
   netwerk: '#4a8f9c',

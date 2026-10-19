@@ -81,14 +81,14 @@ export default function QuotationsTable({
   return (
     <div>
       <div className="mb-3 flex flex-wrap items-center gap-2">
-        <div className="flex rounded-lg border border-line p-0.5 text-xs">
+        <div className="flex rounded-full bg-sunk p-1 text-xs">
           {(['all', 'accepted', 'open', 'expired'] as const).map((s) => (
             <button
               key={s}
               onClick={() => setStatusFilter(s)}
-              className={`rounded-md px-2.5 py-1 transition ${
+              className={`rounded-full px-3 py-1 transition ${
                 statusFilter === s
-                  ? 'bg-ink text-white'
+                  ? 'bg-night text-white shadow-sm'
                   : 'text-ink-mute hover:text-ink'
               }`}
             >
