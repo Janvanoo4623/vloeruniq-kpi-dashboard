@@ -87,8 +87,9 @@ export async function buildResultaat(input: {
   const eerste = pl.months.findIndex((m) => m.revenue > 0 || m.directCosts + m.expenses >= 1000);
   const plMonths = eerste < 0 ? [] : pl.months.slice(eerste);
   const first = plMonths[0]?.month;
-  const thisMonth = new Date().toISOString().slice(0, 7);
-  const adsRows = first ? ((await getAdsRows(`${first}-01`, `${thisMonth}-31`)) ?? []) : [];
+  // Tot en met vandaag, niet "<maand>-31": Postgres weigert 2026-11-31 en dan valt de hele pagina om.
+  const today = new Date().toISOString().slice(0, 10);
+  const adsRows = first ? ((await getAdsRows(`${first}-01`, today)) ?? []) : [];
   const ads = new Map<string, number>();
   for (const r of adsRows) ads.set(r.date.slice(0, 7), (ads.get(r.date.slice(0, 7)) ?? 0) + r.cost);
 
@@ -106,7 +107,7 @@ export async function buildResultaat(input: {
       adsCost: r2(ads.get(m.month) ?? 0),
       calcMarginPct: im.linked ? im.marginPct : null,
       complete: m.month >= startMonth,
-      running: m.month === thisMonth,
+      running: m.month === today.slice(0, 7),
     };
   });
 
