@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Check, Pencil, X } from 'lucide-react';
-import type { Goals, MonthProgress } from '@/lib/today';
+import { monthPace, type Goals, type MonthProgress } from '@/lib/today';
 import { formatEuro, formatNumber, formatPercent } from '@/lib/format';
 import { cn } from '@/components/ui';
 import CountUp from '@/components/CountUp';
@@ -30,7 +30,7 @@ export default function MonthGoal({ month }: { month: MonthProgress }) {
   const doel = month.goals.revenue;
   const maat = doel ?? (hoofd.prev || null);
   const aandeel = maat ? hoofd.value / maat : null;
-  const status = aandeel == null ? null : aandeel >= verstreken + 0.05 ? 'voor' : aandeel <= verstreken - 0.1 ? 'achter' : 'op schema';
+  const status = monthPace(aandeel, month.day, month.daysInMonth);
 
   return (
     // Geen eigen kaart meer: dit blok staat onderin de briefing, waar het de

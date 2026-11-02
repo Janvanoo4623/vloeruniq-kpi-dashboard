@@ -136,6 +136,21 @@ export interface MonthProgress {
   goals: Goals;
 }
 
+/** Dagen aan het begin van de maand waarop we nog geen oordeel geven. */
+export const PACE_GRACE_DAYS = 5;
+
+/**
+ * Loopt de maand voor, achter of op schema? `behaald` is het deel van het doel
+ * (of van vorige maand) dat binnen is. De eerste vijf dagen geven we geen oordeel:
+ * één offerte meer of minder zet de pil dan heen en weer, en € 0 met "op schema"
+ * leest als een fout.
+ */
+export function monthPace(behaald: number | null, day: number, daysInMonth: number): 'voor' | 'achter' | 'op schema' | null {
+  if (behaald == null || day <= PACE_GRACE_DAYS) return null;
+  const verstreken = day / daysInMonth;
+  return behaald >= verstreken + 0.05 ? 'voor' : behaald <= verstreken - 0.1 ? 'achter' : 'op schema';
+}
+
 export function computeMonthProgress(
   quotations: QuotationRow[],
   exclusions: Set<string>,

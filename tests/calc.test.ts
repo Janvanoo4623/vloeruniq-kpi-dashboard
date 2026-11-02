@@ -6,7 +6,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { resolveQuotations, type ResolveInput } from '../lib/resolve';
 import { invoicedMargin } from '../lib/invoiced-margin';
-import { computeBreakEven, computeCallList } from '../lib/today';
+import { computeBreakEven, computeCallList, monthPace } from '../lib/today';
 import { computeCashForecast } from '../lib/cash-forecast';
 import { deltaTone } from '../lib/signal';
 import type { InvoiceRow, QuotationLine, QuotationRow } from '../lib/types';
@@ -214,4 +214,13 @@ test('deltaTone: klein verschil of te weinig offertes blijft neutraal', () => {
   assert.equal(deltaTone(-40, { sample: 5 }), 'neutral');
   assert.equal(deltaTone(-40, { sample: 50 }), 'crit');
   assert.equal(deltaTone(-40, { sample: 50, higherIsBetter: false }), 'good');
+});
+
+test('maandtempo: eerste vijf dagen geen oordeel, daarna voor/achter/op schema', () => {
+  assert.equal(monthPace(0, 2, 30), null); // € 0 op dag 2 is geen "op schema"
+  assert.equal(monthPace(0.5, 5, 30), null);
+  assert.equal(monthPace(null, 20, 30), null);
+  assert.equal(monthPace(0.2, 6, 30), 'op schema');
+  assert.equal(monthPace(0.4, 6, 30), 'voor');
+  assert.equal(monthPace(0.2, 15, 30), 'achter');
 });

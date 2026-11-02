@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { ArrowUpRight, Pencil } from 'lucide-react';
-import type { MonthProgress } from '@/lib/today';
+import { monthPace, type MonthProgress } from '@/lib/today';
 import { formatEuro, formatNumber, formatPercent } from '@/lib/format';
 import CountUp from '@/components/CountUp';
 import { HERO_THEME } from '@/components/page/HeroCard';
@@ -24,7 +24,8 @@ export default function StatementCard({ month, onGoal }: { month: MonthProgress;
   const doel = month.goals.revenue;
   const maat = doel ?? (month.prevTotal.revenue || null);
   const aandeel = maat ? month.revenue / maat : null;
-  const status = aandeel == null ? null : aandeel >= verstreken + 0.05 ? 'loopt voor' : aandeel <= verstreken - 0.1 ? 'loopt achter' : 'op schema';
+  const tempo = monthPace(aandeel, month.day, month.daysInMonth);
+  const status = tempo === 'voor' ? 'loopt voor' : tempo === 'achter' ? 'loopt achter' : tempo;
 
   const klein = [
     { label: 'Marge', value: formatEuro(month.margin), prev: month.prevTotal.margin, cur: month.margin, goal: month.goals.margin },

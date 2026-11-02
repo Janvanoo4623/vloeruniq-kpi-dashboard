@@ -6,7 +6,7 @@
 // worden vet gezet. Elke regel krijgt een soort mee, waar de UI een icoon bij
 // kiest.
 import { formatEuro, formatPercent } from './format';
-import type { BreakEven, MonthProgress } from './today';
+import { monthPace, type BreakEven, type MonthProgress } from './today';
 
 const MAAND = ['januari', 'februari', 'maart', 'april', 'mei', 'juni', 'juli', 'augustus', 'september', 'oktober', 'november', 'december'];
 const maandNaam = (m: string) => MAAND[Number(m.slice(5, 7)) - 1];
@@ -62,12 +62,13 @@ export function buildBriefing(i: BriefingInput): BriefingLine[] {
   if (m.goals.revenue) {
     const behaald = m.revenue / m.goals.revenue;
     const verstreken = m.day / m.daysInMonth;
-    const oordeel =
-      behaald >= verstreken + 0.05 ? 'loopt voor op schema' : behaald <= verstreken - 0.1 ? 'loopt achter op schema' : 'ligt op schema';
+    const tempo = monthPace(behaald, m.day, m.daysInMonth);
+    const oordeel = tempo === 'voor' ? 'loopt voor op schema' : tempo === 'achter' ? 'loopt achter op schema' : 'ligt op schema';
     const nodig = Math.max(0, m.goals.revenue - m.revenue);
     const dagenOver = m.daysInMonth - m.day;
     zinnen.push({ kind: 'goal', text:
-      `Dat is **${formatPercent(Math.round(behaald * 100))}** van het maanddoel van ${formatEuro(m.goals.revenue)} terwijl de maand voor ${formatPercent(Math.round(verstreken * 100))} om is: het ${oordeel}.` +
+      `Dat is **${formatPercent(Math.round(behaald * 100))}** van het maanddoel van ${formatEuro(m.goals.revenue)} terwijl de maand voor ${formatPercent(Math.round(verstreken * 100))} om is` +
+        (tempo ? `: het ${oordeel}.` : '.') +
         (nodig > 0 && dagenOver > 0 ? ` Nog ${formatEuro(nodig)} te gaan in ${dagenOver} ${dagenOver === 1 ? 'dag' : 'dagen'}.` : '') });
   }
 
