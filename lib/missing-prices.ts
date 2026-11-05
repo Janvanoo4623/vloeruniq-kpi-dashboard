@@ -2,6 +2,7 @@
 // purchase price configured. These surface as line items with margin === null
 // (a P-number was recognised, but no price matched — see teamleader/matching.ts).
 import type { QuotationRow } from './types';
+import type { ExtraUnit } from './extras';
 
 /** Eén offerte waarin een vloer zonder inkoopprijs voorkomt. */
 export interface MissingPriceQuotation {
@@ -10,7 +11,7 @@ export interface MissingPriceQuotation {
   customerName: string;
   status: QuotationRow['status'];
   date: string;
-  /** m² van déze vloer in deze offerte, niet de hele offerte. */
+  /** m² van déze vloer in deze offerte (of het aantal in `unit` bij een overig product). */
   m2: number;
   /** Omzet van déze vloerregels, ex btw. */
   revenue: number;
@@ -19,8 +20,10 @@ export interface MissingPriceQuotation {
 export interface MissingPrice {
   code: string;
   quotationCount: number; // # distinct quotations containing this unpriced code
-  m2: number; // total m² affected
+  m2: number; // total m² affected — bij een overig product: het aantal in `unit`
   revenue: number; // floor revenue affected (ex VAT)
+  /** Overig product (trap, plint …): de kostprijs gaat per deze eenheid, montage inbegrepen. */
+  unit?: ExtraUnit;
   /**
    * De code is uit de omschrijving afgeleid, niet uit een P-nummer of een
    * naam uit de prijslijst. Die vragen om een andere actie: bij een P-nummer
@@ -91,6 +94,7 @@ export function computeMissingPrices(
     for (const l of q.lines ?? []) {
       if (l.margin !== null) continue; // priced line
       if (pricedCodes.has(l.code.toLowerCase())) continue;
+      const aantal = l.kind === 'extra' ? (l.qty ?? 0) : l.m2;
       let mp = byCode.get(l.code);
       if (!mp) {
         mp = {
@@ -98,6 +102,7 @@ export function computeMissingPrices(
           quotationCount: 0,
           m2: 0,
           revenue: 0,
+          ...(l.kind === 'extra' && l.unit ? { unit: l.unit } : {}),
           derived: Boolean(l.derivedCode),
           tooGeneric: isGeneriek(l.code),
           quotations: [],
@@ -105,7 +110,7 @@ export function computeMissingPrices(
         };
         byCode.set(l.code, mp);
       }
-      mp.m2 += l.m2;
+      mp.m2 += aantal;
       mp.revenue += l.revenue;
       let offerte = mp._ids.get(q.id);
       if (!offerte) {
@@ -122,7 +127,7 @@ export function computeMissingPrices(
         mp.quotationCount += 1;
       }
       // Optellen per offerte: dezelfde vloer kan op meerdere regels staan.
-      offerte.m2 += l.m2;
+      offerte.m2 += aantal;
       offerte.revenue += l.revenue;
     }
   }
@@ -133,6 +138,7 @@ export function computeMissingPrices(
       quotationCount: mp.quotationCount,
       m2: Math.round(mp.m2 * 10) / 10,
       revenue: Math.round(mp.revenue),
+      ...(mp.unit ? { unit: mp.unit } : {}),
       derived: mp.derived,
       tooGeneric: mp.tooGeneric,
       quotations: [...mp._ids.values()]

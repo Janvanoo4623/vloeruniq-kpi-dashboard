@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Pencil, RotateCcw, X } from 'lucide-react';
 import type { QuotationFields, QuotationLineOverride, QuotationRow, QuotationStatus } from '@/lib/types';
 import { formatEuro, formatNumber, formatPercent, formatProduct } from '@/lib/format';
+import { formatQty } from '@/lib/extras';
 import PriceInput from './PriceInput';
 import QuotationCorrection from './QuotationCorrection';
 
@@ -129,7 +130,10 @@ export default function QuotationModal({
         zonderRegels.lineCount = undefined;
         return JSON.parse(JSON.stringify(zonderRegels)) as QuotationFields;
       }
-      return { ...f, lines: regels, lineCount: lines.length };
+      // Nacalculatieregels uit de factuur staan achteraan en bestaan niet in de
+      // opgeslagen offerte; ze mogen het aantal regels niet ophogen, anders
+      // worden alle regelcorrecties bij het lezen als verouderd genegeerd.
+      return { ...f, lines: regels, lineCount: lines.filter((l) => l.source !== 'factuur').length };
     });
   }
 
@@ -328,14 +332,14 @@ export default function QuotationModal({
 
           {/* Floor lines */}
           <div className="mt-4">
-            <p className="mb-1.5 text-xs font-medium text-ink-mute">Vloerregels</p>
+            <p className="mb-1.5 text-xs font-medium text-ink-mute">Regels</p>
             {lines.length > 0 ? (
               <div className="overflow-x-auto rounded-lg border border-line">
                 <table className="w-full min-w-[560px] text-xs">
                   <thead className="bg-sunk text-ink-faint">
                     <tr>
                       <th className="px-3 py-1.5 text-left font-medium">Product</th>
-                      <th className="px-3 py-1.5 text-right font-medium">M²</th>
+                      <th className="px-3 py-1.5 text-right font-medium">Aantal</th>
                       <th className="px-3 py-1.5 text-right font-medium">Omzet</th>
                       {bewerken && <th className="px-3 py-1.5 text-right font-medium">Ondervloer/m²</th>}
                       {bewerken && <th className="px-3 py-1.5 text-right font-medium">Arbeid/m²</th>}
@@ -346,7 +350,7 @@ export default function QuotationModal({
                     {lines.map((l, i) => (
                       <tr key={i}>
                         <td className="px-3 py-1.5">
-                          {bewerken ? (
+                          {bewerken && l.kind !== 'extra' ? (
                             <input
                               value={fields.lines?.[String(i)]?.code ?? l.code}
                               onChange={(e) => zetRegel(i, 'code', e.target.value)}
@@ -367,18 +371,20 @@ export default function QuotationModal({
                           )}
                         </td>
                         <td className="px-3 py-1.5 text-right tabular-nums text-ink-soft">
-                          {bewerken ? (
+                          {l.kind === 'extra' ? (
+                            l.unit ? formatQty(l.qty ?? 0, l.unit) : formatNumber(l.qty ?? 0)
+                          ) : bewerken ? (
                             <NumberVeld
                               waarde={fields.lines?.[String(i)]?.m2}
                               plaats={l.m2}
                               onChange={(v) => zetRegel(i, 'm2', v)}
                             />
                           ) : (
-                            formatNumber(l.m2)
+                            `${formatNumber(l.m2)} m²`
                           )}
                         </td>
                         <td className="px-3 py-1.5 text-right tabular-nums text-ink-soft">
-                          {bewerken ? (
+                          {bewerken && l.source !== 'factuur' ? (
                             <NumberVeld
                               waarde={fields.lines?.[String(i)]?.revenue}
                               plaats={l.revenue}
@@ -388,7 +394,12 @@ export default function QuotationModal({
                             formatEuro(l.revenue, true)
                           )}
                         </td>
-                        {bewerken && (
+                        {bewerken && l.kind === 'extra' && (
+                          <td colSpan={2} className="px-3 py-1.5 text-right text-[11px] text-ink-faint">
+                            kostprijs per eenheid
+                          </td>
+                        )}
+                        {bewerken && l.kind !== 'extra' && (
                           <td className="px-3 py-1.5 text-right">
                             <NumberVeld
                               waarde={fields.lines?.[String(i)]?.underlayPerM2}
@@ -397,7 +408,7 @@ export default function QuotationModal({
                             />
                           </td>
                         )}
-                        {bewerken && (
+                        {bewerken && l.kind !== 'extra' && (
                           <td className="px-3 py-1.5 text-right">
                             <NumberVeld
                               waarde={fields.lines?.[String(i)]?.laborPerM2}
@@ -410,6 +421,7 @@ export default function QuotationModal({
                           {isUnpriced(l.code, l.margin) ? (
                             <PriceInput
                               code={l.code}
+                              unit={l.kind === 'extra' ? l.unit : undefined}
                               onSaved={(c) =>
                                 setSavedCodes((s) => new Set(s).add(c.toLowerCase()))
                               }
@@ -424,14 +436,15 @@ export default function QuotationModal({
                 </table>
                 {hasUnpriced && (
                   <p className="border-t border-hair bg-warn-soft/50 px-3 py-1.5 text-xs text-warn">
-                    Vul de inkoopprijs (€/m²) in bij regels zonder marge. Die geldt voor het product
-                    en werkt meteen door in alle offertes waarin het voorkomt.
+                    Vul de inkoopprijs (€/m²) in bij regels zonder marge — bij trappen, plinten en
+                    andere overige producten de kostprijs per eenheid, montage inbegrepen. Die geldt
+                    voor het product en werkt meteen door in alle offertes waarin het voorkomt.
                   </p>
                 )}
               </div>
             ) : (
               <span className="text-xs text-ink-faint">
-                Geen gematchte vloerregels
+                Geen herkende regels
                 {q.matchCoverage != null && q.matchCoverage < 100
                   ? ' — voeg ontbrekende prijzen toe in Instellingen.'
                   : '.'}

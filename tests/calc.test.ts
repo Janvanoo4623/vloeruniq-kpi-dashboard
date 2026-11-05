@@ -254,8 +254,122 @@ test('gietvloer telt als vloer, "aanbrengen" is leggen; verwijderen en kurkstuc 
     { alwaysPerM2: 10, gluedPerM2: 5, selfAdhesivePerM2: 6 },
   );
   assert.equal(q.totalM2, 55);
-  assert.equal(q.lines?.length, 1);
+  // Vloer + "Gietvloer verwijderen" als overig product; KorqStuc valt erbuiten.
+  assert.equal(q.lines?.length, 2);
+  assert.equal(q.lines?.[1].code, 'Vloer verwijderen');
   assert.equal(q.lines?.[0].laborRule, 'included');
   assert.equal(q.lines?.[0].installMode, 'click');
   assert.equal(q.margin, 4545 - (25 + 10) * 55);
+});
+
+// ── Overige producten ────────────────────────────────────────────────────
+
+test('overige producten: classificatie op echte offertetekst', async () => {
+  const { classifyExtra } = await import('../lib/extras');
+  const c = (d: string, q = 10, r = 500) => classifyExtra(d, q, r)?.code ?? null;
+  assert.equal(c('Traprenovatie PVC dichte trap P330 antraciet| Incl. stootborden en neusprofielen zwart | Incl. montage', 26, 2471), 'Traprenovatie PVC dichte trap');
+  assert.equal(c('Traprenovatie PVC open trap P730 Beige | Incl. 2 zijden zwarte neusprofielen', 26, 2471), 'Traprenovatie PVC open trap');
+  assert.equal(c('Traprenovatie tapijt | incl. tapijt Touch of Cashmere kleur 92', 1, 992), 'Traprenovatie tapijt');
+  assert.equal(c('Traprenovatie PVC Overzettredes P310 Antraciet | Incl. montage', 13, 913), 'Traprenovatie overzettreden');
+  assert.equal(c('Traprenovatie PVC dichte trap | Incl. stootborden en neusprofielen | Incl. montage', 1, 1500), 'Traprenovatie PVC (hele trap)');
+  // Een hele trap die zijn treden noemt, telt in treden.
+  const twintig = classifyExtra('Traprenovatie PVC dichte trap 20 treden | Incl. montage', 1, 1900);
+  assert.equal(twintig?.code, 'Traprenovatie PVC dichte trap');
+  assert.equal(twintig?.quantity, 20);
+  assert.equal(c('MDF Plint 90x12 gelakt wit RAL9010 | Incl. zaagverlies | Incl. montage | Prijs per m1', 60, 990), 'Plinten');
+  assert.equal(c('Hoge plint 150x12 wit MDF incl. montage en kitten', 36, 594), 'Plinten');
+  assert.equal(c('Plint Amsterdam 90x12 Wit MDF RAL9010 | Prijs per lengte', 25, 545), 'Plinten (per lengte)');
+  assert.equal(c('Entreemat Classic Antraciet | Incl. montage | Ingang voorzijde', 3.9, 230), 'Entreemat');
+  assert.equal(c('PVC vloer verwijderen en afvoeren', 45, 558), 'Vloer verwijderen');
+  assert.equal(c('Tapijttegels Skyper 6488 | incl. leggen tapijttegels', 125, 3750), 'Tapijt');
+  // Geen overig product: vloeren, afwerking, losse trapmaterialen, radiatoren.
+  assert.equal(c('Klik PVC Pure met geïntegreerde ondervloer | Incl. leggen klik pvc en afwerken met plakplint'), null);
+  assert.equal(c('Snijden en kitten langs bestaande plint', 77, 382), null);
+  assert.equal(c('Hightack plintenkit | Per tube', 5, 23), null);
+  assert.equal(c('Trapprofielset 4x130cm RVS | Per 4 stuks', 3.75, 103), null);
+  assert.equal(c('PVC Visgraat tbv plateau trap | Incl. 10% snijverlies'), null);
+  assert.equal(c('Verwijderen, afdoppen en afvoeren radiatoren', 8, 298), null);
+});
+
+const trap = (qty: number, revenue: number): QuotationLine => ({
+  code: 'Traprenovatie PVC dichte trap',
+  kind: 'extra',
+  unit: 'trede',
+  qty,
+  revenue,
+  m2: 0,
+  margin: null,
+});
+
+test('overig product: kostprijs × aantal, telt mee in marge maar niet in m²', () => {
+  const [q] = resolveQuotations(
+    [offerte({ id: 'a', lines: [regel('P100', 10, 400), trap(13, 1300)], omzetVloer: 400, totalM2: 10, revenueExVat: 1700 })],
+    invoer({ prices: [{ code: 'P100', price: 10, effectiveFrom: '2000-01-01' }, { code: 'Traprenovatie PVC dichte trap', price: 60, effectiveFrom: '2000-01-01' }] }),
+  );
+  // Vloer: 400 − 10×10 = 300. Trap: 1300 − 60×13 = 520.
+  assert.equal(q.margin, 820);
+  assert.equal(q.marginPct, Math.round((820 / 1700) * 1000) / 10);
+  assert.equal(q.totalM2, 10);
+  assert.equal(q.matchCoverage, 100);
+});
+
+test('overig product zonder kostprijs: geen marge, telt niet mee in de noemer', () => {
+  const [q] = resolveQuotations(
+    [offerte({ id: 'a', lines: [regel('P100', 10, 400), trap(13, 1300)], omzetVloer: 400, totalM2: 10 })],
+    invoer(),
+  );
+  assert.equal(q.margin, 300);
+  assert.equal(q.marginPct, 75);
+  assert.equal(q.lines?.[1].margin, null);
+});
+
+test('alleen een traprenovatie met kostprijs: marge zonder vloer', () => {
+  const [q] = resolveQuotations(
+    [offerte({ id: 'a', lines: [trap(13, 1300)], omzetVloer: 0, totalM2: 0, revenueExVat: 1300 })],
+    invoer({ prices: [{ code: 'Traprenovatie PVC dichte trap', price: 60, effectiveFrom: '2000-01-01' }] }),
+  );
+  assert.equal(q.margin, 520);
+  assert.equal(q.marginPct, 40);
+});
+
+test('kostprijs van een overig product komt nooit op een vloerregel', () => {
+  // "tapijt" staat in de omschrijving van de vloer, maar Tapijt is een overig product.
+  const vloer: QuotationLine = { ...regel('PVC Stroken Alba', 10, 400), desc: 'PVC Stroken Alba | incl. verwijderen tapijt' };
+  const [q] = resolveQuotations(
+    [offerte({ id: 'a', lines: [vloer] })],
+    invoer({ prices: [{ code: 'Tapijt', price: 30, effectiveFrom: '2000-01-01' }] }),
+  );
+  assert.equal(q.margin, null);
+});
+
+test('nacalculatie: plinten alleen op de factuur komen bij de offerte, wat er al op stond niet dubbel', () => {
+  const plint = (qty: number, revenue: number): QuotationLine => ({ code: 'Plinten', kind: 'extra', unit: 'm1', qty, revenue, m2: 0, margin: null });
+  const prijzen = [
+    { code: 'P100', price: 10, effectiveFrom: '2000-01-01' },
+    { code: 'Plinten', price: 8, effectiveFrom: '2000-01-01' },
+  ];
+  const [q] = resolveQuotations(
+    [offerte({ id: 'a', dealId: 'd1', lines: [regel('P100', 10, 400), plint(20, 300)], omzetVloer: 400, totalM2: 10, revenueExVat: 700 })],
+    invoer({
+      prices: prijzen,
+      // Op de factuur: 50 m plint voor 750. Er stond 20 m / 300 op de offerte → 30 m / 450 nacalculatie.
+      invoiceExtras: { d1: [{ code: 'Plinten', unit: 'm1', qty: 50, revenue: 750 }] },
+    }),
+  );
+  const nacalc = q.lines?.find((l) => l.source === 'factuur');
+  assert.equal(nacalc?.qty, 30);
+  assert.equal(nacalc?.revenue, 450);
+  assert.equal(q.revenueExVat, 1150);
+  // Vloer 300 + plint op offerte (300 − 160) + nacalculatie (450 − 240) = 650
+  assert.equal(q.margin, 650);
+});
+
+test('nacalculatie: minder gefactureerd dan geoffreerd voegt niets toe', () => {
+  const plint: QuotationLine = { code: 'Plinten', kind: 'extra', unit: 'm1', qty: 20, revenue: 300, m2: 0, margin: null };
+  const [q] = resolveQuotations(
+    [offerte({ id: 'a', dealId: 'd1', lines: [regel('P100', 10, 400), plint], omzetVloer: 400, totalM2: 10, revenueExVat: 700 })],
+    invoer({ invoiceExtras: { d1: [{ code: 'Plinten', unit: 'm1', qty: 10, revenue: 150 }] } }),
+  );
+  assert.equal(q.lines?.length, 2);
+  assert.equal(q.revenueExVat, 700);
 });

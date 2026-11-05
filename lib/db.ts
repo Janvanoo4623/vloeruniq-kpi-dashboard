@@ -811,7 +811,54 @@ export async function getResolveInput(): Promise<import('./resolve').ResolveInpu
   }
   const dealWonAt: Record<string, string> = {};
   if (!deals.error) for (const r of deals.data) if (r.date_accepted) dealWonAt[r.id as string] = r.date_accepted as string;
-  return { prices, costs, overrides, invoicedPerDeal: facturen.error ? undefined : invoicedPerDeal, dealWonAt };
+  const invoiceExtras = invoiceExtrasPerDeal(await getInvoiceExtras().catch(() => EMPTY_INVOICE_EXTRAS));
+  return { prices, costs, overrides, invoicedPerDeal: facturen.error ? undefined : invoicedPerDeal, dealWonAt, invoiceExtras };
+}
+
+// ── Overige producten op facturen (nacalculatie) ────────────────────────
+/**
+ * Per factuur de overige producten (plinten, entreematten …) die erop staan,
+ * opgeteld per code. Een factuur die al is opgehaald staat erin, ook als hij
+ * geen overige producten heeft (lege lijst) — zo wordt hij niet steeds opnieuw
+ * opgevraagd. Concepten worden niet bewaard: die kunnen nog veranderen.
+ *
+ * In app_settings om dezelfde reden als de openstaande bedragen: geen migratie
+ * die eerst met de hand in Supabase moet. Het zijn een paar honderd facturen met
+ * hooguit een paar regels.
+ */
+const INVOICE_EXTRAS_KEY = 'invoice_extras';
+
+export interface InvoiceExtrasStore {
+  invoices: Record<string, { dealId: string; lines: import('./types').InvoiceExtraLine[] }>;
+}
+export const EMPTY_INVOICE_EXTRAS: InvoiceExtrasStore = { invoices: {} };
+
+export async function getInvoiceExtras(): Promise<InvoiceExtrasStore> {
+  const v = await getAppSetting<InvoiceExtrasStore>(INVOICE_EXTRAS_KEY, EMPTY_INVOICE_EXTRAS);
+  return v?.invoices ? v : EMPTY_INVOICE_EXTRAS;
+}
+
+export async function setInvoiceExtras(store: InvoiceExtrasStore): Promise<void> {
+  await setAppSetting(INVOICE_EXTRAS_KEY, store);
+}
+
+/** Optellen per deal en per code, zoals lib/resolve.ts het nodig heeft. */
+export function invoiceExtrasPerDeal(store: InvoiceExtrasStore): Record<string, import('./types').InvoiceExtraLine[]> {
+  const perDeal = new Map<string, Map<string, import('./types').InvoiceExtraLine>>();
+  for (const inv of Object.values(store.invoices)) {
+    if (!inv.dealId || inv.lines.length === 0) continue;
+    const codes = perDeal.get(inv.dealId) ?? new Map();
+    for (const l of inv.lines) {
+      const e = codes.get(l.code) ?? { code: l.code, unit: l.unit, qty: 0, revenue: 0 };
+      e.qty += l.qty;
+      e.revenue += l.revenue;
+      codes.set(l.code, e);
+    }
+    perDeal.set(inv.dealId, codes);
+  }
+  const out: Record<string, import('./types').InvoiceExtraLine[]> = {};
+  for (const [deal, codes] of perDeal) out[deal] = [...codes.values()];
+  return out;
 }
 
 // ── Handmatig openstaand bedrag per factuur ─────────────────────────────

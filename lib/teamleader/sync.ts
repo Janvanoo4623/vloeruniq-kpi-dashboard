@@ -8,6 +8,7 @@ import { getCutoffDate } from './dates';
 import { buildCustomerLookup, fetchRunTime } from './deals';
 import { fetchQuotations } from './quotations';
 import { fetchCreditNotes, fetchInvoices, summarizeInvoices } from './invoices';
+import { syncInvoiceExtras } from './invoice-extras';
 import { buildSnapshot } from './aggregate';
 import { computeQuality, mergeHistory, toSnapshot, type QualitySnapshot } from '../data-quality';
 
@@ -33,6 +34,8 @@ export async function runSync(): Promise<{ snapshot: Snapshot; pushed: number }>
   const credits = await fetchCreditNotes(cutoff, (id) => dealVan.get(id) ?? '');
   const invoices = [...facturen, ...credits];
   await db.upsertInvoices(invoices);
+  // Factuurregels voor de nacalculatie: alleen nieuwe facturen, max. 60 per run.
+  await syncInvoiceExtras(facturen, 60);
   const invoicing = summarizeInvoices(invoices);
 
   // Prior execution dates (from the cached snapshot) drive write-back detection.

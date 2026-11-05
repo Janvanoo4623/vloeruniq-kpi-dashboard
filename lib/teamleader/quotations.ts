@@ -16,6 +16,8 @@ export interface AggLine {
   margin: number | null;
   status: QuotationStatus;
   quotationId: string;
+  /** Overig product (lib/extras.ts) — telt niet mee in topproducten per m². */
+  kind?: 'extra';
 }
 
 /**

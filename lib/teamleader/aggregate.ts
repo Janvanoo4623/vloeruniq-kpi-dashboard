@@ -153,6 +153,8 @@ export function buildSnapshot(
   > = {};
   for (const line of productLines) {
     if (line.status !== 'accepted') continue;
+    // Topproducten gaat over vloeren per m²; overige producten hebben geen m².
+    if (line.kind === 'extra') continue;
     const e = (byProduct[line.code] ??= {
       revenue: 0,
       m2: 0,

@@ -25,7 +25,9 @@ import type { PriceConfig } from './teamleader/price-map';
 import { buildSnapshot } from './teamleader/aggregate';
 import type { AggLine } from './teamleader/quotations';
 import { deriveDateParts } from './teamleader/dates';
+import { isExtraCode } from './extras';
 import type {
+  InvoiceExtraLine,
   QuotationFields,
   QuotationLine,
   QuotationLineOverride,
@@ -50,6 +52,12 @@ export interface ResolveInput {
   invoicedPerDeal?: Record<string, number>;
   /** Per deal: de datum waarop hij in Teamleader gewonnen is (closed_at). */
   dealWonAt?: Record<string, string>;
+  /**
+   * Per deal: overige producten op de facturen (plinten, entreematten …),
+   * opgeteld per code. Wat er méér gefactureerd is dan op de offerte stond is
+   * nacalculatie en komt bij de offerte — zie addInvoiceExtras().
+   */
+  invoiceExtras?: Record<string, InvoiceExtraLine[]>;
 }
 
 /**
@@ -76,6 +84,8 @@ function purchaseForLine(line: QuotationLine, config: PriceConfig): number | nul
   const desc = line.desc?.toLowerCase() ?? '';
   if (desc) {
     for (const nm of config.nameMatches) {
+      // Een kostprijs per trede of per meter plint hoort nooit op een vloer.
+      if (isExtraCode(nm.name)) continue;
       if (desc.includes(nm.name)) return nm.price;
     }
   }
@@ -135,6 +145,10 @@ function applyFields(q: QuotationRow, fields: QuotationFields): QuotationRow {
   const nieuweRegels = lines.map((l, i) => {
     const c = regelCorrecties[String(i)];
     if (!c) return l;
+    if (l.kind === 'extra') {
+      // Overig product: telt niet in m² of vloeromzet, dus alleen de regel zelf.
+      return { ...l, revenue: c.revenue ?? l.revenue };
+    }
     const m2 = c.m2 ?? l.m2;
     const revenue = c.revenue ?? l.revenue;
     deltaM2 += m2 - l.m2;
@@ -190,16 +204,60 @@ export function overriddenFieldKeys(fields: QuotationFields | undefined): Set<st
   return keys;
 }
 
+/**
+ * Kostprijs per eenheid van een overig product: handmatige correctie op deze
+ * offerte, dan de prijslijst op exact de code (geen deelmatch op de
+ * omschrijving — zie lib/extras.ts), dan wat er bij de sync is vastgelegd.
+ */
+function costForExtra(line: QuotationLine, config: PriceConfig, override: QuotationOverride | undefined): number | null {
+  const lower = line.code.trim().toLowerCase();
+  const special = override?.prices[lower];
+  if (special != null) return special;
+  const nm = config.nameMatches.find((n) => n.name === lower);
+  if (nm) return nm.price;
+  return line.costPerUnit ?? null;
+}
+
 /** Eén offerte doorrekenen tegen de prijzen en kosten van zijn eigen datum. */
 function recompute(
   q: QuotationRow,
   config: PriceConfig,
   costs: { alwaysPerM2: number; gluedPerM2: number; selfAdhesivePerM2: number },
   override: QuotationOverride | undefined,
+  nacalculatie: QuotationLine[] = [],
 ): QuotationRow {
-  const basis = override?.fields ? applyFields(q, override.fields) : q;
+  const toegepast = override?.fields ? applyFields(q, override.fields) : q;
+  // Nacalculatie komt ná de veldcorrecties: die gaan op volgnummer en mogen
+  // niet verschuiven doordat er een factuurregel achteraan bij komt.
+  const basis =
+    nacalculatie.length > 0
+      ? {
+          ...toegepast,
+          lines: [...(toegepast.lines ?? []), ...nacalculatie],
+          revenueExVat: round2(toegepast.revenueExVat + nacalculatie.reduce((t, l) => t + l.revenue, 0)),
+        }
+      : toegepast;
   const lines = basis.lines ?? [];
   if (lines.length === 0) return basis;
+
+  // Overige producten: kostprijs per eenheid × aantal, verder niets.
+  let extraCost = 0;
+  let extraRevenue = 0;
+  let extraPriced = false;
+  const extraLines = new Map<number, QuotationLine>();
+  lines.forEach((l, i) => {
+    if (l.kind !== 'extra') return;
+    const cpu = costForExtra(l, config, override);
+    const qty = l.qty ?? 0;
+    if (cpu == null) {
+      extraLines.set(i, { ...l, margin: null });
+      return;
+    }
+    extraCost += cpu * qty;
+    extraRevenue += l.revenue;
+    extraPriced = true;
+    extraLines.set(i, { ...l, costPerUnit: cpu, margin: round2(l.revenue - cpu * qty) });
+  });
 
   let material = 0;
   let laborTotal = 0;
@@ -207,7 +265,9 @@ function recompute(
   let pricedRevenue = 0;
   let hasMatch = false;
 
-  const newLines: QuotationLine[] = lines.map((l) => {
+  const newLines: QuotationLine[] = lines.map((l, i) => {
+    const extra = extraLines.get(i);
+    if (extra) return extra;
     const rates = ratesForLine(l, costs);
     const special = override?.prices[l.code.toLowerCase()];
     // Volgorde: handmatige correctie op deze offerte, dan de prijslijst, dan wat
@@ -232,8 +292,22 @@ function recompute(
     };
   });
 
-  if (!hasMatch || m2WithMatch <= 0) {
+  const floorMatch = hasMatch && m2WithMatch > 0;
+  if (!floorMatch && !extraPriced) {
     return { ...basis, lines: newLines, cost: null, margin: null, marginPct: null, verified: false };
+  }
+  if (!floorMatch) {
+    // Alleen overige producten met een kostprijs, bv. een losse traprenovatie.
+    const margin = round2(extraRevenue - extraCost);
+    return {
+      ...basis,
+      lines: newLines,
+      cost: round2(extraCost),
+      margin,
+      marginPct: extraRevenue > 0 ? round1((margin / extraRevenue) * 100) : null,
+      matchCoverage: null,
+      verified: false,
+    };
   }
 
   const cost = material + laborTotal;
@@ -242,16 +316,20 @@ function recompute(
   // pure winst, en een offerte met 40% beprijsde m² kwam op 76% marge uit.
   // Nu: de marge van de beprijsde regels, als percentage doorgetrokken over de
   // hele vloeromzet. Bij volledige dekking verandert er niets.
-  const margin =
+  const floorMargin =
     pricedRevenue > 0 && pricedRevenue < basis.omzetVloer
-      ? round2(((pricedRevenue - cost) / pricedRevenue) * basis.omzetVloer)
-      : round2(basis.omzetVloer - cost);
-  const marginPct = basis.omzetVloer > 0 ? round1((margin / basis.omzetVloer) * 100) : null;
+      ? ((pricedRevenue - cost) / pricedRevenue) * basis.omzetVloer
+      : basis.omzetVloer - cost;
+  // Overige producten tellen alleen mee als ze een kostprijs hebben — zonder
+  // kostprijs staan ze er niet in, net zo min als hun omzet in de noemer.
+  const margin = round2(floorMargin + extraRevenue - extraCost);
+  const base = basis.omzetVloer + extraRevenue;
+  const marginPct = base > 0 ? round1((margin / base) * 100) : null;
   const matchCoverage = basis.totalM2 > 0 ? round1((m2WithMatch / basis.totalM2) * 100) : null;
   return {
     ...basis,
     lines: newLines,
-    cost: round2(cost),
+    cost: round2(cost + extraCost),
     margin,
     marginPct,
     matchCoverage,
@@ -283,7 +361,93 @@ export function resolveQuotations(rows: QuotationRow[], input: ResolveInput): Qu
     }
     return recompute(q, config, rates, overrides?.[q.id]);
   });
-  return applyInvoiceWins(resolved, input);
+  const won = applyInvoiceWins(resolved, input);
+  return addInvoiceExtras(rows, won, input, (q, extra) => {
+    const date = priceDate(q);
+    return recompute(q, configCache.get(date) ?? priceConfigForDate(prices, date), costCache.get(date) ?? costsForDate(costs, date, COST_FALLBACK), overrides?.[q.id], extra);
+  });
+}
+
+/**
+ * Nacalculatie (Jan, 2026-11-05): "Plinten worden op de offerte vaak op
+ * nacalculatie aangeboden en pas op de factuur berekend." Op de offerte staat
+ * de plint dan met €0, op de eindfactuur met het echte aantal meters.
+ *
+ * Per deal en per code: wat er op de facturen méér staat dan op de offerte, komt
+ * als extra regel bij de geaccepteerde offerte van die deal (bij meerdere: de
+ * grootste), met omzet en al. Staat de plint al met bedrag op de offerte, dan
+ * staat hij ook op de factuur en is het verschil nul — er telt niets dubbel.
+ * Minder gefactureerd dan geoffreerd (een aanbetaling zonder regels, een
+ * restantfactuur) laten we liggen: dat is geen nacalculatie.
+ */
+const NACALC_MIN = 1; // euro; afrondingsverschillen zijn geen nacalculatie
+
+function addInvoiceExtras(
+  raw: QuotationRow[],
+  won: QuotationRow[],
+  input: ResolveInput,
+  rerun: (q: QuotationRow, extra: QuotationLine[]) => QuotationRow,
+): QuotationRow[] {
+  const perDeal = input.invoiceExtras;
+  if (!perDeal || Object.keys(perDeal).length === 0) return won;
+
+  const doel = new Map<string, QuotationRow>(); // dealId -> geaccepteerde offerte
+  for (const q of won) {
+    if (q.status !== 'accepted' || !q.dealId || q.deletedAtSource || !perDeal[q.dealId]) continue;
+    const cur = doel.get(q.dealId);
+    if (!cur || q.revenueExVat > cur.revenueExVat) doel.set(q.dealId, q);
+  }
+  if (doel.size === 0) return won;
+
+  const rawById = new Map(raw.map((q) => [q.id, q]));
+  const extraPerId = new Map<string, QuotationLine[]>();
+  for (const [deal, q] of doel) {
+    const geoffreerd = new Map<string, { qty: number; revenue: number }>();
+    for (const l of q.lines ?? []) {
+      if (l.kind !== 'extra') continue;
+      const e = geoffreerd.get(l.code) ?? { qty: 0, revenue: 0 };
+      e.qty += l.qty ?? 0;
+      e.revenue += l.revenue;
+      geoffreerd.set(l.code, e);
+    }
+    const regels: QuotationLine[] = [];
+    for (const f of perDeal[deal]) {
+      const o = geoffreerd.get(f.code) ?? { qty: 0, revenue: 0 };
+      const revenue = round2(f.revenue - o.revenue);
+      if (revenue < NACALC_MIN) continue;
+      regels.push({
+        code: f.code,
+        kind: 'extra',
+        unit: f.unit,
+        qty: Math.max(0, round2(f.qty - o.qty)),
+        revenue,
+        m2: 0,
+        margin: null,
+        desc: 'Nacalculatie (gefactureerd, niet op de offerte)',
+        source: 'factuur',
+      });
+    }
+    if (regels.length > 0) extraPerId.set(q.id, regels);
+  }
+  if (extraPerId.size === 0) return won;
+
+  return won.map((q) => {
+    const regels = extraPerId.get(q.id);
+    const bron = rawById.get(q.id);
+    if (!regels || !bron) return q;
+    const opnieuw = rerun(bron, regels);
+    // Status en beslisdatum komen uit de eerste ronde (gefactureerd = gewonnen).
+    return {
+      ...opnieuw,
+      status: q.status,
+      sourceStatus: q.sourceStatus,
+      wonByInvoice: q.wonByInvoice,
+      dateAccepted: q.dateAccepted,
+      month: q.month,
+      quarter: q.quarter,
+      year: q.year,
+    };
+  });
 }
 
 /**

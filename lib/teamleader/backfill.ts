@@ -6,6 +6,7 @@ import * as db from '../db';
 import { buildCustomerLookup, fetchRunTime } from './deals';
 import { fetchQuotations } from './quotations';
 import { fetchInvoices } from './invoices';
+import { syncInvoiceExtras } from './invoice-extras';
 
 const EPOCH = '2000-01-01';
 
@@ -55,6 +56,9 @@ async function runBackfill(cutoff: string): Promise<{
   await db.upsertQuotations(quotations);
   await db.upsertDeals(runTimeRows);
   await db.upsertInvoices(invoices);
+  // Alle factuurregels die we nog niet hebben, voor de nacalculatie.
+  const regels = await syncInvoiceExtras(invoices);
+  console.log(`[backfill] factuurregels opgehaald: ${regels.fetched}`);
 
   // De backfill haalt ALLE statussen zonder datumgrens op, dus wat hier niet in
   // zit bestaat niet meer in Teamleader. Alleen hier is die conclusie geldig.

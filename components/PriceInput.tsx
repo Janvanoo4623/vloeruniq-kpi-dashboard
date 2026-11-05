@@ -1,6 +1,16 @@
 'use client';
 
 import { useState } from 'react';
+import type { ExtraUnit } from '@/lib/extras';
+
+const PLACEHOLDER: Record<ExtraUnit, string> = {
+  trede: '/trede',
+  trap: '/trap',
+  m1: '/m',
+  lengte: '/lengte',
+  m2: '/m²',
+  stuk: '/stuk',
+};
 
 // Backdated so a newly-entered missing price applies to older quotations too
 // (a purchase price is a fact that existed all along, just wasn't recorded).
@@ -13,9 +23,12 @@ const BACKDATE = '2000-01-01';
  */
 export default function PriceInput({
   code,
+  unit,
   onSaved,
 }: {
   code: string;
+  /** Overig product: kostprijs per deze eenheid, montage inbegrepen. Leeg = vloer, per m². */
+  unit?: ExtraUnit;
   onSaved?: (code: string) => void;
 }) {
   const [val, setVal] = useState('');
@@ -60,8 +73,8 @@ export default function PriceInput({
         }}
         onKeyDown={(e) => e.key === 'Enter' && save()}
         inputMode="decimal"
-        placeholder="/m²"
-        aria-label={`Inkoopprijs voor ${code}`}
+        placeholder={unit ? PLACEHOLDER[unit] : '/m²'}
+        aria-label={unit ? `Kostprijs voor ${code}` : `Inkoopprijs voor ${code}`}
         className={`w-16 rounded-md border bg-white px-1.5 py-0.5 text-xs outline-none focus:border-accent ${
           state === 'error' ? 'border-crit/40' : 'border-line'
         }`}

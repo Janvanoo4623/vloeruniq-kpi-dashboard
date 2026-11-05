@@ -4,6 +4,7 @@
 
 import { dateOnly, deriveDateParts, round } from './dates';
 import { canonicalProduct } from '../format';
+import { classifyExtra, isExtraCode } from '../extras';
 import type { PriceConfig } from './price-map';
 import type {
   CustomerInfo,
@@ -173,7 +174,28 @@ export function parseQuotation(
       const desc = rawDesc.toLowerCase();
       const descTrimmed = rawDesc.trim();
 
-      if (desc.includes('trap')) continue; // exclude traprenovatie (stair renovation)
+      // Overige producten (trap, plint, tapijt, entreemat, verwijderen) eerst:
+      // "PVC vloer verwijderen" begint met een vloertype maar is geen vloer.
+      // Ze tellen niet mee in m² of vloeromzet; de marge rekent lib/resolve.ts.
+      const extraRevenue = item.total?.tax_exclusive?.amount ?? 0;
+      const extra = extraRevenue !== 0 ? classifyExtra(rawDesc, item.quantity ?? 0, extraRevenue) : null;
+      if (extra) {
+        const qty = extra.quantity ?? item.quantity ?? 0;
+        const cpu = priceConfig.nameMatches.find((nm) => nm.name === extra.code.toLowerCase())?.price;
+        lines.push({
+          code: extra.code,
+          kind: 'extra',
+          unit: extra.unit,
+          qty,
+          revenue: extraRevenue,
+          m2: 0,
+          margin: cpu != null ? round(extraRevenue - cpu * qty) : null,
+          desc: descTrimmed,
+          ...(cpu != null ? { costPerUnit: cpu } : {}),
+        });
+        continue;
+      }
+      if (desc.includes('trap')) continue; // overige trapregels (profielsets, plateau) blijven erbuiten
       // "kitten langs wand" finishing line — but never drop a priced floor line.
       if (FINISHING_RE.test(desc) && !P_NUMBER_TEST.test(descTrimmed)) continue;
 
@@ -202,6 +224,8 @@ export function parseQuotation(
       }
       if (matchedPrice === null) {
         for (const nm of priceConfig.nameMatches) {
+          // Een kostprijs per trede of per meter plint hoort nooit op een vloer.
+          if (isExtraCode(nm.name)) continue;
           if (desc.includes(nm.name)) {
             matchedPrice = nm.price;
             if (!product) product = nm.label;

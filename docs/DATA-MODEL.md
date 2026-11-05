@@ -511,3 +511,38 @@ van alleen de beprijsde regels (onbeprijsde regels = pure winst; Pieter Boot 76%
 Nu: (beprijsde omzet − kosten) / beprijsde omzet × vloeromzet. Bij 100% dekking identiek.
 Diff 2026-10-20 over alle 889 offertes: 44 gewijzigd, alle 44 met dekking < 100%; 845 op de cent gelijk.
 Totale marge geaccepteerd €499.902 → €470.025 (−6,0%). Wijkt hiermee bewust af van de oude Sheet.
+
+## Overige producten en nacalculatie — 2026-11-05
+
+Vraag van Jan: traprenovaties, plinten, tapijt, entreematten en het verwijderen van vloeren
+tellen niet mee. De app sloeg elke regel met "trap" over en negeerde alles wat niet met een
+vloertype begon. Gemeten op alle geaccepteerde en open offertes: 206 regels, ±€170k omzet
+zonder kostprijs.
+
+**Herkenning** (`lib/extras.ts`, `classifyExtra`). Een regel krijgt één code uit een vaste lijst
+(`EXTRA_PRODUCTS`), elk met een eigen eenheid: trede, trap, m1, lengte, m², stuk. Getoetst op de
+echte tekst van 432 offertes en 382 facturen (Teamleader-dump van 2026-11-05). Volgorde:
+verwijderen → trap → plint → entreemat → tapijt → pas daarna vloer.
+- "PVC vloer verwijderen en afvoeren" begon met "PVC" en telde als vloer-m² met legkosten. Nu is
+  het "Vloer verwijderen". Effect: 2 offertes, samen 95 m² minder vloer.
+- Een hele trap die zijn treden noemt ("dichte trap 20 treden", aantal 1) telt als 20 treden.
+- Losse trapmaterialen (profielsets, "Traptreden set"), kit, snijden of kitten langs een plint en
+  radiatoren zijn géén overig product en blijven, net als vroeger, buiten beschouwing.
+
+**Rekenen** (`lib/resolve.ts`). Kostprijs per eenheid × aantal; die prijs is inclusief montage
+(keuze 2026-11-05: één bedrag in plaats van inkoop en montage apart). Geen ondervloer, geen
+legtarief, `m2 = 0` zodat de regel nooit in "m² verkocht" of €/m² terechtkomt. De prijs wordt
+alleen op exact de code gezocht. Omgekeerd slaat de vloermatching deze codes over, zodat een
+vloer met "incl. verwijderen tapijt" in de tekst nooit de prijs van Tapijt krijgt.
+Marge = vloermarge (naar rato, ongewijzigd) + omzet − kosten van de overige producten mét
+kostprijs. Overige producten zonder kostprijs tellen niet mee, ook niet in de noemer van het
+percentage. Een offerte met alleen een traprenovatie krijgt zo ook een marge.
+
+**Nacalculatie** (`addInvoiceExtras`). Plinten en entreematten staan vaak met €0 op de offerte
+("prijs op nacalculatie") en pas met het echte aantal op de eindfactuur. De sync haalt per nieuwe
+factuur één keer de regels op (`lib/teamleader/invoice-extras.ts`, max. 60 per run; de backfill
+haalt alles op) en bewaart de overige producten per factuur in `app_settings.invoice_extras`.
+Concepten worden overgeslagen. Bij het lezen: per deal en per code wat er méér gefactureerd is
+dan er op de geaccepteerde offerte stond, komt er als regel (`source: 'factuur'`) bij, inclusief
+omzet. Stond het al met bedrag op de offerte, dan is het verschil nul en telt niets dubbel.
+Minder gefactureerd (aanbetaling, restantfactuur zonder regels) voegt niets toe.

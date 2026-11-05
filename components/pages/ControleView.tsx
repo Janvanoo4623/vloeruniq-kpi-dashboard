@@ -10,6 +10,7 @@ import { formatEuro, formatNumber, formatProduct } from '@/lib/format';
 import { STATUS_LABEL } from '@/components/QuotationModal';
 import MissingPriceModal from '@/components/MissingPriceModal';
 import PriceInput from '@/components/PriceInput';
+import { formatQty } from '@/lib/extras';
 import { Badge, Button, Card, Empty, cn } from '@/components/ui';
 import { Pagination, usePaged } from '@/components/ui/Pagination';
 
@@ -354,21 +355,21 @@ function PrijzenBakje({ missing }: { missing: MissingPrice[] }) {
       <p className="border-b border-hair px-5 py-3 text-[12.5px] leading-relaxed text-ink-mute">
         Zonder inkoopprijs valt er geen marge te berekenen, dus deze omzet telt nergens in mee. Vul
         de prijs hier direct in — hij geldt met terugwerkende kracht, want een inkoopprijs is een
-        feit dat er altijd al was, alleen niet vastgelegd. De marges rekenen door bij de
-        eerstvolgende synchronisatie.
+        feit dat er altijd al was, alleen niet vastgelegd. Bij trappen, plinten en andere overige
+        producten is het de kostprijs per trede, meter of m², montage inbegrepen.
       </p>
       {missing.length === 0 ? (
-        <Empty>Elke vloer die voorkomt heeft een inkoopprijs.</Empty>
+        <Empty>Elk product dat voorkomt heeft een prijs.</Empty>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full min-w-[700px] text-[13px]">
             <thead>
               <tr className="border-b border-hair text-[10.5px] uppercase tracking-wide text-ink-faint">
-                <th className="px-5 py-2 text-left font-semibold">Vloer</th>
+                <th className="px-5 py-2 text-left font-semibold">Product</th>
                 <th className="px-5 py-2 text-right font-semibold">Offertes</th>
-                <th className="px-5 py-2 text-right font-semibold">m²</th>
+                <th className="px-5 py-2 text-right font-semibold">Aantal</th>
                 <th className="px-5 py-2 text-right font-semibold">Omzet zonder marge</th>
-                <th className="px-5 py-2 text-right font-semibold">Inkoopprijs</th>
+                <th className="px-5 py-2 text-right font-semibold">Inkoop- of kostprijs</th>
               </tr>
             </thead>
             <tbody>
@@ -405,7 +406,7 @@ function PrijzenBakje({ missing }: { missing: MissingPrice[] }) {
                     </button>
                   </td>
                   <td className="px-5 py-2.5 text-right tabular-nums text-ink-soft">
-                    {formatNumber(m.m2)}
+                    {m.unit ? formatQty(m.m2, m.unit) : `${formatNumber(m.m2)} m²`}
                   </td>
                   <td className="px-5 py-2.5 text-right font-semibold tabular-nums text-ink">
                     {formatEuro(m.revenue)}
@@ -421,6 +422,7 @@ function PrijzenBakje({ missing }: { missing: MissingPrice[] }) {
                     ) : (
                       <PriceInput
                         code={m.code}
+                        unit={m.unit}
                         onSaved={(code) => setOpgeslagen((s) => new Set(s).add(code))}
                       />
                     )}

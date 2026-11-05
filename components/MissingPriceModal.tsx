@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Tag, X } from 'lucide-react';
 import type { MissingPrice } from '@/lib/missing-prices';
+import { formatQty } from '@/lib/extras';
 import type { QuotationRow } from '@/lib/types';
 import { formatEuro, formatNumber, formatProduct } from '@/lib/format';
 import QuotationModal, { STATUS_LABEL, STATUS_STYLE } from './QuotationModal';
@@ -77,7 +78,7 @@ export default function MissingPriceModal({
             </div>
             <p className="mt-0.5 text-sm text-ink-mute">
               {item.quotationCount} {item.quotationCount === 1 ? 'offerte' : 'offertes'} ·{' '}
-              {formatNumber(item.m2)} m² · {formatEuro(item.revenue)} omzet zonder marge, ex btw
+              {item.unit ? formatQty(item.m2, item.unit) : `${formatNumber(item.m2)} m²`} · {formatEuro(item.revenue)} omzet zonder marge, ex btw
             </p>
           </div>
           <button
@@ -97,7 +98,7 @@ export default function MissingPriceModal({
                 <th className="px-5 py-2 text-left font-semibold">Klant</th>
                 <th className="px-3 py-2 text-left font-semibold">Status</th>
                 <th className="px-3 py-2 text-right font-semibold">Datum</th>
-                <th className="px-3 py-2 text-right font-semibold">m²</th>
+                <th className="px-3 py-2 text-right font-semibold">{item.unit ? 'Aantal' : 'm²'}</th>
                 <th className="px-5 py-2 text-right font-semibold">Omzet</th>
               </tr>
             </thead>

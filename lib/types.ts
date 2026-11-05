@@ -89,6 +89,26 @@ export interface QuotationLine {
   laborRule?: LaborRule;
   /** `code` is uit de omschrijving afgeleid omdat niets in de prijslijst matchte. */
   derivedCode?: boolean;
+  /**
+   * 'extra' = overig product (trap, plint, tapijt, entreemat, verwijderen; zie
+   * lib/extras.ts). Zo'n regel heeft m2 = 0 zodat hij nooit in "m² verkocht"
+   * belandt; het aantal staat in `qty`, de eenheid in `unit`, en de kostprijs
+   * per eenheid (montage inbegrepen) in `costPerUnit`. Geen ondervloer, geen legtarief.
+   */
+  kind?: 'extra';
+  unit?: import('./extras').ExtraUnit;
+  qty?: number;
+  costPerUnit?: number;
+  /** 'factuur' = nacalculatie: alleen op de factuur gezet, bij het lezen toegevoegd. */
+  source?: 'factuur';
+}
+
+/** Een overig product op een factuur, zoals opgeslagen in app_settings ('invoice_extras'). */
+export interface InvoiceExtraLine {
+  code: string;
+  unit: import('./extras').ExtraUnit;
+  qty: number;
+  revenue: number;
 }
 
 /**
