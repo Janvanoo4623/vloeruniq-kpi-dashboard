@@ -244,7 +244,10 @@ function PricesTab({ prices, post, busy }: { prices: CurrentPrice[]; post: Post;
           <tbody className="divide-y divide-hair">
             {filtered.map((p) => {
               const val = edits[p.code] ?? String(p.price);
-              const changed = Number(val) !== p.price && val.trim() !== '';
+              // Ook hetzelfde bedrag met een andere ingangsdatum is een wijziging:
+              // Jan wilde lavasteen terugzetten naar maart en kon dat niet (2026-11-05).
+              const nieuweDatum = keuze !== 'vandaag' && (ingangsdatum(keuze, datum) ?? '') !== p.effectiveFrom;
+              const changed = val.trim() !== '' && (Number(val) !== p.price || nieuweDatum);
               return (
                 <tr key={p.code} className="hover:bg-sunk">
                   <td className="px-3 py-2">
@@ -384,7 +387,8 @@ function ExtraPrices({
             {EXTRA_PRODUCTS.map((x) => {
               const p = huidig.get(x.code.toLowerCase());
               const val = edits[x.code] ?? (p ? String(p.price) : '');
-              const changed = val.trim() !== '' && Number(val) !== p?.price;
+              const nieuweDatum = !!p && keuze !== 'vandaag' && (ingangsdatum(keuze, datum) ?? '') !== p.effectiveFrom;
+              const changed = val.trim() !== '' && (Number(val) !== p?.price || nieuweDatum);
               return (
                 <tr key={x.code} className="hover:bg-sunk">
                   <td className="px-3 py-2">
