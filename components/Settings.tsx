@@ -387,7 +387,9 @@ function ExtraPrices({
               const changed = val.trim() !== '' && Number(val) !== p?.price;
               return (
                 <tr key={x.code} className="hover:bg-sunk">
-                  <td className="px-3 py-2 text-ink-soft">{x.code}</td>
+                  <td className="px-3 py-2">
+                    <span className="rounded bg-sunk px-1.5 py-0.5 text-xs font-medium text-ink-soft">{x.code}</span>
+                  </td>
                   <td className="px-3 py-2">
                     <div className="flex items-center gap-1">
                       <span className="text-ink-faint">€</span>

@@ -1,4 +1,5 @@
 // Display formatters (Dutch locale).
+import { isExtraCode } from './extras';
 
 const eur0 = new Intl.NumberFormat('nl-NL', {
   style: 'currency',
@@ -51,6 +52,8 @@ export function canonicalProduct(code: string): string {
 export function formatProduct(p: string): string {
   const trimmed = p.trim();
   if (/^p\d{3}$/i.test(trimmed)) return trimmed.toUpperCase();
+  // Overige producten hebben een vaste, al nette naam ("Traprenovatie PVC (hele trap)").
+  if (isExtraCode(trimmed)) return trimmed;
   return trimmed
     .split(/\s+/)
     .map((w) =>
