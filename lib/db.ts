@@ -185,8 +185,9 @@ export async function upsertQuotations(rows: QuotationRow[]): Promise<void> {
   if (rows.length === 0) return;
   const payload = rows.map(quotationToRow);
   // Chunk to stay well under payload limits.
-  for (let i = 0; i < payload.length; i += 500) {
-    const { error } = await supabase().from('quotations').upsert(payload.slice(i, i + 500));
+  // 200 per keer: met alle regels erbij werd een batch van 500 een paar MB.
+  for (let i = 0; i < payload.length; i += 200) {
+    const { error } = await supabase().from('quotations').upsert(payload.slice(i, i + 200));
     if (error) throw new Error(`db.upsertQuotations: ${error.message}`);
   }
 }

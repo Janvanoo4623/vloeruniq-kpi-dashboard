@@ -18,6 +18,26 @@ export function hasSupabase(): boolean {
   return Boolean(url() && serviceKey());
 }
 
+/**
+ * fetch met herhaalpoging bij een netwerkfout ("TypeError: fetch failed"). Twee
+ * backfills op 2026-11-05 liepen daarop stuk, telkens bij de eerste schrijfactie
+ * na minuten waarin alleen Teamleader werd aangesproken: een verbinding die
+ * intussen dicht was. Alleen gegooide fouten worden herhaald, nooit een
+ * HTTP-antwoord, en alles wat we schrijven is een upsert of een
+ * voorwaardelijke update — opnieuw sturen is dus veilig.
+ */
+const retryingFetch: typeof fetch = async (input, init) => {
+  const pogingen = 3;
+  for (let i = 1; ; i++) {
+    try {
+      return await fetch(input, init);
+    } catch (err) {
+      if (i >= pogingen || init?.signal?.aborted) throw err;
+      await new Promise((r) => setTimeout(r, 1000 * i * i));
+    }
+  }
+};
+
 let client: SupabaseClient | null = null;
 
 export function supabase(): SupabaseClient {
@@ -27,7 +47,7 @@ export function supabase(): SupabaseClient {
     if (!u || !k) {
       throw new Error('Missing SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY.');
     }
-    client = createClient(u, k, { auth: { persistSession: false } });
+    client = createClient(u, k, { auth: { persistSession: false }, global: { fetch: retryingFetch } });
   }
   return client;
 }
