@@ -39,6 +39,14 @@ const FLOOR_TYPE_RE = /^(pvc|visgraat|stroken|tegels|hongaarse|weense|klik|vt wo
 // no P-number, so a priced floor line is never excluded even if it mentions kit.
 // NB: do NOT match "snij" — every floor line carries "incl. X% snijverlies".
 const FINISHING_RE = /kitt/i;
+// Gietvloeren (lavasteen, microcement) beginnen niet met een vloertype maar met
+// een merk ("Concrada Microcement 2k gietvloer ...") en zijn dus nooit als vloer
+// herkend. Gecheckt op alle 432 geaccepteerde/open offertes (2026-11-05): het
+// woord "gietvloer" staat op precies de vier gietvloerregels en nergens anders.
+// "KorqStuc" en "kurkstuc incl. aanbrengen" zijn wandafwerking en blijven erbuiten.
+// Een regel die een gietvloer verwijdert is geen gietvloer.
+const POURED_FLOOR_RE = /gietvloer/i;
+const REMOVAL_RE = /verwijder|afvoer|slopen/i;
 // Description contains a P-number anywhere.
 const P_NUMBER_TEST = /P\d{3}/i;
 // Extract the first P-number (uppercase) for price lookup.
@@ -90,7 +98,8 @@ const GLUED_RE = /lijm/i;
 // op spelling en streng op betekenis, niet andersom.
 const NO_LABOR_RE =
   /\b(?:excl\.?|exclusief|ex\.?|zonder)\s*(?:het\s+)?leg(?:gen?|service)?\b|\balleen\s+(?:leveren|levering)\b/i;
-const HAS_LABOR_RE = /\bleg(?:gen?|service)\b|\bgelegd\b|\bmont(?:age|eren)\b/i;
+// "aanbrengen" is hoe een gietvloer gelegd wordt ("Lavasteen Gietvloer | Incl. aanbrengen").
+const HAS_LABOR_RE = /\bleg(?:gen?|service)\b|\bgelegd\b|\bmont(?:age|eren)\b|\baanbreng(?:en)?\b/i;
 
 /**
  * Naam afleiden uit de omschrijving als er géén P-nummer is en geen naam uit de
@@ -168,7 +177,10 @@ export function parseQuotation(
       // "kitten langs wand" finishing line — but never drop a priced floor line.
       if (FINISHING_RE.test(desc) && !P_NUMBER_TEST.test(descTrimmed)) continue;
 
-      const isFloor = P_NUMBER_TEST.test(descTrimmed) || FLOOR_TYPE_RE.test(descTrimmed);
+      const isFloor =
+        P_NUMBER_TEST.test(descTrimmed) ||
+        FLOOR_TYPE_RE.test(descTrimmed) ||
+        (POURED_FLOOR_RE.test(descTrimmed) && !REMOVAL_RE.test(descTrimmed));
       if (!isFloor) continue;
 
       const quantity = item.quantity ?? 0;

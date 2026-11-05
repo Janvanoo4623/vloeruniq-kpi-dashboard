@@ -19,7 +19,14 @@ export default async function ControlerenPage() {
     getReviewedIds('labor'),
     getReviewedIds('unmatched'),
   ]);
-  const resolved = resolveQuotations(quotations, resolveInput);
+  // Alleen offertes die (nog) iets kunnen opleveren. Verlopen en geweigerde
+  // offertes tellen nergens mee in omzet of marge, dus nakijken heeft geen zin
+  // (Jan, 2026-11-05: "de meesten hiervan zijn nooit een opdracht geworden").
+  // Een verlopen offerte met facturen op de deal is na resolveQuotations
+  // 'accepted' (wonByInvoice) en blijft er dus wél in.
+  const resolved = resolveQuotations(quotations, resolveInput).filter(
+    (q) => q.status === 'accepted' || q.status === 'open',
+  );
   const pricedCodes = new Set(prices.map((p) => p.code.toLowerCase()));
 
   return (

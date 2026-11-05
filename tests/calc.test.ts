@@ -224,3 +224,38 @@ test('maandtempo: eerste vijf dagen geen oordeel, daarna voor/achter/op schema',
   assert.equal(monthPace(0.4, 6, 30), 'voor');
   assert.equal(monthPace(0.2, 15, 30), 'achter');
 });
+
+// ── Herkenning offerteregels ─────────────────────────────────────────────
+
+test('gietvloer telt als vloer, "aanbrengen" is leggen; verwijderen en kurkstuc niet', async () => {
+  const { parseQuotation } = await import('../lib/teamleader/matching');
+  const regelTL = (description: string, quantity: number, amount: number) => ({
+    description,
+    quantity,
+    total: { tax_exclusive: { amount } },
+  });
+  const summary = { id: 'q1', status: 'accepted', created_at: '2026-10-02T00:00:00Z', updated_at: '2026-10-22T00:00:00Z' };
+  const detail = {
+    grouped_lines: [
+      {
+        line_items: [
+          regelTL('Lavasteen Gietvloer Marble | Incl. aanbrengen', 55, 4545),
+          regelTL('Gietvloer verwijderen en afvoeren', 20, 300),
+          regelTL('KorqStuc Snow | Incl. aanbrengen', 23, 1000),
+        ],
+      },
+    ],
+  };
+  const q = parseQuotation(
+    summary as never,
+    detail as never,
+    {},
+    { pNumbers: {}, nameMatches: [{ name: 'lavasteen gietvloer', price: 25, label: 'Lavasteen Gietvloer' }] } as never,
+    { alwaysPerM2: 10, gluedPerM2: 5, selfAdhesivePerM2: 6 },
+  );
+  assert.equal(q.totalM2, 55);
+  assert.equal(q.lines?.length, 1);
+  assert.equal(q.lines?.[0].laborRule, 'included');
+  assert.equal(q.lines?.[0].installMode, 'click');
+  assert.equal(q.margin, 4545 - (25 + 10) * 55);
+});
