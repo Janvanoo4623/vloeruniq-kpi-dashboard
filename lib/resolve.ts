@@ -378,7 +378,8 @@ export function resolveQuotations(rows: QuotationRow[], input: ResolveInput): Qu
  * grootste), met omzet en al. Staat de plint al met bedrag op de offerte, dan
  * staat hij ook op de factuur en is het verschil nul — er telt niets dubbel.
  * Minder gefactureerd dan geoffreerd (een aanbetaling zonder regels, een
- * restantfactuur) laten we liggen: dat is geen nacalculatie.
+ * restantfactuur) laten we liggen: dat is geen nacalculatie. En het totaal
+ * blijft binnen wat er per deal méér gefactureerd is dan de offerte.
  */
 const NACALC_MIN = 1; // euro; afrondingsverschillen zijn geen nacalculatie
 
@@ -427,7 +428,22 @@ function addInvoiceExtras(
         source: 'factuur',
       });
     }
-    if (regels.length > 0) extraPerId.set(q.id, regels);
+    if (regels.length === 0) continue;
+    // Nacalculatie maakt de factuur hoger dan de offerte; meer dan dat verschil
+    // kan het dus nooit zijn. Gemeten 2026-11-05: bij 19 van de 116 offertes was
+    // er nauwelijks of minder gefactureerd dan geoffreerd — de plint zat dan in
+    // een andere offerteregel, of heette op de factuur anders ("overzettreden"
+    // tegen "dichte trap"). Zonder deze grens telde dat €12,5k dubbel.
+    const ruimte = (input.invoicedPerDeal?.[deal] ?? 0) - q.revenueExVat;
+    const totaal = regels.reduce((t, l) => t + l.revenue, 0);
+    if (ruimte < NACALC_MIN) continue;
+    const factor = Math.min(1, ruimte / totaal);
+    extraPerId.set(
+      q.id,
+      factor < 1
+        ? regels.map((l) => ({ ...l, qty: round2((l.qty ?? 0) * factor), revenue: round2(l.revenue * factor) }))
+        : regels,
+    );
   }
   if (extraPerId.size === 0) return won;
 

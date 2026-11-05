@@ -353,6 +353,7 @@ test('nacalculatie: plinten alleen op de factuur komen bij de offerte, wat er al
     invoer({
       prices: prijzen,
       // Op de factuur: 50 m plint voor 750. Er stond 20 m / 300 op de offerte → 30 m / 450 nacalculatie.
+      invoicedPerDeal: { d1: 1150 },
       invoiceExtras: { d1: [{ code: 'Plinten', unit: 'm1', qty: 50, revenue: 750 }] },
     }),
   );
@@ -372,4 +373,19 @@ test('nacalculatie: minder gefactureerd dan geoffreerd voegt niets toe', () => {
   );
   assert.equal(q.lines?.length, 2);
   assert.equal(q.revenueExVat, 700);
+});
+
+test('nacalculatie: nooit meer dan er boven de offerte is gefactureerd', () => {
+  const [q] = resolveQuotations(
+    [offerte({ id: 'a', dealId: 'd1', lines: [regel('P100', 10, 400)], omzetVloer: 400, totalM2: 10, revenueExVat: 1000 })],
+    invoer({
+      // Plint van 300 op de factuur, maar er is maar 100 méér gefactureerd dan de offerte.
+      invoicedPerDeal: { d1: 1100 },
+      invoiceExtras: { d1: [{ code: 'Plinten', unit: 'm1', qty: 30, revenue: 300 }] },
+    }),
+  );
+  const nacalc = q.lines?.find((l) => l.source === 'factuur');
+  assert.equal(nacalc?.revenue, 100);
+  assert.equal(nacalc?.qty, 10);
+  assert.equal(q.revenueExVat, 1100);
 });
