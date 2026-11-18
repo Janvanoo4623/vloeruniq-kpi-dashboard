@@ -105,19 +105,16 @@ wens: **kolommen G t/m M automatisch gevuld.** De rest van de Sheet blijft handw
   "append" onderaan de tab werkt dus niet. Voorstel: een vast blok "Nog in te plannen" bovenaan
   elke maandtab.
 
-## Open vragen (aan Jan)
+## Open vragen
 
-1. **Toegang tot de echte Sheet** (link, gedeeld met Jasper): welke indeling klopt, die van de
-   toelichting (A–E dagen, M = plint/mat/trap samen) of die van de januari-tab?
-2. **Tabnamen**: precies hoe heten ze ("Januari 2026"?) en wie maakt een nieuwe maandtab aan?
-3. **In welke maand** komt een klus bij akkoord als er nog **geen datum uitvoering** is? De maand
-   van akkoord, de volgende maand, of een aparte tab "Nog in te plannen"?
-4. **Doorschuiven**: als de datum uitvoering in Teamleader verandert, moet de rij dan mee naar de
-   andere maandtab, alleen gemarkeerd worden, of niets?
-5. **Vervallen klus** (deal verloren/geannuleerd): rij doorstrepen, markeren of laten staan?
-6. **Plaats**: woonadres of werkadres (nieuwbouw)?
-7. **Plint/Trap/Mat**: één kolom of drie?
-8. **Wat n8n níet hoeft**: Afspraken, afwezigheid, weekindeling blijven handwerk — bevestigen.
+Alleen gevraagd wat niet uit de Sheet of de data te halen is (2026-11-18):
+- **Admin-rechten** in n8n en **toegang tot de Sheet** (voorwaarde).
+- **Klus zonder datum uitvoering bij akkoord: in welke maandtab?** Voorstel: de maand van akkoord.
+
+Zelf uit te zoeken zodra de Sheet gedeeld is: welke kolomindeling klopt, tabnamen, plint/trap/mat
+in één of drie kolommen, welk adres als plaats (vergelijken met Teamleader). Bewust **niet in
+versie 1** (dus nu niet gevraagd): doorschuiven bij een gewijzigde datum en vervallen klussen;
+versie 1 maakt alleen rijen aan en raakt verder niets aan.
 
 ## Stappen
 

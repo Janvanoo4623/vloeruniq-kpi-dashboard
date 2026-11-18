@@ -617,18 +617,29 @@ op alle gematchte vloer** (`cost_settings`), geen materiaalprijs voor één prod
 van plinten of trappen invullen zou elke vloer-m² duurder maken. Materiaalprijzen van overige
 producten horen onder **Prijzen → Overige producten**. Jan hierop wijzen voordat hij gaat invullen.
 
-### Open vragen vóór het bouwen
+### Besluiten uit de data (2026-11-18) — zelf beslist, niet aan Jan gevraagd
 
-1. **Trap per trap of per trede?** De arbeid is per trap, maar de meeste offertes verkopen per
-   trede. Voorstel: één trap per offerte per trapcode, tenzij de tekst "2x trap" noemt of een hele
-   trap meerdere keren als aantal staat. Of rekent Jan per trede (€360 / ±13 treden)?
-2. **Tapijt/vinyl €24 per m1**: strekkende meter van de rol (bij 4 m breed = €6/m²) of bedoelt Jan
-   m²? En geldt dit ook voor vinyl dat nu als vloer telt met het legtarief van €17?
-3. **Entreemat €7,50 per m1**: de meeste matten staan per m². Omrekenen of een eigen tarief per m²?
-4. **Plinten per lengte**: hoeveel meter is een lengte?
-5. **Vloerverwarming** meenemen als categorie (arbeid per groep)? Jan gaf er geen tarief voor; wordt
-   het frezen uitbesteed (Henk) en is dat dan arbeid of inkoop?
-6. **Lavasteen €15/m²** als eigen legtarief voor gietvloeren: geldt dat ook voor microcement/beton ciré
-   (€26)? Dan wordt het legtarief per vloertype in plaats van één `LABOR_COST_PER_M2`.
-7. **Overgang**: laat de app de huidige prijzen (incl. montage) staan tot Jan een arbeidstarief invult
-   en leest hij ze daarna als "excl. montage"? Of zet Jan alles tegelijk om?
+1. **Trap: arbeid per trap, aantal trappen afgeleid uit de treden.** Treden per offerte vallen in
+   duidelijke groepen: 12–16 (één trap, 56 offertes), 26–32 (twee trappen), 39 en 50 (drie of meer).
+   Regel: `trappen = max(1, round(treden / 14))`, tenzij de tekst "2x trap" noemt. Hele trap en
+   trap met tapijt staan al per trap.
+2. **Plinten per lengte = 2,4 m.** Staat letterlijk in de teksten ("67 lengtes a 2,4m", "240cm per
+   lengte"). Arbeid €10 × 2,4 per lengte. "Alleen leveren" geen arbeid, "alleen montage" alleen arbeid.
+3. **Entreemat €7,50 per m1 → ook €7,50 per m².** Matten zijn meestal 1–2 m² en ±1 m breed; het
+   gaat om €1,5k omzet, het verschil is verwaarloosbaar.
+4. **Gietvloeren: legtarief per type.** Lavasteen (alle regels "Lavasteen …") €15/m², microcement/
+   Concrada (= beton ciré) €26/m², in plaats van `LABOR_COST_PER_M2` (€17).
+5. **Kurkstuc** wordt een overig product per m² met arbeid €26/m² (wanden; telt niet in m² vloer).
+6. **Sleuven dichtzetten** wordt een overig product per m²: arbeid €1,25 + materiaal €3,56.
+7. **Vloerverwarming** wordt herkend als overig product **per groep** (aantal uit de tekst), zonder
+   prijs. Het verschijnt dan in de lijst "zonder kostprijs"; Jan vult een prijs per groep in als hij
+   wil. Losse freesregels (vast bedrag) blijven buiten beschouwing.
+8. **Overgang zonder dubbeltelling:** arbeid wordt alleen opgeteld bij een overig product waarvan de
+   prijs is opgeslagen als **materiaal excl. montage** (met ingangsdatum). Bestaande prijzen (incl.
+   montage) blijven werken zoals nu tot Jan ze omzet.
+
+### Nog aan Jan gevraagd
+
+- **Tapijt €24 per m1**: per strekkende meter van de rol (400 cm breed ≈ €6/m²) of per m²?
+  Tapijt staat in de offertes op beide manieren (per m² rond €45–52, per strekkende meter rond
+  €90–140). Tot het antwoord er is: geen arbeid op tapijt.
