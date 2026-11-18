@@ -569,3 +569,66 @@ korting van een ander onderdeel draagt. Een negatieve regel is altijd korting, n
   in `app_settings.invoice_extras` zonder `net: true` worden opnieuw opgehaald; anders zou een factuur
   vóór korting naast een offerte ná korting het verschil als nacalculatie tellen.
 - Wordt bij de **sync** toegepast, niet bij het lezen: oude offertes krijgen het pas na een backfill.
+
+## Arbeid per categorie — input 2026-11-18 (nog niet gebouwd)
+
+Besluit (gesprek Jan, 2026-11-18): bij overige producten **arbeid apart van materiaal**. Arbeid krijgt
+één tarief per categorie, materiaal een prijs per product. Dit draait de keuze "één bedrag incl.
+montage" van 2026-11-05 terug. **De bestaande prijzen van Jan voor overige producten zijn dus incl.
+montage**: zodra er een arbeidstarief bij komt moet de materiaalprijs omlaag, anders telt de arbeid
+dubbel.
+
+### Arbeidstarieven van Jan (mail 2026-11-18, ex btw, letterlijk)
+
+| Categorie | Arbeid | Eenheid Jan | Eenheid in de app nu | Aansluiting |
+|---|---|---|---|---|
+| Plinten (vaak uitbesteed) | €10 | m1 | m1 / lengte | sluit aan; "per lengte" moet naar meters; "alleen leveren" = geen arbeid; "alleen montage" = alleen arbeid |
+| Traprenovatie PVC overzettreden | €720 | **trap** | trede | **eenheid botst** (zie open vragen) |
+| Traprenovatie PVC standaard | €360 | **trap** | trede / trap | **eenheid botst** bij de per-trede-codes |
+| Trap met tapijt | €360 | trap | trap | sluit aan |
+| Sleuven dichtzetten | €1,25 (+ materiaal €3,56) | m² | — (nieuw) | nieuw; verkocht rond €8,30/m² |
+| Entreematten | €7,50 | m1 | m² / m1 | botst bij "Entreemat" (m²) |
+| Tapijt / vinyl leggen | €24 | **m1** | m² / stuk | m1 of m²? Vinyl is nu een vloer met het algemene legtarief |
+| Beton ciré / kurkstuc aanbrengen | €26 | m² | — (nieuw) | kurkstuc wordt nu bewust overgeslagen (`matching.ts` r. 47); beton ciré = microcement-gietvloer? |
+| Lavasteen gietvloer aanbrengen | €15 | m² | vloer, legtarief €17 | **geen overig product**: een vloer met een eigen legtarief i.p.v. `LABOR_COST_PER_M2` |
+
+Niet genoemd door Jan: **vloerverwarming** (zie hieronder), vloer verwijderen, tapijt met vast bedrag.
+
+### Wat de regelteksten laten zien (dump 2026-11-18, 5.053 regels uit offertes en facturen)
+
+- **Stucen** = alleen kurkstuc/KorqStuc op wanden en plafonds, 7 regels, €8,6k, per m². Geen gewoon
+  stucwerk. Valkuil: "PVC Amtico **Stucco** Flax" is een vloer, dus niet matchen op `/stuc/`.
+- **Sleuven dichtzetten**: ±190 regels, €26k op geaccepteerde offertes, altijd per m² (mediaan
+  €8,30). Varianten: "(tbv vloerverwarming)", "met reparatiemortel", "2 verdiepingen",
+  "sleuvendichtzetten", "Dichtzetten sleuven …". **Niet** meetellen: "Naden dichtzetten",
+  "Dichtzetten houten vloer", "Meerwerk dichtzetten gaten" (andere klus).
+- **Vloerverwarming** is de grootste post zonder kostprijs: €44k op geaccepteerde offertes, ±€170k
+  in alle offertes en facturen. Verkocht **per groep** maar met aantal 1 ("Vloerverwarming 6 groepen
+  | incl. plaatsen verdeler …"), dus het aantal groepen moet uit de tekst komen, zoals de treden
+  bij een hele trap. Daarnaast losse freesregels met een vast bedrag ("Frezen door tegelvloer",
+  "Meerwerk frezen"). Twee regels hebben het bedrag incl. btw als aantal (2645 bij €2.185, 1885
+  bij €1.558): niet als groepen of m² lezen.
+
+### Instellingen: let op het veld "Nieuwe kostenpost"
+
+Jan schreef: "De materialen kan ik gewoon op de plek hieronder invullen", met een schermafbeelding
+van **Instellingen → Nieuwe kostenpost (naam) / Bedrag per m²**. Dat veld is een kostenpost **per m²
+op alle gematchte vloer** (`cost_settings`), geen materiaalprijs voor één product. Daar materiaal
+van plinten of trappen invullen zou elke vloer-m² duurder maken. Materiaalprijzen van overige
+producten horen onder **Prijzen → Overige producten**. Jan hierop wijzen voordat hij gaat invullen.
+
+### Open vragen vóór het bouwen
+
+1. **Trap per trap of per trede?** De arbeid is per trap, maar de meeste offertes verkopen per
+   trede. Voorstel: één trap per offerte per trapcode, tenzij de tekst "2x trap" noemt of een hele
+   trap meerdere keren als aantal staat. Of rekent Jan per trede (€360 / ±13 treden)?
+2. **Tapijt/vinyl €24 per m1**: strekkende meter van de rol (bij 4 m breed = €6/m²) of bedoelt Jan
+   m²? En geldt dit ook voor vinyl dat nu als vloer telt met het legtarief van €17?
+3. **Entreemat €7,50 per m1**: de meeste matten staan per m². Omrekenen of een eigen tarief per m²?
+4. **Plinten per lengte**: hoeveel meter is een lengte?
+5. **Vloerverwarming** meenemen als categorie (arbeid per groep)? Jan gaf er geen tarief voor; wordt
+   het frezen uitbesteed (Henk) en is dat dan arbeid of inkoop?
+6. **Lavasteen €15/m²** als eigen legtarief voor gietvloeren: geldt dat ook voor microcement/beton ciré
+   (€26)? Dan wordt het legtarief per vloertype in plaats van één `LABOR_COST_PER_M2`.
+7. **Overgang**: laat de app de huidige prijzen (incl. montage) staan tot Jan een arbeidstarief invult
+   en leest hij ze daarna als "excl. montage"? Of zet Jan alles tegelijk om?

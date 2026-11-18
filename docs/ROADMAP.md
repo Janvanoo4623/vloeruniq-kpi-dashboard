@@ -129,3 +129,11 @@ gemarkeerde staaf met ballon); (4) "Verdieping" (`DetailsLabel`) met de bestaand
 - [ ] Instellingen heeft geen statement-kaart (werkpagina); alleen restyle.
 - [ ] Offertes toont "conversie" over de periode (gewonnen/beslist), Pijplijn "winkans" over de
       uitgeharde historie — twee definities naast elkaar; eventueel één naam/uitleg kiezen.
+
+## Input Jan 18 november 2026 — nog niet gebouwd
+- [ ] Arbeid per categorie bij overige producten: tarieven van Jan ontvangen, eenheden botsen deels.
+      Zie `DATA-MODEL.md` "Arbeid per categorie" (tabel + open vragen).
+- [ ] Nieuwe categorieën: sleuven dichtzetten, kurkstuc/beton ciré, mogelijk vloerverwarming (±€170k zonder kostprijs).
+- [ ] Legtarief per vloertype (lavasteen €15/m² i.p.v. €17).
+- [ ] Jan wijzen op "Nieuwe kostenpost" = per m² op alle vloer, niet voor materiaal.
+- [ ] Planning-Sheet automatisch vullen via n8n (kolommen G–M). Zie `PLANNING-SHEET.md`.
