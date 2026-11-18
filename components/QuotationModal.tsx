@@ -2,10 +2,17 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Pencil, RotateCcw, X } from 'lucide-react';
-import type { QuotationFields, QuotationLineOverride, QuotationRow, QuotationStatus } from '@/lib/types';
+import { Pencil, Plus, RotateCcw, Trash2, X } from 'lucide-react';
+import type {
+  AddedFloorLine,
+  InstallMode,
+  QuotationFields,
+  QuotationLineOverride,
+  QuotationRow,
+  QuotationStatus,
+} from '@/lib/types';
 import { formatEuro, formatNumber, formatPercent, formatProduct } from '@/lib/format';
-import { formatQty } from '@/lib/extras';
+import { formatQty, isExtraCode } from '@/lib/extras';
 import PriceInput from './PriceInput';
 import QuotationCorrection from './QuotationCorrection';
 
@@ -56,10 +63,13 @@ export default function QuotationModal({
   q,
   onClose,
   pricedCodes,
+  startInEdit = false,
 }: {
   q: QuotationRow;
   onClose: () => void;
   pricedCodes?: Set<string>;
+  /** Meteen in bewerkmodus openen, bv. vanuit "Geen vloer herkend". */
+  startInEdit?: boolean;
 }) {
   const router = useRouter();
   useEffect(() => {
@@ -69,7 +79,7 @@ export default function QuotationModal({
   }, [onClose]);
 
   const [savedCodes, setSavedCodes] = useState<Set<string>>(new Set());
-  const [bewerken, setBewerken] = useState(false);
+  const [bewerken, setBewerken] = useState(startInEdit);
   const [fields, setFields] = useState<QuotationFields>({});
   const [busy, setBusy] = useState(false);
   const [fout, setFout] = useState<string | null>(null);
@@ -82,13 +92,19 @@ export default function QuotationModal({
       .then((r) => r.json())
       .then((d) => {
         if (!leeft) return;
-        setFields(d.overrides?.[q.id]?.fields ?? {});
+        const f: QuotationFields = d.overrides?.[q.id]?.fields ?? {};
+        // Geopend om een vloer toe te voegen en er is nog niets: zet er meteen
+        // een lege regel klaar, dan hoeft er niet eerst gezocht te worden.
+        if (startInEdit && (q.lines ?? []).length === 0 && !f.addedLines?.length) {
+          f.addedLines = [{ code: '', m2: 0, revenue: 0, installMode: 'click', labor: true }];
+        }
+        setFields(f);
       })
       .catch(() => {});
     return () => {
       leeft = false;
     };
-  }, [q.id]);
+  }, [q.id, q.lines, startInEdit]);
 
   const lines = q.lines ?? [];
   const aangepast = (key: string): boolean => {
@@ -133,9 +149,37 @@ export default function QuotationModal({
       // Nacalculatieregels uit de factuur staan achteraan en bestaan niet in de
       // opgeslagen offerte; ze mogen het aantal regels niet ophogen, anders
       // worden alle regelcorrecties bij het lezen als verouderd genegeerd.
-      return { ...f, lines: regels, lineCount: lines.filter((l) => l.source !== 'factuur').length };
+      return { ...f, lines: regels, lineCount: lines.filter((l) => !l.source).length };
     });
   }
+
+  // Productnamen uit de prijslijst voor de keuzelijst bij "vloer toevoegen".
+  // Een naam die exact in de prijslijst staat krijgt meteen zijn inkoopprijs.
+  const [productNamen, setProductNamen] = useState<string[]>([]);
+  useEffect(() => {
+    if (!bewerken || productNamen.length > 0) return;
+    fetch('/api/settings')
+      .then((r) => r.json())
+      .then((d: { prices?: { code: string }[] }) =>
+        setProductNamen(
+          [...new Set((d.prices ?? []).map((p) => p.code).filter((c) => !isExtraCode(c)))].sort((a, b) =>
+            a.localeCompare(b, 'nl'),
+          ),
+        ),
+      )
+      .catch(() => {});
+  }, [bewerken, productNamen.length]);
+
+  const toegevoegd = fields.addedLines ?? [];
+  function zetToegevoegd(next: AddedFloorLine[]) {
+    setFields((f) => {
+      const n: QuotationFields = { ...f, addedLines: next };
+      if (next.length === 0) delete n.addedLines;
+      return n;
+    });
+  }
+  const wijzigToegevoegd = (i: number, patch: Partial<AddedFloorLine>) =>
+    zetToegevoegd(toegevoegd.map((a, j) => (j === i ? { ...a, ...patch } : a)));
 
   async function bewaar(nieuw: QuotationFields | null) {
     setBusy(true);
@@ -144,7 +188,7 @@ export default function QuotationModal({
       const res = await fetch('/api/overrides', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: 'fields', quotationId: q.id, fields: nieuw }),
+        body: JSON.stringify({ type: 'fields', quotationId: q.id, fields: opgeschoond(nieuw) }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data.ok) {
@@ -163,7 +207,7 @@ export default function QuotationModal({
     }
   }
 
-  const heeftCorrecties = Object.keys(fields).length > 0;
+  const heeftCorrecties = opgeschoond(fields) != null;
 
   return (
     <div
@@ -350,7 +394,7 @@ export default function QuotationModal({
                     {lines.map((l, i) => (
                       <tr key={i}>
                         <td className="px-3 py-1.5">
-                          {bewerken && l.kind !== 'extra' ? (
+                          {bewerken && l.kind !== 'extra' && !l.source ? (
                             <input
                               value={fields.lines?.[String(i)]?.code ?? l.code}
                               onChange={(e) => zetRegel(i, 'code', e.target.value)}
@@ -373,7 +417,7 @@ export default function QuotationModal({
                         <td className="px-3 py-1.5 text-right tabular-nums text-ink-soft">
                           {l.kind === 'extra' ? (
                             l.unit ? formatQty(l.qty ?? 0, l.unit) : formatNumber(l.qty ?? 0)
-                          ) : bewerken ? (
+                          ) : bewerken && !l.source ? (
                             <NumberVeld
                               waarde={fields.lines?.[String(i)]?.m2}
                               plaats={l.m2}
@@ -384,7 +428,7 @@ export default function QuotationModal({
                           )}
                         </td>
                         <td className="px-3 py-1.5 text-right tabular-nums text-ink-soft">
-                          {bewerken && l.source !== 'factuur' ? (
+                          {bewerken && !l.source ? (
                             <NumberVeld
                               waarde={fields.lines?.[String(i)]?.revenue}
                               plaats={l.revenue}
@@ -394,12 +438,16 @@ export default function QuotationModal({
                             formatEuro(l.revenue, true)
                           )}
                         </td>
-                        {bewerken && l.kind === 'extra' && (
+                        {bewerken && (l.kind === 'extra' || l.source) && (
                           <td colSpan={2} className="px-3 py-1.5 text-right text-[11px] text-ink-faint">
-                            kostprijs per eenheid
+                            {l.source === 'handmatig'
+                              ? 'aanpassen hieronder'
+                              : l.source === 'factuur'
+                                ? 'uit de factuur'
+                                : 'kostprijs per eenheid'}
                           </td>
                         )}
-                        {bewerken && l.kind !== 'extra' && (
+                        {bewerken && l.kind !== 'extra' && !l.source && (
                           <td className="px-3 py-1.5 text-right">
                             <NumberVeld
                               waarde={fields.lines?.[String(i)]?.underlayPerM2}
@@ -408,7 +456,7 @@ export default function QuotationModal({
                             />
                           </td>
                         )}
-                        {bewerken && l.kind !== 'extra' && (
+                        {bewerken && l.kind !== 'extra' && !l.source && (
                           <td className="px-3 py-1.5 text-right">
                             <NumberVeld
                               waarde={fields.lines?.[String(i)]?.laborPerM2}
@@ -453,6 +501,20 @@ export default function QuotationModal({
           </div>
 
           {bewerken && (
+            <ToegevoegdeVloeren
+              regels={toegevoegd}
+              productNamen={productNamen}
+              revenueExVat={q.revenueExVat}
+              omzetVloer={q.omzetVloer - lines.filter((l) => l.source === 'handmatig').reduce((t, l) => t + l.revenue, 0)}
+              onAdd={() =>
+                zetToegevoegd([...toegevoegd, { code: '', m2: 0, revenue: 0, installMode: 'click', labor: true }])
+              }
+              onChange={wijzigToegevoegd}
+              onRemove={(i) => zetToegevoegd(toegevoegd.filter((_, j) => j !== i))}
+            />
+          )}
+
+          {bewerken && (
             <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-hair pt-3">
               <button
                 type="button"
@@ -486,6 +548,151 @@ export default function QuotationModal({
           <QuotationCorrection q={q} />
         </div>
       </div>
+    </div>
+  );
+}
+
+/** Halfingevulde toegevoegde regels (geen product of geen m²) niet opslaan. */
+function opgeschoond(f: QuotationFields | null): QuotationFields | null {
+  if (!f) return null;
+  const n: QuotationFields = { ...f };
+  const geldig = (f.addedLines ?? []).filter((a) => a.code.trim() && a.m2 > 0);
+  if (geldig.length > 0) n.addedLines = geldig.map((a) => ({ ...a, code: a.code.trim() }));
+  else delete n.addedLines;
+  return Object.keys(n).length > 0 ? n : null;
+}
+
+const LEGWIJZE: { value: InstallMode; label: string }[] = [
+  { value: 'click', label: 'Klik' },
+  { value: 'glued', label: 'Gelijmd' },
+  { value: 'selfadhesive', label: 'Zelfklevend' },
+];
+
+/**
+ * Vloerregels die een mens zelf toevoegt, voor offertes waar Teamleader per
+ * ruimte factureert ("Ruimte 1.18 Kantine") en de app dus geen vloer ziet.
+ * Kies een naam uit de prijslijst, dan rekent de marge meteen met die
+ * inkoopprijs; een nieuwe naam verschijnt daarna als "zonder inkoopprijs".
+ */
+function ToegevoegdeVloeren({
+  regels,
+  productNamen,
+  revenueExVat,
+  omzetVloer,
+  onAdd,
+  onChange,
+  onRemove,
+}: {
+  regels: AddedFloorLine[];
+  productNamen: string[];
+  revenueExVat: number;
+  /** Vloeromzet zónder de toegevoegde regels. */
+  omzetVloer: number;
+  onAdd: () => void;
+  onChange: (i: number, patch: Partial<AddedFloorLine>) => void;
+  onRemove: (i: number) => void;
+}) {
+  const totaal = regels.reduce((t, a) => t + (a.revenue || 0), 0);
+  const teVeel = omzetVloer + totaal > revenueExVat + 1;
+  return (
+    <div className="mt-3 rounded-xl border border-hair bg-sunk/40 p-3">
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-xs font-medium text-ink-soft">Vloer toevoegen</p>
+        <button
+          type="button"
+          onClick={onAdd}
+          className="flex items-center gap-1 rounded-lg border border-line bg-white px-2 py-1 text-xs font-medium text-ink-soft transition hover:text-ink"
+        >
+          <Plus size={12} strokeWidth={2.2} />
+          Vloerregel toevoegen
+        </button>
+      </div>
+      <p className="mt-1 text-[11px] leading-relaxed text-ink-faint">
+        Voor een vloer die op de offerte staat maar niet herkend wordt (bijvoorbeeld per ruimte
+        uitgesplitst). Telt mee in m² en marge; het offertebedrag blijft gelijk. Kies een product uit
+        de lijst, dan rekent hij met die inkoopprijs.
+      </p>
+      {regels.length > 0 && (
+        <div className="mt-2 space-y-2">
+          <datalist id="vloer-producten">
+            {productNamen.map((n) => (
+              <option key={n} value={n} />
+            ))}
+          </datalist>
+          {regels.map((a, i) => (
+            <div key={i} className="flex flex-wrap items-end gap-2 rounded-lg bg-white px-2.5 py-2 ring-1 ring-hair">
+              <label className="min-w-[12rem] flex-1">
+                <span className="mb-0.5 block text-[10.5px] text-ink-mute">Product</span>
+                <input
+                  list="vloer-producten"
+                  value={a.code}
+                  onChange={(e) => onChange(i, { code: e.target.value })}
+                  placeholder="bv. PVC Visgraat P700"
+                  className="w-full rounded border border-line px-1.5 py-1 text-xs outline-none focus:border-accent"
+                />
+              </label>
+              <label>
+                <span className="mb-0.5 block text-[10.5px] text-ink-mute">m²</span>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={a.m2 || ''}
+                  onChange={(e) => onChange(i, { m2: numOrUndef(e.target.value) ?? 0 })}
+                  className="w-20 rounded border border-line px-1.5 py-1 text-right text-xs tabular-nums outline-none focus:border-accent"
+                />
+              </label>
+              <label>
+                <span className="mb-0.5 block text-[10.5px] text-ink-mute">Omzet ex btw</span>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={a.revenue || ''}
+                  onChange={(e) => onChange(i, { revenue: numOrUndef(e.target.value) ?? 0 })}
+                  className="w-24 rounded border border-line px-1.5 py-1 text-right text-xs tabular-nums outline-none focus:border-accent"
+                />
+              </label>
+              <label>
+                <span className="mb-0.5 block text-[10.5px] text-ink-mute">Legwijze</span>
+                <select
+                  value={a.installMode}
+                  onChange={(e) => onChange(i, { installMode: e.target.value as InstallMode })}
+                  className="rounded border border-line bg-white px-1.5 py-1 text-xs outline-none focus:border-accent"
+                >
+                  {LEGWIJZE.map((o) => (
+                    <option key={o.value} value={o.value}>
+                      {o.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="flex items-center gap-1.5 pb-1 text-xs text-ink-soft">
+                <input
+                  type="checkbox"
+                  checked={a.labor}
+                  onChange={(e) => onChange(i, { labor: e.target.checked })}
+                  className="h-3.5 w-3.5 accent-accent"
+                />
+                Leggen inbegrepen
+              </label>
+              <button
+                type="button"
+                onClick={() => onRemove(i)}
+                className="mb-0.5 rounded p-1 text-ink-faint hover:bg-sunk hover:text-crit"
+                aria-label="Regel verwijderen"
+                title="Regel verwijderen"
+              >
+                <Trash2 size={13} strokeWidth={2} />
+              </button>
+            </div>
+          ))}
+          {teVeel && (
+            <p className="text-[11px] text-warn">
+              Vloeromzet komt hiermee boven het offertebedrag ({formatEuro(revenueExVat, true)} ex btw).
+              Klopt het bedrag per regel?
+            </p>
+          )}
+        </div>
+      )}
     </div>
   );
 }

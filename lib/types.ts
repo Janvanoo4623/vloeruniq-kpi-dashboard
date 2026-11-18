@@ -102,8 +102,12 @@ export interface QuotationLine {
   unit?: import('./extras').ExtraUnit;
   qty?: number;
   costPerUnit?: number;
-  /** 'factuur' = nacalculatie: alleen op de factuur gezet, bij het lezen toegevoegd. */
-  source?: 'factuur';
+  /**
+   * 'factuur' = nacalculatie: alleen op de factuur gezet, bij het lezen toegevoegd.
+   * 'handmatig' = door een mens toegevoegd in de offertemodal (QuotationFields.addedLines).
+   * Geen van beide bestaat in de opgeslagen offerte, dus ze tellen nooit mee in lineCount.
+   */
+  source?: 'factuur' | 'handmatig';
 }
 
 /** Een overig product op een factuur, zoals opgeslagen in app_settings ('invoice_extras'). */
@@ -163,6 +167,24 @@ export interface QuotationFields {
   lines?: Record<string, QuotationLineOverride>;
   /** Aantal regels op het moment van corrigeren. */
   lineCount?: number;
+  /**
+   * Vloerregels die Teamleader niet levert of die de app niet herkent (feedback
+   * Jan 2026-11-18: "Bouwbedrijf Wessels, 19k, wordt niet meegenomen"). Ze komen
+   * achter de herkende regels, tellen mee in m² en vloeromzet, en krijgen hun
+   * inkoopprijs uit de prijslijst op de productnaam. Het offertetotaal verandert
+   * niet: dat bedrag zat er al in, alleen wist de app niet waarvoor.
+   */
+  addedLines?: AddedFloorLine[];
+}
+
+export interface AddedFloorLine {
+  code: string;
+  m2: number;
+  /** Omzet ex btw van deze vloer, na korting. */
+  revenue: number;
+  installMode: InstallMode;
+  /** Leggen inbegrepen? Zo nee: geen arbeid. */
+  labor: boolean;
 }
 
 /** One row of the Run Time table (per won deal). */

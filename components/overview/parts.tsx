@@ -78,18 +78,25 @@ export function Tile({
 /** Haalt één offerte op en opent hem in de vertrouwde modal. */
 export function useQuotationOpener(pricedCodes?: Set<string>) {
   const [offerte, setOfferte] = useState<QuotationRow | null>(null);
+  const [bewerken, setBewerken] = useState(false);
   const [laden, setLaden] = useState<string | null>(null);
-  async function open(id: string) {
+  /** `edit`: meteen in bewerkmodus, bv. om een vloer toe te voegen. */
+  async function open(id: string, opts: { edit?: boolean } = {}) {
     setLaden(id);
     try {
       const res = await fetch(`/api/quotation?id=${encodeURIComponent(id)}`);
       const json = await res.json();
-      if (res.ok && json.ok) setOfferte(json.quotation as QuotationRow);
+      if (res.ok && json.ok) {
+        setBewerken(Boolean(opts.edit));
+        setOfferte(json.quotation as QuotationRow);
+      }
     } finally {
       setLaden(null);
     }
   }
-  const modal = offerte ? <QuotationModal q={offerte} onClose={() => setOfferte(null)} pricedCodes={pricedCodes} /> : null;
+  const modal = offerte ? (
+    <QuotationModal q={offerte} onClose={() => setOfferte(null)} pricedCodes={pricedCodes} startInEdit={bewerken} />
+  ) : null;
   return { open, laden, modal };
 }
 

@@ -461,3 +461,33 @@ test('korting op de factuur: nacalculatie rekent na korting, kortingsregel is ge
   assert.equal(lines[0].code, 'Plinten');
   assert.equal(lines[0].revenue, 900);
 });
+
+// ── Zelf vloerregels toevoegen (2026-11-18) ──────────────────────────────
+
+test('toegevoegde vloerregel: offerte zonder herkende vloer krijgt m², vloeromzet en marge', () => {
+  const q = offerte({ id: 'wessels', revenueExVat: 19140 });
+  const added = { code: 'P100', m2: 400, revenue: 15000, installMode: 'click' as const, labor: false };
+  const [r] = resolveQuotations(
+    [q],
+    invoer({ overrides: { wessels: { prices: {}, noLabor: false, fields: { addedLines: [added] } } } }),
+  );
+  assert.equal(r.totalM2, 400);
+  assert.equal(r.omzetVloer, 15000);
+  assert.equal(r.revenueExVat, 19140, 'offertebedrag blijft gelijk');
+  assert.equal(r.margin, 15000 - 10 * 400);
+  assert.equal(r.lines?.[0].source, 'handmatig');
+  assert.ok(r.products.includes('P100'));
+});
+
+test('toegevoegde vloerregel verschuift de regelcorrecties niet', () => {
+  const q = offerte({ id: 'q', lines: [regel('P100', 10, 500)] });
+  const fields = {
+    lines: { '0': { m2: 20 } },
+    lineCount: 1,
+    addedLines: [{ code: 'P100', m2: 5, revenue: 250, installMode: 'click' as const, labor: false }],
+  };
+  const [r] = resolveQuotations([q], invoer({ overrides: { q: { prices: {}, noLabor: false, fields } } }));
+  assert.equal(r.lines?.[0].m2, 20, 'correctie op regel 0 blijft gelden');
+  assert.equal(r.totalM2, 25);
+  assert.equal(r.omzetVloer, 750);
+});

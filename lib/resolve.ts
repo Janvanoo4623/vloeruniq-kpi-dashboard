@@ -169,6 +169,24 @@ function applyFields(q: QuotationRow, fields: QuotationFields): QuotationRow {
   const relevant = status !== 'open' && dateAccepted ? dateAccepted : dateCreated;
   const { month, quarter, year } = deriveDateParts(relevant);
 
+  // Handmatig toegevoegde vloerregels, achter de rest zodat de volgnummers van
+  // de regelcorrecties hierboven niet verschuiven.
+  for (const a of fields.addedLines ?? []) {
+    if (!a.code?.trim() || !(a.m2 > 0)) continue;
+    deltaM2 += a.m2;
+    deltaOmzet += a.revenue ?? 0;
+    nieuweRegels.push({
+      code: a.code.trim(),
+      revenue: a.revenue ?? 0,
+      m2: a.m2,
+      margin: null,
+      desc: 'Handmatig toegevoegd',
+      installMode: a.installMode ?? 'click',
+      laborRule: a.labor === false ? 'excluded' : 'included',
+      source: 'handmatig',
+    });
+  }
+
   const totalM2 = Math.round((q.totalM2 + deltaM2) * 100) / 100;
   const omzetVloer = fields.omzetVloer ?? round2(q.omzetVloer + deltaOmzet);
 
@@ -181,6 +199,7 @@ function applyFields(q: QuotationRow, fields: QuotationFields): QuotationRow {
     quarter,
     year,
     lines: nieuweRegels,
+    products: [...new Set([...(q.products ?? []), ...nieuweRegels.filter((l) => l.source === 'handmatig').map((l) => l.code)])],
     totalM2,
     omzetVloer,
     revenueExVat: fields.revenueExVat ?? q.revenueExVat,

@@ -47,6 +47,21 @@ export async function POST(request: Request) {
         // Handmatig overschreven velden op de offerte zelf (m², omzet, status,
         // datums, tarieven per regel). null wist ze allemaal.
         const fields = body.fields == null ? null : (body.fields as QuotationFields);
+        // Toegevoegde vloerregels rekenen mee in elke KPI: alleen opslaan wat klopt.
+        for (const a of fields?.addedLines ?? []) {
+          const ok =
+            typeof a?.code === 'string' &&
+            a.code.trim().length > 0 &&
+            a.code.length <= 120 &&
+            Number.isFinite(a.m2) &&
+            a.m2 > 0 &&
+            a.m2 < 100000 &&
+            Number.isFinite(a.revenue) &&
+            a.revenue >= 0 &&
+            ['click', 'glued', 'selfadhesive'].includes(a.installMode) &&
+            typeof a.labor === 'boolean';
+          if (!ok) return bad('Toegevoegde vloerregel onvolledig: product, m² en omzet zijn nodig.');
+        }
         await setOverrideFields(quotationId, fields);
         break;
       }

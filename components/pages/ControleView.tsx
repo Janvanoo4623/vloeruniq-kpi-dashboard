@@ -1,13 +1,14 @@
 'use client';
 
 import { useState } from 'react';
-import { Ban, ChevronDown, CircleCheck, Hammer, Tag } from 'lucide-react';
+import { Ban, ChevronDown, CircleCheck, Hammer, Plus, Tag } from 'lucide-react';
 import HeroCard, { MiniStat } from '@/components/page/HeroCard';
 import { BENTO, IconBadge } from '@/components/overview/cards';
 import type { ReviewItem } from '@/lib/review';
 import type { MissingPrice, UnmatchedQuotation } from '@/lib/missing-prices';
 import { formatEuro, formatNumber, formatProduct } from '@/lib/format';
 import { STATUS_LABEL } from '@/components/QuotationModal';
+import { useQuotationOpener } from '@/components/overview/parts';
 import MissingPriceModal from '@/components/MissingPriceModal';
 import PriceInput from '@/components/PriceInput';
 import { formatQty } from '@/lib/extras';
@@ -444,6 +445,7 @@ function PrijzenBakje({ missing }: { missing: MissingPrice[] }) {
 
 function GeenVloerBakje({ items }: { items: UnmatchedQuotation[] }) {
   const gepagineerd = usePaged(items);
+  const opener = useQuotationOpener();
   return (
     <Card>
       <p className="border-b border-hair px-5 py-3 text-[12.5px] leading-relaxed text-ink-mute">
@@ -453,7 +455,9 @@ function GeenVloerBakje({ items }: { items: UnmatchedQuotation[] }) {
         enkele vloerregel om ze aan op te hangen. Dat is bewust: in dezelfde offertes staat
         &ldquo;Verwijderen en afvoeren tapijt 370&rdquo; met net zo goed m², en een ruimere regel
         zou die meesleuren. Kies per offerte: <strong>uitsluiten</strong>{' '}als hij nergens in
-        hoort, of <strong>gezien</strong>{' '}als de omzet klopt en je accepteert dat de m² ontbreken.
+        hoort, <strong>vloer toevoegen</strong>{' '}om zelf product, m² en omzet in te vullen (dan telt
+        hij mee in m² en marge), of <strong>gezien</strong>{' '}als de omzet klopt en je accepteert dat
+        de m² ontbreken.
       </p>
       {items.length === 0 ? (
         <Empty>In elke offerte met omzet is minstens één vloerregel herkend.</Empty>
@@ -462,21 +466,35 @@ function GeenVloerBakje({ items }: { items: UnmatchedQuotation[] }) {
           <div className="flex items-center gap-x-4 border-b border-hair px-5 py-2 text-[10.5px] font-semibold uppercase tracking-wide text-ink-faint">
             <span className="flex-1">Klant</span>
             <span className="w-[86px] shrink-0 text-right">Offerte-omzet</span>
-            <span className="w-[188px] shrink-0" aria-hidden />
+            <span className="w-[300px] shrink-0" aria-hidden />
           </div>
           <ul className="divide-y divide-hair">
             {gepagineerd.visible.map((u) => (
-              <UnmatchedRow key={u.id} item={u} />
+              <UnmatchedRow
+                key={u.id}
+                item={u}
+                laden={opener.laden === u.id}
+                onAdd={() => opener.open(u.id, { edit: true })}
+              />
             ))}
           </ul>
           <Pagination {...gepagineerd.props} />
         </>
       )}
+      {opener.modal}
     </Card>
   );
 }
 
-function UnmatchedRow({ item }: { item: UnmatchedQuotation }) {
+function UnmatchedRow({
+  item,
+  laden,
+  onAdd,
+}: {
+  item: UnmatchedQuotation;
+  laden: boolean;
+  onAdd: () => void;
+}) {
   const [busy, setBusy] = useState<'excl' | 'ok' | 'undo' | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -521,7 +539,7 @@ function UnmatchedRow({ item }: { item: UnmatchedQuotation }) {
         <span className="w-[86px] shrink-0 text-right text-[13.5px] font-bold tabular-nums text-ink">
           {formatEuro(item.revenueExVat)}
         </span>
-        <div className="flex w-[188px] shrink-0 items-center justify-end gap-2">
+        <div className="flex w-[300px] shrink-0 items-center justify-end gap-2">
           {item.reviewed ? (
             <Button
               variant="ghost"
@@ -532,6 +550,15 @@ function UnmatchedRow({ item }: { item: UnmatchedQuotation }) {
             </Button>
           ) : (
             <>
+              <Button
+                variant="secondary"
+                disabled={busy != null || laden}
+                title="Zelf product, m² en omzet invullen"
+                onClick={onAdd}
+              >
+                <Plus size={12} strokeWidth={2.2} />
+                {laden ? '…' : 'Vloer toevoegen'}
+              </Button>
               <Button
                 variant="secondary"
                 disabled={busy != null}
