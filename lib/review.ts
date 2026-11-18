@@ -82,7 +82,8 @@ export function computeReviewList(
       desc: l.desc ?? '',
       m2: l.m2,
       revenue: l.revenue,
-      pricePerM2: l.m2 > 0 ? round2(l.revenue / l.m2) : null,
+      // Vóór korting: de grens van €35/m² is op lijstprijzen gemeten.
+      pricePerM2: l.m2 > 0 ? round2((l.revenueBeforeDiscount ?? l.revenue) / l.m2) : null,
       laborPerM2: l.laborPerM2 ?? 0,
       installMode: l.installMode,
     }));

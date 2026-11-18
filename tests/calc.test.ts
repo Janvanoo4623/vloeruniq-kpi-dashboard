@@ -389,3 +389,75 @@ test('nacalculatie: nooit meer dan er boven de offerte is gefactureerd', () => {
   assert.equal(nacalc?.qty, 10);
   assert.equal(q.revenueExVat, 1100);
 });
+
+// ── Korting naar rato (2026-11-18) ───────────────────────────────────────
+
+test('korting: negatieve regel wordt naar rato over alle regels verdeeld', async () => {
+  const { parseQuotation } = await import('../lib/teamleader/matching');
+  const regel = (description: string, quantity: number, amount: number) => ({
+    description,
+    quantity,
+    total: { tax_exclusive: { amount } },
+  });
+  // Echte offerte 1219 (Donker): vloer + plint − "Regio korting", totaal 6647,94.
+  const summary = {
+    id: 'q1219',
+    status: 'accepted',
+    created_at: '2026-10-21T00:00:00Z',
+    updated_at: '2026-10-22T00:00:00Z',
+    total: { tax_exclusive: { amount: 6647.94 }, tax_inclusive: { amount: 8044 } },
+  };
+  const detail = {
+    grouped_lines: [
+      {
+        line_items: [
+          regel('PVC Visgraat XL EVC (P700) Beige | Incl. 10% snijverlies | Incl. lijmen en leggen', 110, 6090.91),
+          regel('MDF Renovatieplint 90x18 gelakt wit RAL9010 | Incl. montage', 72, 1306.12),
+          regel('Regio korting', 1, -749.09),
+        ],
+      },
+    ],
+  };
+  const q = parseQuotation(
+    summary as never,
+    detail as never,
+    {},
+    { pNumbers: { P700: 30 }, nameMatches: [] } as never,
+    { alwaysPerM2: 10, gluedPerM2: 5, selfAdhesivePerM2: 6 },
+  );
+  const factor = 6647.94 / (6090.91 + 1306.12);
+  assert.equal(q.lines?.length, 2, 'de kortingsregel is geen product');
+  assert.equal(q.lines?.[0].revenue, Math.round(6090.91 * factor * 100) / 100);
+  assert.equal(q.lines?.[0].revenueBeforeDiscount, 6090.91);
+  assert.equal(q.omzetVloer, Math.round(6090.91 * factor * 100) / 100);
+  // Vloer + plint samen = offertetotaal (op afronding na).
+  const som = (q.lines ?? []).reduce((t, l) => t + l.revenue, 0);
+  assert.ok(Math.abs(som - 6647.94) < 0.02);
+});
+
+test('korting: zonder korting of zonder totaal blijven de bedragen gelijk', async () => {
+  const { discountFactor } = await import('../lib/teamleader/matching');
+  const d = { grouped_lines: [{ line_items: [{ total: { tax_exclusive: { amount: 1000 } } }] }] };
+  assert.equal(discountFactor(d, 1000), 1);
+  assert.equal(discountFactor(d, 0), 1, 'geen totaal: niets aannemen');
+  assert.equal(discountFactor(d, 1200), 1, 'nooit boven 1');
+  assert.equal(discountFactor(d, 900), 0.9);
+});
+
+test('korting op de factuur: nacalculatie rekent na korting, kortingsregel is geen plint', async () => {
+  const { extrasFromInvoice } = await import('../lib/teamleader/invoice-extras');
+  const regel = (description: string, quantity: number, amount: number) => ({
+    description,
+    quantity,
+    total: { tax_exclusive: { amount } },
+  });
+  const lines = extrasFromInvoice({
+    total: { tax_exclusive: { amount: 900 } },
+    grouped_lines: [
+      { line_items: [regel('MDF Plint 90x12 gelakt wit | Incl. montage', 50, 1000), regel('Plinten korting', 1, -100)] },
+    ],
+  });
+  assert.equal(lines.length, 1);
+  assert.equal(lines[0].code, 'Plinten');
+  assert.equal(lines[0].revenue, 900);
+});

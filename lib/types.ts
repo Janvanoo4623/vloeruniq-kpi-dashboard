@@ -73,7 +73,10 @@ export type LaborRule = 'included' | 'excluded' | 'unknown';
 /** One matched floor line's stats (for top-products aggregation + DB storage). */
 export interface QuotationLine {
   code: string;
+  /** Regelbedrag ex btw ná de korting van de offerte (naar rato, zie discountFactor). */
   revenue: number;
+  /** Het bedrag zoals het op de regel staat, vóór korting. Alleen gezet als er korting was. */
+  revenueBeforeDiscount?: number;
   m2: number;
   margin: number | null;
   desc?: string; // raw line description (for modal transparency; populated at sync time)

@@ -4,22 +4,30 @@ import { apiCall, mapLimit } from './client';
 import { FETCH_CONCURRENCY } from './constants';
 import { round } from './dates';
 import { classifyExtra } from '../extras';
+import { discountFactor } from './matching';
 import * as db from '../db';
 import type { InvoiceExtraLine, InvoiceRow } from '../types';
 
 interface TLInvoiceDetail {
+  total?: { tax_exclusive?: { amount?: number } };
   grouped_lines?: { line_items?: { description?: string; quantity?: number; total?: { tax_exclusive?: { amount?: number } } }[] }[];
 }
 
-/** De overige producten op één factuur, opgeteld per code. */
+/**
+ * De overige producten op één factuur, opgeteld per code, ná korting: een
+ * negatieve regel is korting en wordt naar rato over de regels verdeeld, net als
+ * op de offerte (zie discountFactor in matching.ts).
+ */
 export function extrasFromInvoice(detail: TLInvoiceDetail | null): InvoiceExtraLine[] {
   const perCode = new Map<string, InvoiceExtraLine>();
+  const factor = discountFactor(detail, detail?.total?.tax_exclusive?.amount ?? 0);
   for (const g of detail?.grouped_lines ?? []) {
     for (const item of g.line_items ?? []) {
-      const revenue = item.total?.tax_exclusive?.amount ?? 0;
-      if (revenue === 0) continue;
-      const m = classifyExtra(item.description ?? '', item.quantity ?? 0, revenue);
+      const bruto = item.total?.tax_exclusive?.amount ?? 0;
+      if (bruto <= 0) continue;
+      const m = classifyExtra(item.description ?? '', item.quantity ?? 0, bruto);
       if (!m) continue;
+      const revenue = round(bruto * factor, 2);
       const e = perCode.get(m.code) ?? { code: m.code, unit: m.unit, qty: 0, revenue: 0 };
       e.qty = round(e.qty + (m.quantity ?? item.quantity ?? 0), 2);
       e.revenue = round(e.revenue + revenue, 2);
@@ -42,7 +50,7 @@ export async function syncInvoiceExtras(invoices: InvoiceRow[], limit = Infinity
   try {
     const store = await db.getInvoiceExtras();
     const todo = invoices
-      .filter((i) => i.status !== 'draft' && i.totalExcl > 0 && !store.invoices[i.id])
+      .filter((i) => i.status !== 'draft' && i.totalExcl > 0 && !store.invoices[i.id]?.net)
       .sort((a, b) => b.invoiceDate.localeCompare(a.invoiceDate));
     const batch = todo.slice(0, limit);
     if (batch.length === 0) return { fetched: 0, remaining: 0 };
@@ -57,7 +65,7 @@ export async function syncInvoiceExtras(invoices: InvoiceRow[], limit = Infinity
     batch.forEach((inv, i) => {
       const d = details[i];
       if (d === undefined) return;
-      store.invoices[inv.id] = { dealId: inv.dealId, lines: extrasFromInvoice(d) };
+      store.invoices[inv.id] = { dealId: inv.dealId, lines: extrasFromInvoice(d), net: true };
     });
     await db.setInvoiceExtras(store);
     return { fetched: batch.length, remaining: todo.length - batch.length };

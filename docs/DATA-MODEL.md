@@ -546,3 +546,26 @@ Concepten worden overgeslagen. Bij het lezen: per deal en per code wat er méér
 dan er op de geaccepteerde offerte stond, komt er als regel (`source: 'factuur'`) bij, inclusief
 omzet. Stond het al met bedrag op de offerte, dan is het verschil nul en telt niets dubbel.
 Minder gefactureerd (aanbetaling, restantfactuur zonder regels) voegt niets toe.
+
+## Korting naar rato — 2026-11-18
+
+Vraag van Jan: "rekent het systeem met het hele offertebedrag of per regel? Per regel wordt de korting
+niet meegenomen." Klopte: de app rekende met de regelbedragen vóór korting. Vloeruniq zet korting als
+**negatieve regel** ("Regio korting", "Korting Rijssen", "korting plint", "gratis entreemat"); het veld
+`discounts` van Teamleader is leeg (gecontroleerd op offertes 1178, 1201, 1219). Gemeten vóór de fix:
+bij 237 van de 421 geaccepteerde offertes lag de som van vloer- en overige regels boven het
+offertetotaal, samen EUR 88.800. Vier kortingsregels telden zelfs als product (Plinten/Entreemat met
+een negatief bedrag).
+
+**Regel** (`discountFactor` in `lib/teamleader/matching.ts`): factor = offertetotaal ex btw ÷ som van
+alle positieve regels, nooit boven 1, en 1 als er geen totaal of geen positieve regel is. Elke
+vloer- en overige regel krijgt `revenue = bruto × factor` en bewaart `revenueBeforeDiscount`. De korting
+gaat dus ook naar rato over regels die de app niet herkent (stucwerk), zodat de vloer niet de
+korting van een ander onderdeel draagt. Een negatieve regel is altijd korting, nooit een product.
+
+- Herkenning (`classifyExtra`) en de hint "waarschijnlijk los verkocht" (grens €35/m²) gebruiken het
+  bedrag **vóór** korting: die grenzen zijn op lijstprijzen gemeten.
+- Facturen (nacalculatie, `extrasFromInvoice`) krijgen dezelfde factor met het factuurtotaal. Ingangen
+  in `app_settings.invoice_extras` zonder `net: true` worden opnieuw opgehaald; anders zou een factuur
+  vóór korting naast een offerte ná korting het verschil als nacalculatie tellen.
+- Wordt bij de **sync** toegepast, niet bij het lezen: oude offertes krijgen het pas na een backfill.

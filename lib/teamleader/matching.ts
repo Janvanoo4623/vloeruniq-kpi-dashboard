@@ -121,6 +121,35 @@ function deriveProductName(rawDesc: string): string | null {
   return first;
 }
 
+/**
+ * Korting naar rato (2026-11-18). Vloeruniq zet korting als negatieve regel op
+ * de offerte ("Regio korting", "Korting Rijssen", "korting plint"); het
+ * kortingsveld van Teamleader zelf (`discounts`) is in de praktijk leeg. Tot nu
+ * toe sloeg de app die regels over en rekende hij met de regelbedragen vóór
+ * korting: bij 237 van de 421 geaccepteerde offertes lag de som van de vloer- en
+ * overige regels boven het offertetotaal, samen EUR 88.800 te veel omzet in de marge.
+ *
+ * Factor = offertetotaal ex btw ÷ som van alle positieve regels. Dat vangt een
+ * negatieve regel én een eventuele korting op offerteniveau, en verdeelt hem
+ * over álle regels — ook over wat de app niet herkent (stucwerk), zodat de vloer
+ * niet de korting van een ander onderdeel draagt. Nooit boven 1, en zonder
+ * totaal of positieve regels 1: dan weten we het niet en laten we het zoals het was.
+ */
+export function discountFactor(
+  detail: { grouped_lines?: { line_items?: { total?: { tax_exclusive?: { amount?: number } } }[] }[] } | null,
+  totalExcl: number,
+): number {
+  let positief = 0;
+  for (const g of detail?.grouped_lines ?? []) {
+    for (const item of g.line_items ?? []) {
+      const a = item.total?.tax_exclusive?.amount ?? 0;
+      if (a > 0) positief += a;
+    }
+  }
+  if (!(totalExcl > 0) || !(positief > 0)) return 1;
+  return Math.min(1, totalExcl / positief);
+}
+
 export function parseQuotation(
   summary: TLQuotationSummary,
   detail: TLQuotationDetail | null,
@@ -167,18 +196,29 @@ export function parseQuotation(
   let needsReview = false;
   const products: string[] = []; // matched floor products (P-numbers / names), distinct
   const lines: QuotationLine[] = []; // per-product line stats for top-products aggregation
+  const factor = discountFactor(detail, totalExcl);
+  /** Regelbedrag na korting, plus het bedrag ervóór als er korting was. */
+  const netto = (bruto: number) =>
+    factor < 1 ? { revenue: round(bruto * factor), revenueBeforeDiscount: bruto } : { revenue: bruto };
 
   for (const group of detail?.grouped_lines ?? []) {
     for (const item of group.line_items ?? []) {
       const rawDesc = item.description ?? '';
       const desc = rawDesc.toLowerCase();
       const descTrimmed = rawDesc.trim();
+      const brutoRegel = item.total?.tax_exclusive?.amount ?? 0;
+
+      // Een negatieve regel is korting ("korting plint", "gratis entreemat"),
+      // geen product: hij zit al in de factor hierboven.
+      if (brutoRegel < 0) continue;
 
       // Overige producten (trap, plint, tapijt, entreemat, verwijderen) eerst:
       // "PVC vloer verwijderen" begint met een vloertype maar is geen vloer.
       // Ze tellen niet mee in m² of vloeromzet; de marge rekent lib/resolve.ts.
-      const extraRevenue = item.total?.tax_exclusive?.amount ?? 0;
-      const extra = extraRevenue !== 0 ? classifyExtra(rawDesc, item.quantity ?? 0, extraRevenue) : null;
+      // Herkend op het bedrag vóór korting: de prijsgrenzen in classifyExtra
+      // zijn op lijstprijzen gemeten.
+      const extra = brutoRegel !== 0 ? classifyExtra(rawDesc, item.quantity ?? 0, brutoRegel) : null;
+      const { revenue: extraRevenue, revenueBeforeDiscount: extraBruto } = netto(brutoRegel);
       if (extra) {
         const qty = extra.quantity ?? item.quantity ?? 0;
         const cpu = priceConfig.nameMatches.find((nm) => nm.name === extra.code.toLowerCase())?.price;
@@ -188,6 +228,7 @@ export function parseQuotation(
           unit: extra.unit,
           qty,
           revenue: extraRevenue,
+          ...(extraBruto != null ? { revenueBeforeDiscount: extraBruto } : {}),
           m2: 0,
           margin: cpu != null ? round(extraRevenue - cpu * qty) : null,
           desc: descTrimmed,
@@ -206,7 +247,7 @@ export function parseQuotation(
       if (!isFloor) continue;
 
       const quantity = item.quantity ?? 0;
-      const lineRevenue = item.total?.tax_exclusive?.amount ?? 0;
+      const { revenue: lineRevenue, revenueBeforeDiscount } = netto(brutoRegel);
       totalM2 += quantity;
       omzetVloer += lineRevenue;
 
@@ -285,6 +326,7 @@ export function parseQuotation(
         lines.push({
           code: product,
           revenue: lineRevenue,
+          ...(revenueBeforeDiscount != null ? { revenueBeforeDiscount } : {}),
           m2: quantity,
           margin: lineMargin,
           desc: descTrimmed,

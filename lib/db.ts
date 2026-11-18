@@ -830,7 +830,12 @@ export async function getResolveInput(): Promise<import('./resolve').ResolveInpu
 const INVOICE_EXTRAS_KEY = 'invoice_extras';
 
 export interface InvoiceExtrasStore {
-  invoices: Record<string, { dealId: string; lines: import('./types').InvoiceExtraLine[] }>;
+  /**
+   * `net` = regelbedragen ná de korting op de factuur (sinds 2026-11-18). Een
+   * ingang zonder wordt opnieuw opgehaald: de offertes rekenen sindsdien na
+   * korting, en een factuur vóór korting zou het verschil als nacalculatie tellen.
+   */
+  invoices: Record<string, { dealId: string; lines: import('./types').InvoiceExtraLine[]; net?: true }>;
 }
 export const EMPTY_INVOICE_EXTRAS: InvoiceExtrasStore = { invoices: {} };
 
