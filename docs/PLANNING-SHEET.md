@@ -261,7 +261,7 @@ eigen OAuth-client gebruikt n8n een HTTP Request-node op de Sheets API: schrijve
 de koppeling niet afhangt van Jaspers account. De workflow blijft gelijk; alleen de credential in
 de Sheets-nodes wordt vervangen.
 
-Stappen (worden aangevuld terwijl Jasper ze doorloopt; dit wordt Jans instructie):
+Stappen (zo doorlopen door Jasper op 2026-11-19; dit is de basis van Jans instructie):
 1. https://console.cloud.google.com, ingelogd met het Google-account dat de Sheet mag bewerken →
    projectkiezer → **Nieuw project** → naam `Vloeruniq n8n` → Maken.
 2. Met dat project geselecteerd: ☰ → **APIs & Services → Library** → **Google Sheets API** →
@@ -290,6 +290,24 @@ Stappen (worden aangevuld terwijl Jasper ze doorloopt; dit wordt Jans instructie
    Authentication **Send Credentials in Body** → **Connect** → inloggen → bij "niet geverifieerd":
    Geavanceerd → Ga naar Vloeruniq n8n → Toestaan.
    Test: workflow "Google Sheets – verbinding testen" (Z8CI922wC9Z8qBXk) leest de tabnamen.
+7. **Mail** (meldingen): in een Gmail-node → Credential → *Create new* → **Sign in with Google**. Hier
+   werkt de standaard n8n-login wél; geen Google Cloud nodig. Na kiezen de workflow **opslaan**
+   (Save rechtsboven), anders blijft de node zonder credential.
+
+**Overstap naar Jan — twee routes**
+- **Kort (±5 min, aanbevolen om mee te beginnen):** Jan maakt alleen stap 6 en 7 opnieuw, maar logt
+  in als **info@vloeruniq.nl**. Hij gebruikt de Client ID/Secret van de bestaande client (Jasper geeft
+  ze hem via een veilige weg, bv. samen achter het scherm; nooit per mail). De client in Jaspers
+  Google-project werkt voor elk Google-account, want de app staat op *In production*. Nadeel: de
+  koppeling hangt dan nog aan Jaspers Google Cloud-project.
+- **Volledig (±15 min):** Jan doet stap 1–7 zelf met info@vloeruniq.nl. Dan hangt niets meer aan
+  Jasper. Branding-links en redirect-URL blijven hetzelfde.
+
+**Daarna in n8n (Jasper of Jan)**: de nieuwe Google-credential kiezen in *Sheet lezen* en *In Sheet
+schrijven*; de nieuwe Gmail-credential in *Let op mailen* en in workflow *Planning – foutmelding*;
+spreadsheetId in *Gegevens samenvoegen* naar het origineel
+(`16jKiKf5c5MCIcEQ0CvpIOR4tnC7qzR2NqaqzMuN6Xto`); opslaan. Daarna de oude credentials van Jasper
+verwijderen in n8n (Overview → Credentials).
 
 ## Open vragen
 
