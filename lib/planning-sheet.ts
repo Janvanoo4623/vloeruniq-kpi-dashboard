@@ -125,6 +125,11 @@ export function planningJob(input: PlanningInput): PlanningJob {
         });
       else if (CARPET.test(extra.code) && extra.unit === 'm2' && q > 0) add(head(desc), q, false);
       else if (/verwijder/i.test(extra.code)) overig.push(q > 1 ? `${num(q)} × ${head(desc)}` : head(desc));
+      // Sinds 2026-11-19 overige producten; in de planning blijven ze overig werk,
+      // net als toen OTHER_WORK ze ving. Vloerverwarming zonder aantal: de groepen
+      // staan al in de tekst, en het aantal is soms het bedrag incl. btw.
+      else if (/^vloerverwarming/i.test(extra.code)) overig.push(head(desc));
+      else if (/^(kurkstuc|sleuven)/i.test(extra.code)) overig.push(qty > 1 ? `${num(qty)} × ${head(desc)}` : head(desc));
       continue;
     }
     if (isFloorLine(desc)) {

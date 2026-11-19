@@ -227,7 +227,7 @@ test('maandtempo: eerste vijf dagen geen oordeel, daarna voor/achter/op schema',
 
 // ── Herkenning offerteregels ─────────────────────────────────────────────
 
-test('gietvloer telt als vloer, "aanbrengen" is leggen; verwijderen en kurkstuc niet', async () => {
+test('gietvloer telt als vloer, "aanbrengen" is leggen; verwijderen en kurkstuc niet als vloer', async () => {
   const { parseQuotation } = await import('../lib/teamleader/matching');
   const regelTL = (description: string, quantity: number, amount: number) => ({
     description,
@@ -254,9 +254,11 @@ test('gietvloer telt als vloer, "aanbrengen" is leggen; verwijderen en kurkstuc 
     { alwaysPerM2: 10, gluedPerM2: 5, selfAdhesivePerM2: 6 },
   );
   assert.equal(q.totalM2, 55);
-  // Vloer + "Gietvloer verwijderen" als overig product; KorqStuc valt erbuiten.
-  assert.equal(q.lines?.length, 2);
+  // Vloer + "Gietvloer verwijderen" en KorqStuc als overige producten (kurkstuc sinds 2026-11-19).
+  assert.equal(q.lines?.length, 3);
   assert.equal(q.lines?.[1].code, 'Vloer verwijderen');
+  assert.equal(q.lines?.[2].code, 'Kurkstuc');
+  assert.equal(q.totalM2, 55);
   assert.equal(q.lines?.[0].laborRule, 'included');
   assert.equal(q.lines?.[0].installMode, 'click');
   assert.equal(q.margin, 4545 - (25 + 10) * 55);
@@ -301,14 +303,15 @@ const trap = (qty: number, revenue: number): QuotationLine => ({
   margin: null,
 });
 
-test('overig product: kostprijs × aantal, telt mee in marge maar niet in m²', () => {
+test('overig product: materiaal × aantal + arbeid per trap, telt mee in marge maar niet in m²', () => {
   const [q] = resolveQuotations(
     [offerte({ id: 'a', lines: [regel('P100', 10, 400), trap(13, 1300)], omzetVloer: 400, totalM2: 10, revenueExVat: 1700 })],
     invoer({ prices: [{ code: 'P100', price: 10, effectiveFrom: '2000-01-01' }, { code: 'Traprenovatie PVC dichte trap', price: 60, effectiveFrom: '2000-01-01' }] }),
   );
-  // Vloer: 400 − 10×10 = 300. Trap: 1300 − 60×13 = 520.
-  assert.equal(q.margin, 820);
-  assert.equal(q.marginPct, Math.round((820 / 1700) * 1000) / 10);
+  // Vloer: 400 − 10×10 = 300. Trap: 13 treden = 1 trap → 1300 − 60×13 − 360 arbeid = 160.
+  assert.equal(q.margin, 460);
+  assert.equal(q.marginPct, Math.round((460 / 1700) * 1000) / 10);
+  assert.equal(q.lines?.[1].laborCost, 360);
   assert.equal(q.totalM2, 10);
   assert.equal(q.matchCoverage, 100);
 });
@@ -328,8 +331,8 @@ test('alleen een traprenovatie met kostprijs: marge zonder vloer', () => {
     [offerte({ id: 'a', lines: [trap(13, 1300)], omzetVloer: 0, totalM2: 0, revenueExVat: 1300 })],
     invoer({ prices: [{ code: 'Traprenovatie PVC dichte trap', price: 60, effectiveFrom: '2000-01-01' }] }),
   );
-  assert.equal(q.margin, 520);
-  assert.equal(q.marginPct, 40);
+  assert.equal(q.margin, 160);
+  assert.equal(q.marginPct, 12.3);
 });
 
 test('kostprijs van een overig product komt nooit op een vloerregel', () => {
@@ -361,8 +364,89 @@ test('nacalculatie: plinten alleen op de factuur komen bij de offerte, wat er al
   assert.equal(nacalc?.qty, 30);
   assert.equal(nacalc?.revenue, 450);
   assert.equal(q.revenueExVat, 1150);
-  // Vloer 300 + plint op offerte (300 − 160) + nacalculatie (450 − 240) = 650
-  assert.equal(q.margin, 650);
+  // Vloer 300 + plint op offerte (300 − 160 − 200 arbeid) + nacalculatie (450 − 240 − 300 arbeid) = 150
+  assert.equal(q.margin, 150);
+});
+
+// ── Arbeid per categorie (2026-11-19) ────────────────────────────────────
+
+const extra = (code: string, unit: QuotationLine['unit'], qty: number, revenue: number, desc = ''): QuotationLine => ({
+  code, kind: 'extra', unit, qty, revenue, m2: 0, margin: null, desc,
+});
+
+test('arbeid: trappen uit treden, 1 per 14, of zoals de tekst zegt', async () => {
+  const { stairsFromSteps } = await import('../lib/labor');
+  assert.equal(stairsFromSteps(0), 0);
+  assert.equal(stairsFromSteps(13), 1);
+  assert.equal(stairsFromSteps(16), 1);
+  assert.equal(stairsFromSteps(28), 2);
+  assert.equal(stairsFromSteps(39), 3);
+  assert.equal(stairsFromSteps(26, 'Traprenovatie PVC 2x trap'), 2);
+  assert.equal(stairsFromSteps(12, '13 treden'), 1);
+});
+
+test('arbeid: plinten per lengte = 2,4 m, alleen leveren zonder arbeid, alleen montage zonder materiaalprijs', () => {
+  const [q] = resolveQuotations(
+    [offerte({
+      id: 'a',
+      lines: [
+        extra('Plinten (per lengte)', 'lengte', 10, 300),
+        extra('Plinten (alleen leveren)', 'm1', 10, 80),
+        extra('Plinten (alleen montage)', 'm1', 10, 150),
+      ],
+      omzetVloer: 0, totalM2: 0, revenueExVat: 530,
+    })],
+    invoer({ prices: [
+      { code: 'Plinten (per lengte)', price: 10, effectiveFrom: '2000-01-01' },
+      { code: 'Plinten (alleen leveren)', price: 5, effectiveFrom: '2000-01-01' },
+    ] }),
+  );
+  assert.equal(q.lines?.[0].laborCost, 240); // 10 lengtes × 2,4 m × €10
+  assert.equal(q.lines?.[0].margin, 300 - 100 - 240);
+  assert.equal(q.lines?.[1].margin, 80 - 50);
+  assert.equal(q.lines?.[2].margin, 150 - 100); // geen prijs nodig: alleen arbeid
+  assert.equal(q.margin, -40 + 30 + 50);
+});
+
+test('arbeid: tarief uit de kosteninstellingen met ingangsdatum, nooit als kostenpost per m²', () => {
+  const offertes = [offerte({ id: 'a', lines: [regel('P100', 10, 400), extra('Plinten', 'm1', 10, 200)], omzetVloer: 400, totalM2: 10, revenueExVat: 600 })];
+  const prijzen = [{ code: 'P100', price: 10, effectiveFrom: '2000-01-01' }, { code: 'Plinten', price: 4, effectiveFrom: '2000-01-01' }];
+  const [standaard] = resolveQuotations(offertes, invoer({ prices: prijzen }));
+  // Vloer 400 − 100 = 300 (legservice uitgesloten); plint 200 − 40 − 100 = 60.
+  assert.equal(standaard.margin, 360);
+  const [eigen] = resolveQuotations(offertes, invoer({ prices: prijzen, costs: [
+    { key: 'arbeid:plinten', value: 12, effectiveFrom: '2026-01-01' },
+    { key: 'arbeid:plinten', value: 50, effectiveFrom: '2026-12-01' }, // na de offertedatum: telt niet
+  ] }));
+  assert.equal(eigen.margin, 300 + (200 - 40 - 120));
+});
+
+test('arbeid: gietvloer krijgt het eigen legtarief in plaats van het algemene', () => {
+  const giet = (desc: string): QuotationLine => ({ code: 'Lavasteen Gietvloer', m2: 10, revenue: 1000, margin: null, installMode: 'click', laborRule: 'included', desc });
+  const prijzen = [{ code: 'Lavasteen Gietvloer', price: 25, effectiveFrom: '2000-01-01' }];
+  const kosten = [{ key: 'labor', value: 11, effectiveFrom: '2000-01-01' }, { key: 'transport', value: 1, effectiveFrom: '2000-01-01' }];
+  const [lava] = resolveQuotations([offerte({ id: 'a', lines: [giet('Lavasteen Gietvloer Marble | Incl. aanbrengen')] })], invoer({ prices: prijzen, costs: kosten }));
+  // 1000 − (25 + 15 lavasteen + 1 transport) × 10
+  assert.equal(lava.margin, 590);
+  const [micro] = resolveQuotations([offerte({ id: 'a', lines: [giet('Concrada Microcement 2k gietvloer | Incl. aanbrengen')] })], invoer({ prices: [{ code: 'Lavasteen Gietvloer', price: 25, effectiveFrom: '2000-01-01' }], costs: kosten }));
+  assert.equal(micro.margin, 1000 - (25 + 26 + 1) * 10);
+});
+
+test('overige producten: kurkstuc, sleuven en vloerverwarming op echte tekst', async () => {
+  const { classifyExtra } = await import('../lib/extras');
+  assert.equal(classifyExtra('Sleuven dichtzetten (tbv vloerverwarming)', 45, 373)?.code, 'Sleuven dichtzetten');
+  assert.equal(classifyExtra('Dichtzetten sleuven met reparatiemortel', 30, 250)?.code, 'Sleuven dichtzetten');
+  assert.equal(classifyExtra('Sleuven dichten, egaliseren, lijmen en leggen 2250,- ex btw', 1, 2250), null);
+  const vv = classifyExtra('Vloerverwarming 6 groepen | incl. plaatsen verdeler en op druk zetten van het systeem.', 1, 2400);
+  assert.deepEqual(vv, { code: 'Vloerverwarming', unit: 'groep', quantity: 6 });
+  // Het aantal is hier het bedrag incl. btw: de groepen komen uit de tekst.
+  assert.equal(classifyExtra('Vloerverwarming 9 groepen incl. montage en verdeler', 2645, 2185)?.quantity, 9);
+  assert.equal(classifyExtra('Vloerverwarming 8 groepen (74m2) | Incl. montage en open verdeler | sleuven 100mm', 1, 3000)?.code, 'Vloerverwarming');
+  assert.equal(classifyExtra('Vloerverwarming frezen', 1, 1557), null);
+  assert.equal(classifyExtra('Eventueel meerprijs vloerverwarming 6 groepen a 100', 1, 100), null);
+  assert.equal(classifyExtra('Badkamer voorzien van Kurkstuc | Wanden en plafond', 34.5, 2566)?.code, 'Kurkstuc');
+  assert.equal(classifyExtra('Wand uitvlakken met Ardex R1 | Aanbrengen 2 lagen Korqstuc', 13, 1288)?.code, 'Kurkstuc');
+  assert.equal(classifyExtra('VL 04 PVC Amtico Stucco Flax AROUC39 blauw | Incl. egaliseren, lijmen en leggen', 20, 1500), null);
 });
 
 test('nacalculatie: minder gefactureerd dan geoffreerd voegt niets toe', () => {

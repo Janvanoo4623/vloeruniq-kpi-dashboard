@@ -20,7 +20,8 @@
 // telt wat er bij de sync is berekend. Zo kan een lege prijslijst nooit
 // stilzwijgend alle marges op nul zetten.
 import { COST_FALLBACK } from './teamleader/constants';
-import { costsForDate, priceConfigForDate, type CostRow, type PriceRow } from './pricing';
+import { costsForDate, priceConfigForDate, type CostRow, type CostsPerM2, type PriceRow } from './pricing';
+import { LABOR_FALLBACK, LABOR_ONLY_CODES, laborForExtra, pouredFloorLaborKey } from './labor';
 import type { PriceConfig } from './teamleader/price-map';
 import { buildSnapshot } from './teamleader/aggregate';
 import type { AggLine } from './teamleader/quotations';
@@ -102,10 +103,7 @@ function purchaseForLine(line: QuotationLine, config: PriceConfig): number | nul
  * alleen de bedragen eronder komen vers uit de kosteninstellingen. Regels die
  * van vóór die velden dateren vallen terug op wat er is opgeslagen.
  */
-function ratesForLine(
-  line: QuotationLine,
-  costs: { alwaysPerM2: number; gluedPerM2: number; selfAdhesivePerM2: number },
-): { underlay: number; labor: number } {
+function ratesForLine(line: QuotationLine, costs: CostsPerM2): { underlay: number; labor: number } {
   const underlay =
     line.installMode === 'selfadhesive'
       ? costs.selfAdhesivePerM2
@@ -114,12 +112,19 @@ function ratesForLine(
         : line.installMode === 'click'
           ? 0
           : (line.underlayPerM2 ?? line.gluedPerM2 ?? 0);
+  // Gietvloer (lavasteen, microcement): eigen legtarief in plaats van 'labor';
+  // eigen kostenposten per m² blijven gelden.
+  const poured = pouredFloorLaborKey(line.desc);
+  const always =
+    poured && costs.laborPerM2 != null
+      ? costs.alwaysPerM2 - costs.laborPerM2 + (costs.laborRates?.[poured] ?? LABOR_FALLBACK[poured] ?? 0)
+      : costs.alwaysPerM2;
   const labor =
     line.laborRule === 'excluded'
       ? 0
-      : line.laborRule
-        ? costs.alwaysPerM2
-        : (line.laborPerM2 ?? costs.alwaysPerM2);
+      : line.laborRule || poured
+        ? always
+        : (line.laborPerM2 ?? always);
   return { underlay, labor };
 }
 
@@ -241,7 +246,7 @@ function costForExtra(line: QuotationLine, config: PriceConfig, override: Quotat
 function recompute(
   q: QuotationRow,
   config: PriceConfig,
-  costs: { alwaysPerM2: number; gluedPerM2: number; selfAdhesivePerM2: number },
+  costs: CostsPerM2,
   override: QuotationOverride | undefined,
   nacalculatie: QuotationLine[] = [],
 ): QuotationRow {
@@ -259,23 +264,27 @@ function recompute(
   const lines = basis.lines ?? [];
   if (lines.length === 0) return basis;
 
-  // Overige producten: kostprijs per eenheid × aantal, verder niets.
+  // Overige producten: materiaal per eenheid × aantal, plus arbeid per categorie
+  // (lib/labor.ts, sinds 2026-11-19). Zonder materiaalprijs geen marge, behalve
+  // bij codes die alleen arbeid zijn (alleen montage).
   let extraCost = 0;
   let extraRevenue = 0;
   let extraPriced = false;
   const extraLines = new Map<number, QuotationLine>();
   lines.forEach((l, i) => {
     if (l.kind !== 'extra') return;
-    const cpu = costForExtra(l, config, override);
     const qty = l.qty ?? 0;
+    const cpu = costForExtra(l, config, override) ?? (LABOR_ONLY_CODES.has(l.code) ? 0 : null);
+    const labor = round2(laborForExtra(l.code, qty, l.desc ?? '', costs.laborRates ?? LABOR_FALLBACK));
     if (cpu == null) {
-      extraLines.set(i, { ...l, margin: null });
+      extraLines.set(i, { ...l, margin: null, laborCost: labor });
       return;
     }
-    extraCost += cpu * qty;
+    const cost = cpu * qty + labor;
+    extraCost += cost;
     extraRevenue += l.revenue;
     extraPriced = true;
-    extraLines.set(i, { ...l, costPerUnit: cpu, margin: round2(l.revenue - cpu * qty) });
+    extraLines.set(i, { ...l, costPerUnit: cpu, laborCost: labor, margin: round2(l.revenue - cost) });
   });
 
   let material = 0;

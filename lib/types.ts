@@ -96,12 +96,16 @@ export interface QuotationLine {
    * 'extra' = overig product (trap, plint, tapijt, entreemat, verwijderen; zie
    * lib/extras.ts). Zo'n regel heeft m2 = 0 zodat hij nooit in "m² verkocht"
    * belandt; het aantal staat in `qty`, de eenheid in `unit`, en de kostprijs
-   * per eenheid (montage inbegrepen) in `costPerUnit`. Geen ondervloer, geen legtarief.
+   * per eenheid in `costPerUnit` — sinds 2026-11-19 alleen materiaal; de arbeid
+   * per categorie (lib/labor.ts) staat als totaalbedrag in `laborCost`. Geen
+   * ondervloer, geen legtarief per m².
    */
   kind?: 'extra';
   unit?: import('./extras').ExtraUnit;
   qty?: number;
   costPerUnit?: number;
+  /** Arbeid in euro's voor deze regel (overig product), bij het lezen berekend. */
+  laborCost?: number;
   /**
    * 'factuur' = nacalculatie: alleen op de factuur gezet, bij het lezen toegevoegd.
    * 'handmatig' = door een mens toegevoegd in de offertemodal (QuotationFields.addedLines).

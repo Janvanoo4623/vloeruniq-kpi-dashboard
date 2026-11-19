@@ -11,9 +11,13 @@
 //
 // Hoe het werkt. Een regel krijgt een van een VASTE lijst codes, met een eigen
 // eenheid. Jan vult per code één kostprijs per eenheid in onder Instellingen →
-// Prijzen, montage inbegrepen (keuze 2026-11-05: liever één bedrag dan inkoop
-// en montage apart). Er komt geen ondervloer of legtarief per m² bij, en de
-// regel telt niet mee in "m² verkocht".
+// Prijzen. Er komt geen ondervloer of legtarief per m² bij, en de regel telt
+// niet mee in "m² verkocht".
+//
+// Sinds 2026-11-19 is die kostprijs het MATERIAAL; de arbeid komt er per
+// categorie bij (lib/labor.ts, besluit gesprek Jan 2026-11-18). Dat draait de
+// keuze "één bedrag incl. montage" van 2026-11-05 terug. Er stond toen maar één
+// prijs (Plinten €4,36/m), en dat was al materiaal.
 //
 // Waarom een vaste lijst en geen afgeleide namen zoals bij vloeren. Een
 // kostprijs per trede mag nooit op een vloerregel belanden, en een vloerprijs
@@ -25,7 +29,7 @@
 // nooit aan zonder dat opnieuw te doen: een geraden patroon heeft eerder alle
 // vloer-m² op nul gezet.
 
-export type ExtraUnit = 'trede' | 'trap' | 'm1' | 'lengte' | 'm2' | 'stuk';
+export type ExtraUnit = 'trede' | 'trap' | 'm1' | 'lengte' | 'm2' | 'stuk' | 'groep';
 
 export const UNIT_LABEL: Record<ExtraUnit, string> = {
   trede: 'per trede',
@@ -34,6 +38,7 @@ export const UNIT_LABEL: Record<ExtraUnit, string> = {
   lengte: 'per lengte',
   m2: 'per m²',
   stuk: 'per stuk',
+  groep: 'per groep',
 };
 
 /** Korte eenheid achter een aantal ("13 treden", "60 m"). */
@@ -53,6 +58,8 @@ export function formatQty(qty: number, unit: ExtraUnit): string {
       return `${s} m²`;
     case 'stuk':
       return `${s}×`;
+    case 'groep':
+      return `${s} ${n === 1 ? 'groep' : 'groepen'}`;
   }
 }
 
@@ -73,6 +80,9 @@ export const EXTRA_PRODUCTS: { code: string; unit: ExtraUnit }[] = [
   { code: 'Entreemat (per strekkende meter)', unit: 'm1' },
   { code: 'Vloer verwijderen', unit: 'm2' },
   { code: 'Vloer verwijderen (vast bedrag)', unit: 'stuk' },
+  { code: 'Kurkstuc', unit: 'm2' },
+  { code: 'Sleuven dichtzetten', unit: 'm2' },
+  { code: 'Vloerverwarming', unit: 'groep' },
 ];
 
 const UNIT_BY_CODE = new Map(EXTRA_PRODUCTS.map((p) => [p.code.toLowerCase(), p.unit]));
@@ -131,6 +141,25 @@ const PER_RUNNING_METER_RE = /strekkende meter/i;
 
 const CARPET_RE = /tapijt/i;
 
+// Kurkstuc/KorqStuc op wanden en plafonds (7 regels in de dump van 2026-11-18).
+// Overal in de tekst: "Wand uitvlakken met Ardex R1 | Aanbrengen 2 lagen
+// Korqstuc" noemt het pas na de |. Nooit op /stuc/: "PVC Amtico Stucco" is een vloer.
+const CORK_PLASTER_RE = /kurkstuc|korqstuc/i;
+
+// Sleuven dichtzetten, altijd per m² (±190 regels). "Naden dichtzetten" en
+// "Dichtzetten houten vloer" zijn andere klussen en hebben geen "sleu".
+// Een regel met een vast bedrag ("Sleuven dichten, egaliseren, lijmen en leggen
+// 2250,- ex btw", aantal 1) is een verzamelregel en blijft erbuiten.
+const SLOTS_RE = /sleuv|sleuf/i;
+
+// Vloerverwarming wordt per groep verkocht met aantal 1 ("Vloerverwarming 6
+// groepen | incl. plaatsen verdeler"), dus het aantal groepen komt uit de tekst.
+// Het aantal op de regel is soms het bedrag incl. btw (2645 bij €2.185): nooit gebruiken.
+// "Eventueel meerprijs vloerverwarming" is een optie, geen verkoop.
+const FLOOR_HEATING_RE = /vloerverwarm/i;
+const GROUPS_RE = /\b(\d{1,2})\s*groepen\b/i;
+const OPTIONAL_RE = /^eventueel/i;
+
 const firstPart = (desc: string) => desc.split('|')[0];
 
 /**
@@ -181,6 +210,17 @@ export function classifyExtra(rawDesc: string, quantity: number, revenue: number
   if (CARPET_RE.test(head)) {
     return fixed ? { code: 'Tapijt (vast bedrag)', unit: 'stuk' } : { code: 'Tapijt', unit: 'm2' };
   }
+
+  if (CORK_PLASTER_RE.test(desc) && !fixed) return { code: 'Kurkstuc', unit: 'm2' };
+
+  // Vloerverwarming vóór sleuven: "Vloerverwarming 8 groepen (74m2) | … | sleuven 100mm".
+  if (FLOOR_HEATING_RE.test(head) && !SLOTS_RE.test(head) && !OPTIONAL_RE.test(head)) {
+    const groepen = desc.match(GROUPS_RE);
+    if (groepen) return { code: 'Vloerverwarming', unit: 'groep', quantity: Number(groepen[1]) };
+    return null;
+  }
+
+  if (SLOTS_RE.test(head) && !fixed) return { code: 'Sleuven dichtzetten', unit: 'm2' };
 
   return null;
 }

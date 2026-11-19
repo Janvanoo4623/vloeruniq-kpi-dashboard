@@ -10,6 +10,7 @@ const PLACEHOLDER: Record<ExtraUnit, string> = {
   lengte: '/lengte',
   m2: '/m²',
   stuk: '/stuk',
+  groep: '/groep',
 };
 
 // Backdated so a newly-entered missing price applies to older quotations too

@@ -416,7 +416,14 @@ export default function QuotationModal({
                         </td>
                         <td className="px-3 py-1.5 text-right tabular-nums text-ink-soft">
                           {l.kind === 'extra' ? (
-                            l.unit ? formatQty(l.qty ?? 0, l.unit) : formatNumber(l.qty ?? 0)
+                            <>
+                              {l.unit ? formatQty(l.qty ?? 0, l.unit) : formatNumber(l.qty ?? 0)}
+                              {!!l.laborCost && (
+                                <span className="block text-[11px] text-ink-faint" title="Arbeid per categorie (Instellingen → Kosten)">
+                                  arbeid {formatEuro(l.laborCost, true)}
+                                </span>
+                              )}
+                            </>
                           ) : bewerken && !l.source ? (
                             <NumberVeld
                               waarde={fields.lines?.[String(i)]?.m2}

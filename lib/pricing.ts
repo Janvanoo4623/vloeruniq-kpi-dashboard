@@ -3,6 +3,8 @@
 // non-retroactive — a quotation always uses the price whose effective_from is
 // on/before the quotation's date. See supabase/schema.sql + docs/DATA-MODEL.md.
 
+import { LABOR_FALLBACK, isLaborKey, type LaborRates } from './labor';
+
 export interface PriceRow {
   code: string;
   price: number;
@@ -90,6 +92,10 @@ export interface CostsPerM2 {
   gluedPerM2: number;
   /** Zelfklevende ondervloer: alleen bij zelfklevend. */
   selfAdhesivePerM2: number;
+  /** Alleen het legtarief ('labor'), al inbegrepen in alwaysPerM2. Een gietvloer vervangt dit deel. */
+  laborPerM2?: number;
+  /** Arbeid per categorie ("arbeid:…", lib/labor.ts). Telt NIET in alwaysPerM2. */
+  laborRates?: LaborRates;
 }
 
 /**
@@ -106,11 +112,17 @@ export function costsForDate(
   let alwaysPerM2 = 0;
   let gluedPerM2 = 0;
   let selfAdhesivePerM2 = 0;
+  const laborRates: LaborRates = { ...LABOR_FALLBACK };
   for (const key of keys) {
+    if (isLaborKey(key)) {
+      laborRates[key] = resolveCost(rows, key, date, LABOR_FALLBACK[key] ?? 0);
+      continue;
+    }
     const v = resolveCost(rows, key, date, fallback[key] ?? 0);
     if (key === SELF_ADHESIVE_KEY) selfAdhesivePerM2 = v;
     else if (GLUED_KEYS.has(key)) gluedPerM2 += v;
     else alwaysPerM2 += v;
   }
-  return { alwaysPerM2, gluedPerM2, selfAdhesivePerM2 };
+  const laborPerM2 = resolveCost(rows, 'labor', date, fallback.labor ?? 0);
+  return { alwaysPerM2, gluedPerM2, selfAdhesivePerM2, laborPerM2, laborRates };
 }

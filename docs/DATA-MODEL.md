@@ -570,7 +570,7 @@ korting van een ander onderdeel draagt. Een negatieve regel is altijd korting, n
   vóór korting naast een offerte ná korting het verschil als nacalculatie tellen.
 - Wordt bij de **sync** toegepast, niet bij het lezen: oude offertes krijgen het pas na een backfill.
 
-## Arbeid per categorie — input 2026-11-18 (nog niet gebouwd)
+## Arbeid per categorie — input 2026-11-18, gebouwd 2026-11-19
 
 Besluit (gesprek Jan, 2026-11-18): bij overige producten **arbeid apart van materiaal**. Arbeid krijgt
 één tarief per categorie, materiaal een prijs per product. Dit draait de keuze "één bedrag incl.
@@ -638,11 +638,47 @@ producten horen onder **Prijzen → Overige producten**. Jan hierop wijzen voord
    prijs is opgeslagen als **materiaal excl. montage** (met ingangsdatum). Bestaande prijzen (incl.
    montage) blijven werken zoals nu tot Jan ze omzet.
 
+### Gebouwd (2026-11-19)
+
+- `lib/labor.ts`: tarieven per categorie (`LABOR_CATEGORIES`, sleutel `arbeid:…` in `cost_settings`,
+  met ingangsdatum; zonder rij geldt Jans tarief), `laborForExtra(code, aantal, tekst, tarieven)`,
+  `stairsFromSteps`, `pouredFloorLaborKey`.
+- `lib/pricing.ts` `costsForDate`: `arbeid:`-sleutels tellen **niet** in `alwaysPerM2` (anders werd elk
+  tarief een kostenpost op alle vloer); geeft `laborPerM2` (alleen 'labor') en `laborRates` terug.
+- `lib/resolve.ts`: overig product = materiaal × aantal + arbeid (`laborCost` op de regel). Zonder
+  materiaalprijs geen marge, behalve "Plinten (alleen montage)" (alleen arbeid). Gietvloer: legtarief
+  'labor' vervangen door het lavasteen- of microcementtarief; eigen kostenposten per m² blijven.
+- Besluit 8 (alleen arbeid bij prijzen "excl. montage") is **vervallen**: er stond maar één prijs voor
+  een overig product, Plinten €4,36/m, en dat is materiaal. Dus: elke prijs onder Overige producten
+  is materiaal.
+- `lib/extras.ts`: nieuwe codes **Kurkstuc** (m²), **Sleuven dichtzetten** (m²), **Vloerverwarming**
+  (groep, aantal uit "N groepen"). Getoetst op de dump (5.053 regels): alleen regels die eerst nergens
+  onder vielen veranderen — 188 sleuven (€92k, €26k geaccepteerd), 81 vloerverwarming (€147k, €43k
+  geaccepteerd), 7 kurkstuc (€8,6k). Regels van €0, vaste bedragen ("Sleuven dichten, egaliseren,
+  lijmen en leggen 2250,-"), "Vloerverwarming frezen" en "Eventueel meerprijs" blijven erbuiten. Deze
+  herkenning gebeurt bij de sync: werkt pas na een **backfill**. Zonder materiaalprijs verschijnen ze
+  alleen in "zonder kostprijs"; de marge verandert er niet door. In de planning blijven ze "overig werk".
+- Instellingen → Kosten: blok "Arbeid per categorie"; "Nieuwe kostenpost" weigert `arbeid:`-namen en
+  waarschuwt dat het niet voor materiaal is. Prijzen → Overige producten heet nu "Materiaal".
+
+**Diff op alle 931 offertes (oude tegen nieuwe resolver, zelfde database, 2026-11-19):** 236 offertes
+een andere marge, elke wijziging zit in een plint- of lavasteenregel. Marge geaccepteerd
+**€557.285 → €463.319 (−€93.967)**:
+- Plinten: 276 regels, −€93.309 geaccepteerd. 9.331 m plint op geaccepteerde offertes, €125k omzet,
+  mediaan **€13,58/m** na korting; kostprijs €4,36 + €10 arbeid = €14,36/m. Plinten waren met 67%
+  marge te rooskleurig en zitten volgens Jans eigen tarieven rond kostprijs. **Bij Jan bevestigen**
+  dat €10/m klopt (wat hij de plintenlegger betaalt) en €4,36/m alleen inkoop is.
+- Lavasteen: 7 regels, −€896 geaccepteerd (legtarief €15 i.p.v. €11).
+- "Plinten (alleen montage)": 1 regel krijgt nu een marge (alleen arbeid), +€238.
+- Trappen en entreematten: nog geen verschil, er staat geen materiaalprijs.
+
 ### Nog aan Jan gevraagd
 
 - **Tapijt €24 per m1**: per strekkende meter van de rol (400 cm breed ≈ €6/m²) of per m²?
   Tapijt staat in de offertes op beide manieren (per m² rond €45–52, per strekkende meter rond
-  €90–140). Tot het antwoord er is: geen arbeid op tapijt.
+  €90–140). Tot het antwoord er is: geen arbeid op tapijt (tarief `arbeid:tapijt` = €0 per m², aan te
+  passen in Instellingen → Kosten).
+- **Plinten**: klopt €10/m arbeid + €4,36/m inkoop? Dan verkoopt hij plinten rond kostprijs (zie diff).
 
 ## "Click PVC" en "Zelf leggen" — 2026-11-19
 

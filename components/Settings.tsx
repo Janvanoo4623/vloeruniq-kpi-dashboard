@@ -8,6 +8,7 @@ import DataQualityTab from './DataQualityTab';
 import type { QualityReport } from '@/lib/data-quality';
 import { formatProduct } from '@/lib/format';
 import { EXTRA_PRODUCTS, UNIT_LABEL, isExtraCode } from '@/lib/extras';
+import { LABOR_CATEGORIES, isLaborKey } from '@/lib/labor';
 
 const TABS = [
   { key: 'prijzen' as const, label: 'Prijzen' },
@@ -369,16 +370,16 @@ function ExtraPrices({
     <div className="mt-6">
       <p className="text-sm font-medium text-ink">Overige producten</p>
       <p className="mb-2 mt-0.5 text-xs text-ink-mute">
-        Trappen, plinten, tapijt, entreematten en verwijderen. Vul de kostprijs per eenheid in,
-        montage inbegrepen. Er komt geen ondervloer of legtarief bij, en ze tellen niet mee in de
-        verkochte m².
+        Trappen, plinten, tapijt, entreematten, kurkstuc, sleuven, vloerverwarming en verwijderen.
+        Vul de <strong>materiaalprijs</strong> per eenheid in, zonder montage: de arbeid komt erbij
+        per categorie (Instellingen → Kosten). Ze tellen niet mee in de verkochte m².
       </p>
       <div className="overflow-auto rounded-xl border border-line">
         <table className="w-full border-collapse text-sm">
           <thead className="bg-sunk text-xs text-ink-mute">
             <tr className="border-b border-line">
               <th className="px-3 py-2 text-left font-medium">Product</th>
-              <th className="px-3 py-2 text-left font-medium">Kostprijs (ex btw)</th>
+              <th className="px-3 py-2 text-left font-medium">Materiaal (ex btw)</th>
               <th className="px-3 py-2 text-left font-medium">Geldig sinds</th>
               <th className="px-3 py-2" />
             </tr>
@@ -458,7 +459,10 @@ function CostsTab({ costs, post, busy }: { costs: CurrentCost[]; post: Post; bus
   const [datum, setDatum] = useState(vandaag);
 
   const byKey = new Map(costs.map((c) => [c.key, c]));
-  const extraKeys = costs.map((c) => c.key).filter((k) => !BUILTIN_COSTS.includes(k)).sort();
+  const extraKeys = costs
+    .map((c) => c.key)
+    .filter((k) => !BUILTIN_COSTS.includes(k) && !isLaborKey(k))
+    .sort();
   const orderedKeys = [...BUILTIN_COSTS.filter((k) => byKey.has(k)), ...extraKeys];
 
   return (
@@ -516,6 +520,8 @@ function CostsTab({ costs, post, busy }: { costs: CurrentCost[]; post: Post; bus
         })}
       </div>
 
+      <LaborRates costs={byKey} post={post} busy={busy} keuze={keuze} datum={datum} />
+
       <div className="mt-4 flex flex-wrap items-end gap-2 border-t border-hair pt-4">
         <div>
           <label className="block text-xs text-ink-mute">Nieuwe kostenpost (naam)</label>
@@ -538,7 +544,7 @@ function CostsTab({ costs, post, busy }: { costs: CurrentCost[]; post: Post; bus
           />
         </div>
         <button
-          disabled={busy || !newName.trim() || !newValue.trim()}
+          disabled={busy || !newName.trim() || !newValue.trim() || isLaborKey(newName.trim().toLowerCase())}
           onClick={async () => {
             const ok = await post(
               {
@@ -559,11 +565,83 @@ function CostsTab({ costs, post, busy }: { costs: CurrentCost[]; post: Post; bus
           Toevoegen
         </button>
         <p className="w-full text-xs text-ink-faint">
-          Extra kosten gelden per m² op alle gematchte vloer, vanaf de ingangsdatum die je hierboven
-          kiest.
+          Extra kosten gelden per m² op <strong>alle</strong> gematchte vloer, vanaf de ingangsdatum die
+          je hierboven kiest. Niet gebruiken voor materiaal van plinten, trappen en dergelijke: dat is
+          een prijs per product onder Prijzen → Overige producten.
         </p>
       </div>
     </Card>
+  );
+}
+
+// Arbeid per categorie (lib/labor.ts). Zonder opgeslagen rij geldt Jans tarief van
+// 2026-11-18; opslaan maakt een gewone kostenrij met sleutel "arbeid:…".
+function LaborRates({
+  costs,
+  post,
+  busy,
+  keuze,
+  datum,
+}: {
+  costs: Map<string, CurrentCost>;
+  post: Post;
+  busy: boolean;
+  keuze: Ingang;
+  datum: string;
+}) {
+  const [edits, setEdits] = useState<Record<string, string>>({});
+  return (
+    <div className="mt-6 border-t border-hair pt-4">
+      <p className="text-sm font-medium text-ink">Arbeid per categorie</p>
+      <p className="mb-2 mt-0.5 text-xs text-ink-mute">
+        Komt bovenop de materiaalprijs van overige producten. Bij lavasteen en microcement vervangt het
+        tarief het legtarief per m².
+      </p>
+      <div className="space-y-2">
+        {LABOR_CATEGORIES.map((c) => {
+          const row = costs.get(c.key);
+          const cur = row?.value ?? c.fallback;
+          const val = edits[c.key] ?? String(cur);
+          const changed = val.trim() !== '' && Number(val) !== cur;
+          return (
+            <div key={c.key} className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border border-hair px-3 py-2">
+              <span className="w-48 shrink-0 text-sm font-medium text-ink-soft">{c.label}</span>
+              <span className="text-ink-faint">€</span>
+              <input
+                type="number"
+                step="0.01"
+                value={val}
+                onChange={(e) => setEdits((s) => ({ ...s, [c.key]: e.target.value }))}
+                className="w-24 rounded border border-line px-2 py-1 text-sm tabular-nums outline-none focus:border-accent"
+              />
+              <span className="text-xs text-ink-faint">
+                {c.unit}
+                {c.note ? ` · ${c.note}` : ''}
+                {row && row.effectiveFrom > '2000-01-01' ? ` · sinds ${row.effectiveFrom}` : ''}
+              </span>
+              <button
+                disabled={busy || !changed}
+                onClick={async () => {
+                  const ok = await post(
+                    { type: 'cost', key: c.key, value: Number(val), effectiveFrom: ingangsdatum(keuze, datum) },
+                    ingangTekst(keuze, datum),
+                  );
+                  if (ok)
+                    setEdits((s) => {
+                      const n = { ...s };
+                      delete n[c.key];
+                      return n;
+                    });
+                }}
+                className={`ml-auto rounded-full bg-accent px-3 py-1 text-xs font-medium text-white transition hover:bg-accent/90 disabled:opacity-40 ${changed ? 'animate-fade-in' : 'invisible'}`}
+              >
+                Opslaan
+              </button>
+            </div>
+          );
+        })}
+      </div>
+    </div>
   );
 }
 
