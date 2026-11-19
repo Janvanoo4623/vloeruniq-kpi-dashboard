@@ -217,12 +217,22 @@ Google-client, jaspervdheide@gmail.com), `Vloeruniq dashboard (planning)` (heade
 Getest op de testkopie met offerte 1151 (Zonnebelt): rij 52 direct onder Overig in `Dec '26`,
 maandtotaal schoof mee (1256,5), notitie met offerte-id; tweede run schreef niets (dubbel-check).
 
+**Verplaatsen bij een gewijzigde Datum uitvoering** (besluit Jasper 2026-11-19, gebouwd zelfde dag):
+`deal.updated` → geaccepteerde offerte van de deal → zelfde keten met `mode: wijziging`.
+`placeJob` zoekt de klus in álle tabs op de notitie (`teamleader:<offerte>` of `deal:<deal>`; aantal
+rijen uit `rijen:n`). Zelfde tab → niets. Andere tab → nieuwe rijen onder Overig van de nieuwe maand
+(G–M vers uit Teamleader, Opmerkingen mee), oude rijen verwijderd, notitie "Verplaatst van …".
+A–E van de oude maand gaan bewust niet mee. Niet gevonden bij een wijziging → niets (Jans eigen
+klussen hebben geen notitie en worden nooit aangeraakt). Getest heen en terug (Dec ↔ Nov) met de
+`testDatum` in de node *Testofferte*; `Nov '26` heeft geen Overig-blok → onderaan, binnen het totaal,
+met waarschuwing.
+
 Nog te doen vóór livegang:
-1. Webhook registreren in Teamleader (`webhooks.register`, via de n8n-token) en workflow activeren.
+1. Webhooks registreren in Teamleader (`quotation.accepted` en `deal.updated`, via de n8n-token) en workflow activeren.
 2. Foutmelding als een run mislukt (bv. maandtab bestaat nog niet) → mail of Slack aan Jasper/Jan.
 3. Schaduwperiode: twee weken op de testkopie, vergelijken met wat Jan zelf in het origineel typt.
 4. Dan: spreadsheetId naar het origineel, Google-credential naar info@vloeruniq.nl (instructie hieronder).
-Bewust niet in versie 1: doorschuiven bij gewijzigde datum, vervallen klussen, overig werk in F.
+Bewust niet in versie 1: vervallen klussen, overig werk in F.
 
 ## Google-koppeling — eigen OAuth-client (en later de instructie voor Jan)
 
