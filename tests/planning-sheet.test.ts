@@ -104,6 +104,7 @@ test('planning: nieuwe klus komt onder de laatste klus in Overig, als ingevoegde
   assert.equal(r.alAanwezig, false);
   assert.equal(r.rij, 7); // onder Agema (rij 6)
   assert.deepEqual((r.requests[0] as any).insertDimension.range, { sheetId: 7, dimension: 'ROWS', startIndex: 6, endIndex: 8 });
+  assert.equal((r.requests[0] as any).insertDimension.inheritFromBefore, true); // onder Agema, niet onder het label
   const naam = r.requests.find((q: any) => q.updateCells?.start.columnIndex === 6) as any;
   assert.match(naam.updateCells.rows[0].values[0].note, /teamleader:q1/);
   assert.deepEqual(r.waarschuwingen, []);
@@ -113,6 +114,14 @@ test('planning: totaal stopt vóór de vrije plek → toch binnen het SUM-bereik
   const r = placeRows({ grid: grid(6), sheetId: 7, target: doel, rows: rijen, quotationId: 'q1', offerteNaam: 'Offerte 1' });
   assert.equal(r.rij, 6); // SUM loopt t/m rij 6: invoegen op 6 schuift de grens mee
   assert.equal(r.waarschuwingen.length, 1);
+});
+
+test('planning: direct onder het bloklabel neemt de rij de opmaak van ónder over', () => {
+  const g = grid(8);
+  g[5] = [];
+  const r = placeRows({ grid: g, sheetId: 7, target: doel, rows: rijen, quotationId: 'q2', offerteNaam: 'Offerte 2' });
+  assert.equal(r.rij, 6);
+  assert.equal((r.requests[0] as any).insertDimension.inheritFromBefore, false);
 });
 
 test('planning: dezelfde offerte nooit twee keer', () => {

@@ -202,6 +202,28 @@ volledigste rij; script in scratchpad, niet in de repo):
   niet als vloer herkend (`FLOOR_TYPE_RE` kent alleen "klik"). Raakt ook m² en marge in het
   dashboard (o.a. offerte 1241, "Click PVC Tegels Basic Natural"); fixen met de margediff.
 
+## n8n-flow — status 2026-11-19
+
+Workflow **"Planning – offerte geaccepteerd → Sheet (TEST)"** (`buYLH9yMcyY3mZNn`), nog **inactief**:
+Teamleader webhook (`quotation.accepted`) of handmatige test → quotations.info → deals.info →
+contacts/companies.info → *Gegevens samenvoegen* (naam, plaats, mobiel, Datum uitvoering,
+spreadsheetId) → `POST /api/planning` → tabs lezen → tab kiezen (op `tabKey`) → tab lezen
+(grid A1:M400 met notities en formules) → `POST /api/planning/plaats` → als nog niet aanwezig:
+`spreadsheets/{id}:batchUpdate`.
+
+Credentials in n8n: `Teamleader - OAuth` (eigen integratie "n8n"), `Google - OAuth API` (eigen
+Google-client, jaspervdheide@gmail.com), `Vloeruniq dashboard (planning)` (header auth).
+
+Getest op de testkopie met offerte 1151 (Zonnebelt): rij 52 direct onder Overig in `Dec '26`,
+maandtotaal schoof mee (1256,5), notitie met offerte-id; tweede run schreef niets (dubbel-check).
+
+Nog te doen vóór livegang:
+1. Webhook registreren in Teamleader (`webhooks.register`, via de n8n-token) en workflow activeren.
+2. Foutmelding als een run mislukt (bv. maandtab bestaat nog niet) → mail of Slack aan Jasper/Jan.
+3. Schaduwperiode: twee weken op de testkopie, vergelijken met wat Jan zelf in het origineel typt.
+4. Dan: spreadsheetId naar het origineel, Google-credential naar info@vloeruniq.nl (instructie hieronder).
+Bewust niet in versie 1: doorschuiven bij gewijzigde datum, vervallen klussen, overig werk in F.
+
 ## Google-koppeling — eigen OAuth-client (en later de instructie voor Jan)
 
 **Waarom geen standaard Google-login van n8n Cloud.** Die werkt alleen in de Google Sheets-node, en

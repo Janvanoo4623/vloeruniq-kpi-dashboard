@@ -355,7 +355,8 @@ export function placeRows(args: {
   // 4. Aanvraag.
   const n = rows.length;
   const requests: unknown[] = [
-    { insertDimension: { range: { sheetId, dimension: 'ROWS', startIndex: at, endIndex: at + n }, inheritFromBefore: at > 0 } },
+    // Opmaak van de rij erboven, behalve als dat het bloklabel is ("Overig" is cursief en groter).
+    { insertDimension: { range: { sheetId, dimension: 'ROWS', startIndex: at, endIndex: at + n }, inheritFromBefore: at - 1 !== label } },
     {
       repeatCell: {
         range: { sheetId, startRowIndex: at, endRowIndex: at + n, startColumnIndex: 0, endColumnIndex: 13 },
