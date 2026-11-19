@@ -227,11 +227,24 @@ klussen hebben geen notitie en worden nooit aangeraakt). Getest heen en terug (D
 `testDatum` in de node *Testofferte*; `Nov '26` heeft geen Overig-blok → onderaan, binnen het totaal,
 met waarschuwing.
 
+**Schaduwperiode gestart 2026-11-19 ±12:40.** Workflow actief; webhooks geregistreerd via de
+n8n-integratie: **`deal.won`** (= akkoord: aanmaken) en **`deal.updated`** (= alleen verplaatsen) naar
+`https://janvanoo.app.n8n.cloud/webhook/vloeruniq-planning-7c1f9e2a4b8d`.
+- Teamleader **kent geen webhook `quotation.accepted`** (webhooks.register weigert hem). Bij akkoord op
+  een offerte wordt de deal automatisch gewonnen; de flow pakt de geaccepteerde offerte van de deal.
+- Webhooks beheren (lijst/aan/af): workflow *Hulp – Teamleader webhooks beheren* (`ZgUne5XdnrQr6HiR`),
+  POST `{actie: list|register|unregister, payload}` op zijn webhook. **Staat uit**; alleen tijdelijk
+  aanzetten, want iedereen met het adres kan dan webhooks in Jans Teamleader zetten.
+- Meldingen per mail aan jaspervdheide@gmail.com en jan@vloeruniq.nl (Gmail-credential van Jasper):
+  *Planning – foutmelding* (`Qd80qTtkkQBmRRMV`, Error Trigger; alleen bij automatische runs, niet bij
+  handmatige tests) en *Let op mailen* in de flow (waarschuwingen: tab ontbreekt, geen Overig-blok,
+  buiten het totaal). Getest: foutmail ✓ (voorbeelddata); let-op-mail nog niet in het echt gezien.
+- Productiepad getest met een nagebootste `deal.updated` voor Zonnebelt: "al goed" in Dec '26.
+
 Nog te doen vóór livegang:
-1. Webhooks registreren in Teamleader (`quotation.accepted` en `deal.updated`, via de n8n-token) en workflow activeren.
-2. Foutmelding als een run mislukt (bv. maandtab bestaat nog niet) → mail of Slack aan Jasper/Jan.
-3. Schaduwperiode: twee weken op de testkopie, vergelijken met wat Jan zelf in het origineel typt.
-4. Dan: spreadsheetId naar het origineel, Google-credential naar info@vloeruniq.nl (instructie hieronder).
+1. Schaduwperiode: twee weken op de testkopie, vergelijken met wat Jan zelf in het origineel typt.
+2. Overstap: spreadsheetId in *Gegevens samenvoegen* naar het origineel; Google- en Gmail-credential
+   naar Jans account (instructie hieronder); workflownaam zonder "(TEST)".
 Bewust niet in versie 1: vervallen klussen, overig werk in F.
 
 ## Google-koppeling — eigen OAuth-client (en later de instructie voor Jan)
