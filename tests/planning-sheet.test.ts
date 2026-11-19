@@ -4,6 +4,7 @@
 //   npm test
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { isFloorLine, laborRuleOf } from '../lib/teamleader/matching';
 import { planningJob, planningTarget, sheetRows, linesFromQuotation, placeRows, placeJob, findJob, layoutForTab, tabKey, type GridCell, type TabGrid } from '../lib/planning-sheet';
 
 const regel = (description: string, quantity: number, amount: number) => ({ description, quantity, amount });
@@ -226,4 +227,15 @@ test('planning: kolomindeling volgt de tabnaam', () => {
   assert.equal(layoutForTab("Jun '26"), 'oud');
   assert.equal(layoutForTab('2027'), 'oud');
   assert.equal(layoutForTab('Geen datum'), 'geenDatum');
+});
+
+// ── Vloerherkenning (gedeeld met de sync) ───────────────────────────────
+
+test('vloer: "Click PVC" zonder P-nummer is een vloer; "Zelf leggen" en "Exclusive installation" zijn zonder legservice', () => {
+  assert.equal(isFloorLine('Click PVC Mist | Incl. 6% snijverlies'), true);
+  assert.equal(isFloorLine('Click PVC Tegels VT Wonen Basic Natural | Incl. leggen click pvc'), true);
+  assert.equal(laborRuleOf('Klik PVC | Kleur ntb | Zelf leggen'), 'excluded');
+  assert.equal(laborRuleOf('Click PVC with integrated underlay | Exclusive installation click PVC'), 'excluded');
+  // Ongewijzigd: gewoon "incl. leggen" blijft mét legservice.
+  assert.equal(laborRuleOf('Klik PVC P440 | Incl. leggen'), 'included');
 });

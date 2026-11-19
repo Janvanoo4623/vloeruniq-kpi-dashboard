@@ -30,7 +30,10 @@ export interface Costs {
 }
 
 // Description starts with a floor-product type.
-const FLOOR_TYPE_RE = /^(pvc|visgraat|stroken|tegels|hongaarse|weense|klik|vt wonen)/i;
+// "Click PVC …" is dezelfde klikvloer als "Klik PVC …" in Engelse spelling. Zonder
+// P-nummer viel zo'n regel buiten m² en marge (2026-11-19, gevonden bij de
+// vergelijking met Jans planning-Sheet: 9 geaccepteerde regels, ±400 m², ±€14k).
+const FLOOR_TYPE_RE = /^(pvc|visgraat|stroken|tegels|hongaarse|weense|klik|click|vt wonen)/i;
 // Finishing / labour lines billed in m² but that are NOT floor surface, e.g.
 // "PVC vloer snijden en kitten langs wand". These start with a floor type and so
 // slip through FLOOR_TYPE_RE, inflating floor m² (offerte 1003: 254 m² = 159 m²
@@ -97,8 +100,12 @@ const GLUED_RE = /lijm/i;
 // Vandaar de optionele slot-n. Dit is de derde typefout op rij die een regel deed
 // missen — na "onvervloer" en "Ex legservice" — dus de patronen zijn bewust ruim
 // op spelling en streng op betekenis, niet andersom.
+//
+// "Zelf leggen" (de klant legt zelf) bevat het woord "leggen" en telde daardoor als
+// mét legservice; "Exclusive installation" is de Engelse variant van excl. leggen
+// (2026-11-19, offerte met 42 m² "Klik PVC | Zelf leggen" kreeg €714 legkosten).
 const NO_LABOR_RE =
-  /\b(?:excl\.?|exclusief|ex\.?|zonder)\s*(?:het\s+)?leg(?:gen?|service)?\b|\balleen\s+(?:leveren|levering)\b/i;
+  /\b(?:excl\.?|exclusief|ex\.?|zonder)\s*(?:het\s+)?leg(?:gen?|service)?\b|\balleen\s+(?:leveren|levering)\b|\bzelf\s+(?:te\s+)?leg(?:gen?)?\b|\bexclusive\s+installation\b/i;
 // "aanbrengen" is hoe een gietvloer gelegd wordt ("Lavasteen Gietvloer | Incl. aanbrengen").
 const HAS_LABOR_RE = /\bleg(?:gen?|service)\b|\bgelegd\b|\bmont(?:age|eren)\b|\baanbreng(?:en)?\b/i;
 

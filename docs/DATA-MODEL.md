@@ -643,3 +643,18 @@ producten horen onder **Prijzen → Overige producten**. Jan hierop wijzen voord
 - **Tapijt €24 per m1**: per strekkende meter van de rol (400 cm breed ≈ €6/m²) of per m²?
   Tapijt staat in de offertes op beide manieren (per m² rond €45–52, per strekkende meter rond
   €90–140). Tot het antwoord er is: geen arbeid op tapijt.
+
+## "Click PVC" en "Zelf leggen" — 2026-11-19
+
+Gevonden bij de vergelijking met Jans planning-Sheet. Twee gaten in de vloerherkenning
+(`lib/teamleader/matching.ts`, nu als `isFloorLine` / `laborRuleOf` ook gebruikt door de planning):
+- **"Click PVC …"** zonder P-nummer werd niet als vloer herkend (`FLOOR_TYPE_RE` kende alleen "klik").
+- **"Zelf leggen"** bevat "leggen" en telde als mét legservice; **"Exclusive installation"** werd niet
+  als zonder legservice herkend.
+
+Diff op alle 5.053 echte regels (offertes + facturen), oude tegen nieuwe code: **34 regels veranderen,
+allemaal met Click/Zelf leggen in de tekst, niets anders.** Op geaccepteerde offertes: 9 regels
+(±410 m², ±€12k omzet) tellen nu als vloer (5 zonder legservice-info → Controleren), en 42 m² "Klik
+PVC | Zelf leggen" verliest €714 legkosten. Werkt pas na een **backfill** (regels worden bij de sync
+opgeslagen); de Click-vloeren hebben daarna nog een inkoopprijs nodig (afgeleide naam, bv. "Click
+PVC Mist").
