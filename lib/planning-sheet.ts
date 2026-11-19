@@ -179,12 +179,21 @@ export const SHEET_COLUMNS: Record<SheetLayout, Columns> = {
 export interface SheetTarget {
   tab: string;
   /**
+   * De tabnaam zonder hoofdletters, spaties en leestekens ("nov26"). De echte tabs
+   * heten `Nov '26` en zelfs `Okt' 26`; de Excel-export liet de apostrof weg. n8n
+   * zoekt de tab op deze sleutel, zodat een typfout in de tabnaam niets uitmaakt.
+   */
+  tabKey: string;
+  /**
    * Het blok waaronder de klus komt (tekst in kolom A), of null voor de eerste
    * lege rij onder de kop. "Overig" is waar Jan een klus zonder vaste week zet.
    */
   block: string | null;
   layout: SheetLayout;
 }
+
+/** "Okt' 26" → "okt26". */
+export const tabKey = (title: string): string => title.toLowerCase().replace(/[^a-z0-9]/g, '');
 
 /**
  * Waar een klus komt. Besluit 2026-11-19 (geen vraag aan Jan, de Sheet zegt het
@@ -195,10 +204,10 @@ export function planningTarget(datumUitvoering: string | null | undefined): Shee
   const m = /^(\d{4})-(\d{2})/.exec(datumUitvoering ?? '');
   const jaar = m ? Number(m[1]) : 0;
   const maand = m ? Number(m[2]) : 0;
-  if (jaar === 2026 && maand >= 1 && maand <= 12)
-    return { tab: `${MAANDEN[maand - 1]} 26`, block: 'Overig', layout: maand >= 7 ? 'maand' : 'oud' };
-  if (jaar === 2027) return { tab: '2027', block: 'Overig', layout: 'oud' };
-  return { tab: 'Geen datum', block: null, layout: 'geenDatum' };
+  const t = (tab: string, block: string | null, layout: SheetLayout): SheetTarget => ({ tab, tabKey: tabKey(tab), block, layout });
+  if (jaar === 2026 && maand >= 1 && maand <= 12) return t(`${MAANDEN[maand - 1]} '26`, 'Overig', maand >= 7 ? 'maand' : 'oud');
+  if (jaar === 2027) return t('2027', 'Overig', 'oud');
+  return t('Geen datum', null, 'geenDatum');
 }
 
 /**
@@ -242,4 +251,139 @@ export function linesFromQuotation(detail: {
       amount: it.total?.tax_exclusive?.amount ?? 0,
     })),
   );
+}
+
+// ── Invoegen in de Sheet ────────────────────────────────────────────────
+
+/** Een cel zoals de Sheets API hem geeft (spreadsheets.get met includeGridData). */
+export interface GridCell {
+  formattedValue?: string;
+  userEnteredValue?: { stringValue?: string; numberValue?: number; formulaValue?: string; boolValue?: boolean };
+  note?: string;
+}
+
+const col = (letter: string): number => letter.charCodeAt(0) - 65; // A → 0; alle kolommen hier zijn één letter
+const cellText = (c: GridCell | undefined): string =>
+  (c?.formattedValue ?? c?.userEnteredValue?.stringValue ?? '').toString().trim();
+const BLOCK_RE = /^(week\b|afspraken$|overig$)/i;
+
+export interface PlaceResult {
+  /** Het 1-gebaseerde rijnummer waar de klus begint, of waar hij al stond. */
+  rij: number;
+  /** Al eerder geschreven (zelfde offerte-id in een notitie): niets doen. */
+  alAanwezig: boolean;
+  /** Body voor POST spreadsheets/{id}:batchUpdate; leeg als alAanwezig. */
+  requests: unknown[];
+  waarschuwingen: string[];
+}
+
+/**
+ * Bepaalt waar de rijen in een tab komen en bouwt de batchUpdate-aanvraag.
+ *
+ * - Plek: onder de laatste klus in het blok (bv. "Overig"), vóór het volgende
+ *   blok of het totaal. Zonder blok (tab "Geen datum"): onder de laatste klus.
+ * - Rijen worden INGEVOEGD, niet in lege rijen geschreven, en altijd binnen het
+ *   =SUM-bereik van de m²-kolom, zodat het maandtotaal en de tab "Totalen"
+ *   meetellen. In augustus loopt dat bereik niet door tot onder Overig.
+ * - Nooit dubbel: de naamcel krijgt een notitie met `teamleader:<offerte-id>`;
+ *   staat die al in de tab, dan gebeurt er niets.
+ * - Nieuwe rijen krijgen een witte achtergrond, zodat ze niet de kleur (status)
+ *   van de rij erboven overnemen. Alleen kolommen A t/m M.
+ */
+export function placeRows(args: {
+  grid: GridCell[][];
+  sheetId: number;
+  target: SheetTarget;
+  rows: Record<string, string | number>[];
+  quotationId: string;
+  offerteNaam: string;
+}): PlaceResult {
+  const { grid, sheetId, target, rows, quotationId, offerteNaam } = args;
+  const c = SHEET_COLUMNS[target.layout];
+  const marker = `teamleader:${quotationId}`;
+  const waarschuwingen: string[] = [];
+
+  // 1. Al aanwezig?
+  for (let r = 0; r < grid.length; r++) {
+    if ((grid[r] ?? []).some((cell) => cell?.note?.includes(marker))) {
+      return { rij: r + 1, alAanwezig: true, requests: [], waarschuwingen };
+    }
+  }
+
+  // 2. Totaal: =SUM(J5:J79) in de m²-kolom.
+  let sumRow = -1;
+  let sumEnd = -1;
+  for (let r = 0; r < grid.length; r++) {
+    const f = grid[r]?.[col(c.m2)]?.userEnteredValue?.formulaValue ?? '';
+    const m = /^=SUM\(\s*[A-Z]+(\d+)\s*:\s*[A-Z]+(\d+)\s*\)/i.exec(f);
+    if (m) {
+      sumRow = r;
+      sumEnd = Number(m[2]) - 1; // 0-gebaseerd
+      break;
+    }
+  }
+
+  // 3. Het blok en zijn einde.
+  let label = 0; // rij 1 (index 0) is de kop
+  if (target.block) {
+    const idx = grid.findIndex((row) => cellText(row?.[0]).toLowerCase() === target.block!.toLowerCase());
+    if (idx >= 0) label = idx;
+    else waarschuwingen.push(`Blok "${target.block}" niet gevonden in ${target.tab}; onderaan de tab gezet.`);
+  }
+  let einde = sumRow >= 0 ? sumRow : grid.length;
+  if (target.block && label > 0) {
+    for (let r = label + 1; r < einde; r++) {
+      if (BLOCK_RE.test(cellText(grid[r]?.[0]))) {
+        einde = r;
+        break;
+      }
+    }
+  }
+  const vanaf = target.block && label === 0 ? 1 : label + 1;
+  let laatste = -1;
+  for (let r = vanaf; r < einde; r++) {
+    const row = grid[r] ?? [];
+    if ([c.naam, c.m2, c.vloer].some((l) => cellText(row[col(l)]) !== '')) laatste = r;
+  }
+  if (target.block && label === 0 && laatste < 0) laatste = einde - 1;
+  let at = laatste >= 0 ? laatste + 1 : vanaf; // 0-gebaseerd: eerste nieuwe rij
+  if (sumEnd >= 0 && at > sumEnd) {
+    waarschuwingen.push(`Totaal loopt t/m rij ${sumEnd + 1}; klus op rij ${sumEnd + 1} gezet zodat hij meetelt.`);
+    at = sumEnd;
+  }
+
+  // 4. Aanvraag.
+  const n = rows.length;
+  const requests: unknown[] = [
+    { insertDimension: { range: { sheetId, dimension: 'ROWS', startIndex: at, endIndex: at + n }, inheritFromBefore: at > 0 } },
+    {
+      repeatCell: {
+        range: { sheetId, startRowIndex: at, endRowIndex: at + n, startColumnIndex: 0, endColumnIndex: 13 },
+        cell: { userEnteredFormat: { backgroundColor: { red: 1, green: 1, blue: 1 } } },
+        fields: 'userEnteredFormat.backgroundColor',
+      },
+    },
+  ];
+  rows.forEach((row, i) => {
+    for (const [letter, value] of Object.entries(row)) {
+      const isNaam = i === 0 && letter === c.naam;
+      requests.push({
+        updateCells: {
+          start: { sheetId, rowIndex: at + i, columnIndex: col(letter) },
+          rows: [
+            {
+              values: [
+                {
+                  userEnteredValue: typeof value === 'number' ? { numberValue: value } : { stringValue: value },
+                  ...(isNaam ? { note: `Automatisch uit Teamleader (n8n): ${offerteNaam}\n${marker}` } : {}),
+                },
+              ],
+            },
+          ],
+          fields: isNaam ? 'userEnteredValue,note' : 'userEnteredValue',
+        },
+      });
+    }
+  });
+  return { rij: at + 1, alAanwezig: false, requests, waarschuwingen };
 }

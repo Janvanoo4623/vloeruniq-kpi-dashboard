@@ -4,7 +4,7 @@
 //   npm test
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { planningJob, planningTarget, sheetRows, linesFromQuotation } from '../lib/planning-sheet';
+import { planningJob, planningTarget, sheetRows, linesFromQuotation, placeRows, tabKey, type GridCell } from '../lib/planning-sheet';
 
 const regel = (description: string, quantity: number, amount: number) => ({ description, quantity, amount });
 
@@ -72,11 +72,56 @@ test('planning: vloer zonder legservice gaat naar K, niet naar J (telt niet mee 
 });
 
 test('planning: plaats in de Sheet volgt de datum uitvoering', () => {
-  assert.deepEqual(planningTarget('2026-12-07'), { tab: 'Dec 26', block: 'Overig', layout: 'maand' });
-  assert.deepEqual(planningTarget('2026-09-01'), { tab: 'Sept 26', block: 'Overig', layout: 'maand' });
-  assert.deepEqual(planningTarget('2027-03-01'), { tab: '2027', block: 'Overig', layout: 'oud' });
-  assert.deepEqual(planningTarget(''), { tab: 'Geen datum', block: null, layout: 'geenDatum' });
-  assert.deepEqual(planningTarget(null), { tab: 'Geen datum', block: null, layout: 'geenDatum' });
+  assert.deepEqual(planningTarget('2026-12-07'), { tab: "Dec '26", tabKey: 'dec26', block: 'Overig', layout: 'maand' });
+  assert.deepEqual(planningTarget('2026-09-01'), { tab: "Sept '26", tabKey: 'sept26', block: 'Overig', layout: 'maand' });
+  assert.deepEqual(planningTarget('2027-03-01'), { tab: '2027', tabKey: '2027', block: 'Overig', layout: 'oud' });
+  assert.deepEqual(planningTarget(''), { tab: 'Geen datum', tabKey: 'geendatum', block: null, layout: 'geenDatum' });
+  assert.deepEqual(planningTarget(null), { tab: 'Geen datum', tabKey: 'geendatum', block: null, layout: 'geenDatum' });
+  // De echte tab heet "Okt' 26" (apostrof verkeerd): de sleutel vindt hem toch.
+  assert.equal(tabKey("Okt' 26"), planningTarget('2026-10-05').tabKey);
+});
+
+// Een maandtab in het klein: kop, week, Overig met één klus, totaal.
+const t = (v: string) => ({ formattedValue: v, userEnteredValue: { stringValue: v } });
+const grid = (sumTot: number) => {
+  const g: GridCell[][] = [];
+  g[0] = [t(''), t('Di'), t('Wo'), t('Do'), t('Vrij'), t('Opmerkingen'), t('Naam')];
+  g[1] = [t('Week 45')];
+  g[2] = [{}, {}, {}, {}, {}, {}, t('Wilbers'), {}, {}, { formattedValue: '83', userEnteredValue: { numberValue: 83 } }];
+  g[3] = [t('Afspraken')];
+  g[4] = [t('Overig')];
+  g[5] = [{}, {}, {}, {}, {}, {}, t('Agema')];
+  g[6] = [];
+  g[7] = [];
+  g[8] = [{}, {}, {}, {}, {}, {}, {}, {}, {}, { userEnteredValue: { formulaValue: `=SUM(J3:J${sumTot})` } }];
+  return g;
+};
+const doel = planningTarget('2026-11-20');
+const rijen: Record<string, string | number>[] = [{ G: 'Nieuw', J: 50, L: 'P420' }, { J: 20, L: 'P420' }];
+
+test('planning: nieuwe klus komt onder de laatste klus in Overig, als ingevoegde rijen', () => {
+  const r = placeRows({ grid: grid(8), sheetId: 7, target: doel, rows: rijen, quotationId: 'q1', offerteNaam: 'Offerte 1' });
+  assert.equal(r.alAanwezig, false);
+  assert.equal(r.rij, 7); // onder Agema (rij 6)
+  assert.deepEqual((r.requests[0] as any).insertDimension.range, { sheetId: 7, dimension: 'ROWS', startIndex: 6, endIndex: 8 });
+  const naam = r.requests.find((q: any) => q.updateCells?.start.columnIndex === 6) as any;
+  assert.match(naam.updateCells.rows[0].values[0].note, /teamleader:q1/);
+  assert.deepEqual(r.waarschuwingen, []);
+});
+
+test('planning: totaal stopt vóór de vrije plek → toch binnen het SUM-bereik (zoals in augustus)', () => {
+  const r = placeRows({ grid: grid(6), sheetId: 7, target: doel, rows: rijen, quotationId: 'q1', offerteNaam: 'Offerte 1' });
+  assert.equal(r.rij, 6); // SUM loopt t/m rij 6: invoegen op 6 schuift de grens mee
+  assert.equal(r.waarschuwingen.length, 1);
+});
+
+test('planning: dezelfde offerte nooit twee keer', () => {
+  const g = grid(8);
+  g[5][6] = { ...t('Agema'), note: 'Automatisch uit Teamleader (n8n): Offerte 9\nteamleader:q1' };
+  const r = placeRows({ grid: g, sheetId: 7, target: doel, rows: rijen, quotationId: 'q1', offerteNaam: 'Offerte 1' });
+  assert.equal(r.alAanwezig, true);
+  assert.equal(r.rij, 6);
+  assert.deepEqual(r.requests, []);
 });
 
 test('planning: cellen per indeling — eerste rij met klantgegevens, vervolgrij alleen vloer', () => {

@@ -14,7 +14,8 @@ export async function proxy(request: NextRequest) {
     pathname === '/login' ||
     pathname.startsWith('/api/login') ||
     pathname.startsWith('/api/sync') ||
-    pathname === '/api/planning' // n8n, self-protected with PLANNING_API_SECRET
+    pathname === '/api/planning' || // n8n, self-protected with the planning key
+    pathname === '/api/planning/plaats'
   ) {
     return NextResponse.next();
   }

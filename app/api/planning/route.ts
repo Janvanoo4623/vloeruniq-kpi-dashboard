@@ -16,28 +16,10 @@ import {
   sheetRows,
   type PlanningLineInput,
 } from '@/lib/planning-sheet';
-import { getAppSetting } from '@/lib/db';
-import { hasSupabase } from '@/lib/supabase';
-import { sha256 } from '@/lib/planning-token';
+import { authorized } from '@/lib/planning-token';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
-
-/**
- * De sleutel staat als PLANNING_API_SECRET in de omgeving, óf als sha256-hash in
- * Supabase (app_settings.planning_api, gezet met `npm run planning:token`). Dat
- * tweede bestaat omdat Jasper geen omgevingsvariabelen op Vercel productie kan
- * zetten — hetzelfde patroon als de Moneybird- en Ads-koppeling.
- */
-async function authorized(request: Request): Promise<boolean> {
-  const header = request.headers.get('authorization') ?? '';
-  const given = header.startsWith('Bearer ') ? header.slice(7).trim() : '';
-  const env = process.env.PLANNING_API_SECRET;
-  if (env) return given === env;
-  const stored = hasSupabase() ? await getAppSetting<{ sha256?: string } | null>('planning_api', null) : null;
-  if (stored?.sha256) return given !== '' && sha256(given) === stored.sha256;
-  return process.env.NODE_ENV !== 'production'; // alleen lokaal zonder sleutel
-}
 
 interface Body {
   naam?: string;

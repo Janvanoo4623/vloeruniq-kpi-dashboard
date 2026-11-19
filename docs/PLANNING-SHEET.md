@@ -202,6 +202,50 @@ volledigste rij; script in scratchpad, niet in de repo):
   niet als vloer herkend (`FLOOR_TYPE_RE` kent alleen "klik"). Raakt ook m² en marge in het
   dashboard (o.a. offerte 1241, "Click PVC Tegels Basic Natural"); fixen met de margediff.
 
+## Google-koppeling — eigen OAuth-client (en later de instructie voor Jan)
+
+**Waarom geen standaard Google-login van n8n Cloud.** Die werkt alleen in de Google Sheets-node, en
+die schrijft op kolomKOP, niet op kolomletter. In Jans Sheet gaat dat mis: kolom K heeft geen kop,
+de kop van M verschilt per maand ("Plinten/Trap/Mat" jul/aug, "Plint/Trap/Mat" daarna), en de node
+kan geen rij invoegen (nodig om binnen het `SUM`-bereik van het maandtotaal te blijven). Met een
+eigen OAuth-client gebruikt n8n een HTTP Request-node op de Sheets API: schrijven per celadres
+(`values.batchUpdate`) en rijen invoegen (`batchUpdate` → `insertDimension`).
+
+**Nu (test)**: opgezet door Jasper op jaspervdheide@gmail.com, schrijft in de testkopie.
+**Bij livegang**: Jan doet dezelfde stappen op **info@vloeruniq.nl** (eigenaar van de Sheet), zodat
+de koppeling niet afhangt van Jaspers account. De workflow blijft gelijk; alleen de credential in
+de Sheets-nodes wordt vervangen.
+
+Stappen (worden aangevuld terwijl Jasper ze doorloopt; dit wordt Jans instructie):
+1. https://console.cloud.google.com, ingelogd met het Google-account dat de Sheet mag bewerken →
+   projectkiezer → **Nieuw project** → naam `Vloeruniq n8n` → Maken.
+2. Met dat project geselecteerd: ☰ → **APIs & Services → Library** → **Google Sheets API** →
+   **Enable** (direct: https://console.cloud.google.com/apis/library/sheets.googleapis.com).
+3. ☰ → **APIs & Services → OAuth consent screen** (heet nu **Google Auth Platform**) → **Get started**:
+   App name `Vloeruniq n8n`, User support email = eigen adres, Audience **External**, Contact
+   information = eigen adres → voorwaarden aanvinken → **Create**.
+4. Eerst **Branding**: naast naam en e-mail zijn voor publiceren verplicht: Application home page
+   `https://www.vloeruniq.nl/` en privacy policy `https://www.vloeruniq.nl/privacy-policy/`
+   (bestaan allebei; gecontroleerd 2026-11-19). Zo nodig `vloeruniq.nl` bij Authorized domains.
+   Logo en terms leeg laten. "Internal" kan niet: alleen voor Google Workspace, niet voor gmail.
+   Dan Google Auth Platform → **Audience** → Publishing status **Testing** → **Publish app** → Confirm
+   → **In production**. Nodig: in Testing verloopt de koppeling na 7 dagen. Verificatie door Google
+   is niet nodig (alleen eigen gebruik); bij inloggen verschijnt "Google heeft deze app niet
+   geverifieerd" → **Geavanceerd → Ga naar Vloeruniq n8n**.
+5. Google Auth Platform → **Clients** → **Create client** → Application type **Web application**,
+   naam `n8n`, Authorized redirect URI `https://oauth.n8n.cloud/oauth2/callback` → **Create**.
+   Google toont het **Client secret maar één keer**: venster open laten of **Download JSON**.
+   Niet mailen of in een chat plakken; direct in n8n invullen (volgende stap).
+6. In n8n een **generieke OAuth2 API-credential** (zit niet in de credentiallijst; aanmaken vanuit
+   een HTTP Request-node: Authentication *Generic Credential Type* → *OAuth2 API* → **Connect to**):
+   naam `Google Sheets (…)`, Grant Type **Authorization Code**, Authorization URL
+   `https://accounts.google.com/o/oauth2/v2/auth`, Access Token URL `https://oauth2.googleapis.com/token`,
+   Client ID/Secret uit stap 5, Scope `https://www.googleapis.com/auth/spreadsheets`, Auth URI Query
+   Parameters `access_type=offline&prompt=consent` (zonder deze twee geen blijvende koppeling),
+   Authentication **Send Credentials in Body** → **Connect** → inloggen → bij "niet geverifieerd":
+   Geavanceerd → Ga naar Vloeruniq n8n → Toestaan.
+   Test: workflow "Google Sheets – verbinding testen" (Z8CI922wC9Z8qBXk) leest de tabnamen.
+
 ## Open vragen
 
 Alleen gevraagd wat niet uit de Sheet of de data te halen is (2026-11-18):
