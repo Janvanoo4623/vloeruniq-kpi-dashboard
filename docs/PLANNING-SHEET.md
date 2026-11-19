@@ -42,10 +42,7 @@ wens: **kolommen G t/m M automatisch gevuld.** De rest van de Sheet blijft handw
 
 `Planning | Opmerkingen | Opmerkingen | Naam | Telnummer | Plaats | m2 incl. snijverl. | (leeg) | Vloer | Plinten | Trap | Mat | Wie | Wanneer`
 
-> **Dit wijkt af van Jans toelichting:** hier zijn plint, trap en mat drie aparte kolommen en
-> staan "Wie" en "Wanneer" rechts; de dagkolommen A–E ontbreken. Mogelijk is januari een oudere
-> indeling of zijn kolommen bij het kopiëren weggevallen. **Niet bouwen op een van beide totdat we
-> de echte Sheet gezien hebben** (zie open vragen).
+> Dit is de **oude** indeling (jan–jun). Vanaf juli geldt Jans toelichting; zie "Echte indeling".
 
 ### Wat opvalt in de januari-voorbeelden
 
@@ -66,6 +63,67 @@ wens: **kolommen G t/m M automatisch gevuld.** De rest van de Sheet blijft handw
   vloerverwarming frezen, uitvlakken keukenvloer, alleen plinten plaatsen.
 - **Eén klant meerdere keren** (Groteboer in week 4 én week 5): verschillende fases van dezelfde
   klus (sleuven dichten → egaliseren → leggen).
+
+## Echte indeling — uit de export van 2026-11-19
+
+Bestand: **Planning '26** (eigenaar info@vloeruniq.nl, Jasper bewerker als jaspervdheide@gmail.com).
+Origineel `16jKiKf5c5MCIcEQ0CvpIOR4tnC7qzR2NqaqzMuN6Xto`, testkopie
+`1fzP--ApMv3PUPUNBusdg6_YtpG-UnFVq4zXlSh2ffSw` (eigendom Jasper; n8n schrijft alleen hierin tot live).
+
+**Tabs:** `Jan 26` … `Jun 26`, `Jul 26`, `Aug 26`, `Sept 26`, `Okt 26`, `Nov 26`, `Dec 26`, `2027`,
+`Geen datum`, `Totalen`, `Bronbestand`. Let op: "Sept", niet "Sep"; "Mrt", "Mei", "Okt".
+
+**Twee kolomindelingen.** Vanaf juli is de indeling veranderd; de twee verschillen in de paste en
+Jans toelichting kwamen daarvandaan.
+
+| | Jul 26 t/m Dec 26 (nieuw) | Jan–Jun 26, `2027`, `Bronbestand` (oud) | `Geen datum` |
+|---|---|---|---|
+| Dagen | A–E = Ma–Vr (A1 leeg = maandag) | A = Planning (vrije tekst) | — |
+| Opmerkingen | F | B, C | A, B |
+| Naam / Tel / Plaats | G / H / I | D / E / F | C / D / E |
+| m² incl. snijverlies | **J** | G | F |
+| Verdieping / m² zonder legservice | K | H | G |
+| Vloer | L | I | H |
+| Plint / Trap / Mat | **M (één kolom)** | J / K / L (drie) | I / J / K |
+| Wie / Wanneer | — | M / N | L / M |
+
+Kolommen rechts van M (N–AM) bevatten in sommige tabs restanten van kopiëren/plakken
+(bv. Nov rij 46, 55). Negeren.
+
+**Blokken binnen een maandtab** (te herkennen aan kolom A en de achtergrondkleur):
+- `Week 45` enz. in kolom A, grijs `#F3F3F3` = kop van een week.
+- `Afspraken` in kolom A, grijs `#F3F3F3`, 3 rijen = inspecties/opnames (alleen Nov en Dec).
+- `Overig` in kolom A, lichtgrijs `#EFEFEF` = **klussen zonder specifieke week**: dit is waar Jan
+  een klus "voorlopig in een maand" zet. Ontbreekt in `Jan 26` en `Nov 26`.
+- Afwezigheid: losse tekst in A/B, meestal fel groen `#00FF00` of `#E6B8AF`.
+- Groen `#D9EAD3` / `#B6D7A8` op klusrijen = handmatige status (bv. "Factuur kan weg"); oranje
+  `#FF9900` = "Bellen". Betekenis per kleur niet bevestigd; n8n raakt kleuren niet aan.
+- Meerdere vloeren = vervolgrijen met alleen J (m²), K (verdieping) en L (vloer).
+- Totaal: `=SUM(J<eerste>:J<laatste>)` onder de laatste rij; `Totalen` verwijst per maand naar die
+  cel (`'Nov 26'!J80`). **Het SUM-bereik loopt niet altijd door tot onder Overig** (Aug: `J5:J58`,
+  Overig op rij 53 — rijen 59+ tellen niet mee). Een rij die n8n buiten het bereik schrijft, valt
+  dus uit het maandtotaal.
+
+**Tab `Geen datum`** bestaat al (oude indeling, verschoven, 1 klus). **Tab `2027`**: oude indeling,
+in kolom A vrije tekst als "Feb '27", "2e kwartaal 2027", "begin mei".
+
+**Gevolgen voor het ontwerp**
+- **Plaatsing (besluit, geen vraag aan Jan):** datum uitvoering bekend in 2026 → het `Overig`-blok
+  van die maandtab; in 2027 → tab `2027`; geen datum → tab `Geen datum`. Wordt in de
+  schaduwperiode met Jan gecontroleerd.
+- **Schrijven in lege rijen, niet invoegen:** de Google Sheets-node van n8n kan geen rij midden in
+  een tab invoegen. n8n leest de tab, zoekt het blok, schrijft in de eerste lege rij daaronder
+  (G en J leeg) die nog binnen het SUM-bereik valt, en meldt het als er geen plek meer is.
+- **Alleen de nieuwe indeling** (Jul–Dec) en `Geen datum`/`2027` hoeven ondersteund te worden;
+  klussen in het verleden worden niet meer aangemaakt.
+- **Naam**: vaak voor- en achternaam of bedrijf ("Stijn Eikenaar", "BAT Rijssen", "Autohandel
+  Rensink"), soms met adres ("Jansen Eupe, verlengde oranjestraat 36"). **Telefoon** als `Tel: 06…`.
+- **M (Plint/Trap/Mat)** in één cel, gescheiden door ` | ` of ` / ` ("120x12 RAL9010 | Entreemat
+  Classic taupe 2 st", "70m1 70x12 plint en 2 trappen 26 treden P730").
+- **n8n-credential Google:** n8n Cloud's beheerde Google-login werkt alleen in de Google Sheets-node,
+  niet in de HTTP Request-node ("This credential is configured to prevent use within an HTTP
+  Request"). Credential: `Google Sheets account` (jaspervdheide@gmail.com); later omzetten naar
+  info@vloeruniq.nl.
 
 ## Ontwerp (voorstel, nog niet afgestemd)
 
@@ -109,7 +167,7 @@ wens: **kolommen G t/m M automatisch gevuld.** De rest van de Sheet blijft handw
 
 Alleen gevraagd wat niet uit de Sheet of de data te halen is (2026-11-18):
 - **Admin-rechten** in n8n en **toegang tot de Sheet** (voorwaarde).
-- **Klus zonder datum uitvoering bij akkoord: in welke maandtab?** Voorstel: de maand van akkoord.
+- ~~Klus zonder datum: welke tab?~~ Beantwoord door de Sheet zelf: `Overig`-blok / tab `Geen datum`.
 
 Zelf uit te zoeken zodra de Sheet gedeeld is: welke kolomindeling klopt, tabnamen, plint/trap/mat
 in één of drie kolommen, welk adres als plaats (vergelijken met Teamleader). Bewust **niet in
@@ -118,7 +176,7 @@ versie 1 maakt alleen rijen aan en raakt verder niets aan.
 
 ## Stappen
 
-1. Jasper: in n8n een OAuth2 API-credential aanmaken en de OAuth Redirect URL doorsturen.
+1. Jasper: in n8n een OAuth2 API-credential aanmaken (n8n Cloud redirect: https://oauth.n8n.cloud/oauth2/callback).
 2. Jan of Jasper (met beheerrechten): een aparte Teamleader-integratie "n8n planning" aanmaken
    met die redirect URL.
 3. Open vragen hierboven beantwoord + toegang tot de Sheet.
