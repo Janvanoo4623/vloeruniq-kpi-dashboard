@@ -158,6 +158,8 @@ const MAANDEN = ['Jan', 'Feb', 'Mrt', 'Apr', 'Mei', 'Jun', 'Jul', 'Aug', 'Sept',
 export type SheetLayout = 'maand' | 'oud' | 'geenDatum';
 
 interface Columns {
+  /** Opmerkingen van de planner; gaat mee als een klus naar een andere maand verhuist. */
+  opm: string;
   naam: string;
   tel: string;
   plaats: string;
@@ -171,9 +173,9 @@ interface Columns {
 }
 
 export const SHEET_COLUMNS: Record<SheetLayout, Columns> = {
-  maand: { naam: 'G', tel: 'H', plaats: 'I', m2: 'J', k: 'K', vloer: 'L', m: 'M' },
-  oud: { naam: 'D', tel: 'E', plaats: 'F', m2: 'G', k: 'H', vloer: 'I', plint: 'J', trap: 'K', mat: 'L' },
-  geenDatum: { naam: 'C', tel: 'D', plaats: 'E', m2: 'F', k: 'G', vloer: 'H', plint: 'I', trap: 'J', mat: 'K' },
+  maand: { opm: 'F', naam: 'G', tel: 'H', plaats: 'I', m2: 'J', k: 'K', vloer: 'L', m: 'M' },
+  oud: { opm: 'B', naam: 'D', tel: 'E', plaats: 'F', m2: 'G', k: 'H', vloer: 'I', plint: 'J', trap: 'K', mat: 'L' },
+  geenDatum: { opm: 'A', naam: 'C', tel: 'D', plaats: 'E', m2: 'F', k: 'G', vloer: 'H', plint: 'I', trap: 'J', mat: 'K' },
 };
 
 export interface SheetTarget {
@@ -255,6 +257,22 @@ export function linesFromQuotation(detail: {
 
 // ── Invoegen in de Sheet ────────────────────────────────────────────────
 
+/**
+ * De notitie op de naamcel is het geheugen van n8n in de Sheet: welke offerte en
+ * deal, en hoeveel rijen erbij horen. Zonder die notitie raakt n8n een rij nooit aan.
+ */
+function noteText(a: { offerteNaam: string; quotationId: string; dealId?: string; rijen: number; herkomst?: string }): string {
+  return [
+    `Automatisch uit Teamleader (n8n): ${a.offerteNaam}`,
+    a.herkomst,
+    `teamleader:${a.quotationId}`,
+    a.dealId ? `deal:${a.dealId}` : '',
+    `rijen:${a.rijen}`,
+  ]
+    .filter(Boolean)
+    .join('\n');
+}
+
 /** Een cel zoals de Sheets API hem geeft (spreadsheets.get met includeGridData). */
 export interface GridCell {
   formattedValue?: string;
@@ -297,8 +315,11 @@ export function placeRows(args: {
   rows: Record<string, string | number>[];
   quotationId: string;
   offerteNaam: string;
+  dealId?: string;
+  /** Extra regel in de notitie, bv. "Verplaatst van Nov '26". */
+  herkomst?: string;
 }): PlaceResult {
-  const { grid, sheetId, target, rows, quotationId, offerteNaam } = args;
+  const { grid, sheetId, target, rows, quotationId, offerteNaam, dealId, herkomst } = args;
   const c = SHEET_COLUMNS[target.layout];
   const marker = `teamleader:${quotationId}`;
   const waarschuwingen: string[] = [];
@@ -376,7 +397,7 @@ export function placeRows(args: {
               values: [
                 {
                   userEnteredValue: typeof value === 'number' ? { numberValue: value } : { stringValue: value },
-                  ...(isNaam ? { note: `Automatisch uit Teamleader (n8n): ${offerteNaam}\n${marker}` } : {}),
+                  ...(isNaam ? { note: noteText({ offerteNaam, quotationId, dealId, rijen: n, herkomst }) } : {}),
                 },
               ],
             },
@@ -387,4 +408,137 @@ export function placeRows(args: {
     }
   });
   return { rij: at + 1, alAanwezig: false, requests, waarschuwingen };
+}
+
+// ── Klus zoeken en verplaatsen ──────────────────────────────────────────
+
+export interface TabGrid {
+  sheetId: number;
+  title: string;
+  grid: GridCell[][];
+}
+
+/** Welke kolomindeling een tab heeft, afgeleid van zijn naam. */
+export function layoutForTab(title: string): SheetLayout {
+  const k = tabKey(title);
+  if (k === 'geendatum') return 'geenDatum';
+  if (/^\d{4}$/.test(k)) return 'oud';
+  const m = MAANDEN.findIndex((naam) => k.startsWith(naam.toLowerCase()));
+  return m >= 0 && m < 6 ? 'oud' : 'maand';
+}
+
+export interface FoundJob {
+  tab: TabGrid;
+  /** 0-gebaseerde eerste rij (die met de notitie). */
+  start: number;
+  count: number;
+}
+
+/**
+ * Zoekt de rijen die n8n voor deze offerte (of deze deal) schreef, in alle tabs.
+ * Alleen op de notitie: een klus die Jan zelf typte, wordt nooit gevonden en dus
+ * nooit verplaatst of verwijderd. Vervolgrijen tellen alleen mee zolang hun
+ * naamcel leeg is en ze geen bloklabel zijn; zet de planner er een eigen rij
+ * tussen, dan stopt het daar.
+ */
+export function findJob(tabs: TabGrid[], quotationId: string, dealId?: string): FoundJob | null {
+  const markers = [`teamleader:${quotationId}`, ...(dealId ? [`deal:${dealId}`] : [])];
+  for (const tab of tabs) {
+    const c = SHEET_COLUMNS[layoutForTab(tab.title)];
+    for (let r = 0; r < tab.grid.length; r++) {
+      const note = (tab.grid[r] ?? []).map((cell) => cell?.note ?? '').find((n) => markers.some((m) => n.includes(m)));
+      if (!note) continue;
+      const opgegeven = Number(/rijen:(\d+)/.exec(note)?.[1] ?? 0);
+      let count = 1;
+      const max = opgegeven || 50;
+      while (count < max) {
+        const row = tab.grid[r + count] ?? [];
+        if (cellText(row[col(c.naam)]) !== '' || BLOCK_RE.test(cellText(row[0]))) break;
+        // Zonder opgegeven aantal (oude notitie): alleen rijen met m² of vloer.
+        if (!opgegeven && cellText(row[col(c.m2)]) === '' && cellText(row[col(c.vloer)]) === '') break;
+        count++;
+      }
+      return { tab, start: r, count };
+    }
+  }
+  return null;
+}
+
+export type JobActie = 'nieuw' | 'verplaatst' | 'al goed' | 'niet gevonden' | 'tab ontbreekt';
+
+export interface JobResult {
+  actie: JobActie;
+  tab?: string;
+  rij?: number;
+  van?: string;
+  requests: unknown[];
+  waarschuwingen: string[];
+}
+
+/**
+ * Eén beslissing voor beide gebeurtenissen (docs/PLANNING-SHEET.md):
+ * - staat de klus al in de juiste tab → niets (de planner bepaalt de week);
+ * - staat hij in een andere tab → verhuizen: nieuwe rijen onder Overig van de
+ *   juiste maand (gegevens vers uit Teamleader, Opmerkingen gaan mee), de oude
+ *   rijen worden verwijderd. Wat de planner in A–E van de oude maand had, gaat
+ *   bewust niet mee: dat klopt niet meer (besluit Jasper 2026-11-19);
+ * - staat hij nergens → bij akkoord (`nieuw`) aanmaken, bij een gewijzigde deal
+ *   (`wijziging`) niets: dan is het een klus die Jan zelf typte.
+ */
+export function placeJob(args: {
+  tabs: TabGrid[];
+  target: SheetTarget;
+  rows: Record<string, string | number>[];
+  quotationId: string;
+  dealId?: string;
+  offerteNaam: string;
+  mode: 'nieuw' | 'wijziging';
+}): JobResult {
+  const { tabs, target, quotationId, dealId, offerteNaam, mode } = args;
+  const doel = tabs.find((t) => tabKey(t.title) === target.tabKey);
+  const gevonden = findJob(tabs, quotationId, dealId);
+
+  if (gevonden && tabKey(gevonden.tab.title) === target.tabKey) {
+    return { actie: 'al goed', tab: gevonden.tab.title, rij: gevonden.start + 1, requests: [], waarschuwingen: [] };
+  }
+  if (!gevonden && mode === 'wijziging') return { actie: 'niet gevonden', requests: [], waarschuwingen: [] };
+  if (!doel) {
+    return {
+      actie: 'tab ontbreekt',
+      requests: [],
+      waarschuwingen: [`Tab "${target.tab}" bestaat niet in de planning. Maak de maandtab aan; de klus wordt bij de volgende wijziging alsnog gezet.`],
+    };
+  }
+
+  const rows = args.rows.map((r) => ({ ...r }));
+  let herkomst: string | undefined;
+  if (gevonden) {
+    const bron = SHEET_COLUMNS[layoutForTab(gevonden.tab.title)];
+    const bronOpm = [bron.opm, ...(layoutForTab(gevonden.tab.title) === 'oud' ? ['C'] : [])];
+    const opm = gevonden.tab.grid
+      .slice(gevonden.start, gevonden.start + gevonden.count)
+      .flatMap((row) => bronOpm.map((l) => cellText(row?.[col(l)])))
+      .filter(Boolean)
+      .join(' | ');
+    if (opm && rows[0]) rows[0][SHEET_COLUMNS[target.layout].opm] = opm;
+    herkomst = `Verplaatst van ${gevonden.tab.title}`;
+  }
+
+  const ins = placeRows({ grid: doel.grid, sheetId: doel.sheetId, target, rows, quotationId, offerteNaam, dealId, herkomst });
+  const requests = [...ins.requests];
+  if (gevonden) {
+    requests.push({
+      deleteDimension: {
+        range: { sheetId: gevonden.tab.sheetId, dimension: 'ROWS', startIndex: gevonden.start, endIndex: gevonden.start + gevonden.count },
+      },
+    });
+  }
+  return {
+    actie: gevonden ? 'verplaatst' : 'nieuw',
+    tab: doel.title,
+    rij: ins.rij,
+    ...(gevonden ? { van: gevonden.tab.title } : {}),
+    requests,
+    waarschuwingen: ins.waarschuwingen,
+  };
 }

@@ -4,7 +4,7 @@
 //   npm test
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { planningJob, planningTarget, sheetRows, linesFromQuotation, placeRows, tabKey, type GridCell } from '../lib/planning-sheet';
+import { planningJob, planningTarget, sheetRows, linesFromQuotation, placeRows, placeJob, findJob, layoutForTab, tabKey, type GridCell, type TabGrid } from '../lib/planning-sheet';
 
 const regel = (description: string, quantity: number, amount: number) => ({ description, quantity, amount });
 
@@ -166,4 +166,64 @@ test('planning: cellen per indeling — eerste rij met klantgegevens, vervolgrij
   assert.equal(oud.K, 'Traprenovatie PVC dichte trap P360 Grey (13 treden)');
   assert.equal(oud.J, 'MDF Plint 90x12 gelakt zwart RAL9005');
   assert.equal(oud.E, undefined);
+});
+
+// ── Verplaatsen bij een gewijzigde datum uitvoering ──────────────────────
+
+/** Nov met een klus die n8n schreef (2 rijen) + opmerking; Dec leeg onder Overig. */
+const tabs = (): TabGrid[] => {
+  const nov = grid(8);
+  nov[5] = [{}, {}, {}, {}, {}, t('eerst egaliseren'), { ...t('Zonnebelt'), note: 'Automatisch uit Teamleader (n8n): Offerte 1151\nteamleader:q1\ndeal:d1\nrijen:2' }];
+  nov[6] = [{}, {}, {}, {}, {}, {}, {}, {}, {}, { formattedValue: '20', userEnteredValue: { numberValue: 20 } }];
+  nov[7] = [{}, {}, {}, {}, {}, {}, t('Agema')]; // een andere klus direct eronder
+  const dec = grid(8);
+  dec[5] = [];
+  return [
+    { sheetId: 11, title: "Nov '26", grid: nov },
+    { sheetId: 12, title: "Dec '26", grid: dec },
+  ];
+};
+const zonnebelt: Record<string, string | number>[] = [{ G: 'Zonnebelt', J: 48.5, L: 'Visgraat' }, { J: 20, L: 'Stroken' }];
+
+test('planning: klus wordt gevonden op de notitie, met precies zijn eigen rijen', () => {
+  const f = findJob(tabs(), 'q1');
+  assert.equal(f?.tab.title, "Nov '26");
+  assert.equal(f?.start, 5);
+  assert.equal(f?.count, 2); // Agema eronder hoort er niet bij
+  assert.equal(findJob(tabs(), 'onbekend', 'd1')?.start, 5); // ook via de deal
+  assert.equal(findJob(tabs(), 'onbekend'), null);
+});
+
+test('planning: datum naar december → nieuwe rijen in Dec onder Overig, oude rijen in Nov weg, opmerking mee', () => {
+  const r = placeJob({ tabs: tabs(), target: planningTarget('2026-12-07'), rows: zonnebelt, quotationId: 'q1', dealId: 'd1', offerteNaam: 'Offerte 1151', mode: 'wijziging' });
+  assert.equal(r.actie, 'verplaatst');
+  assert.equal(r.van, "Nov '26");
+  assert.equal(r.tab, "Dec '26");
+  const ins = r.requests[0] as any;
+  assert.equal(ins.insertDimension.range.sheetId, 12);
+  const del = r.requests.at(-1) as any;
+  assert.deepEqual(del.deleteDimension.range, { sheetId: 11, dimension: 'ROWS', startIndex: 5, endIndex: 7 });
+  const opm = r.requests.find((q: any) => q.updateCells?.start.columnIndex === 5) as any;
+  assert.equal(opm.updateCells.rows[0].values[0].userEnteredValue.stringValue, 'eerst egaliseren');
+  const naam = r.requests.find((q: any) => q.updateCells?.start.columnIndex === 6) as any;
+  assert.match(naam.updateCells.rows[0].values[0].note, /Verplaatst van Nov '26/);
+  assert.match(naam.updateCells.rows[0].values[0].note, /rijen:2/);
+});
+
+test('planning: zelfde maand → niets; Jans eigen klus (geen notitie) → niets; geen datum → naar "Geen datum"', () => {
+  const zelfde = placeJob({ tabs: tabs(), target: planningTarget('2026-11-30'), rows: zonnebelt, quotationId: 'q1', offerteNaam: 'x', mode: 'wijziging' });
+  assert.equal(zelfde.actie, 'al goed');
+  assert.deepEqual(zelfde.requests, []);
+  const handwerk = placeJob({ tabs: tabs(), target: planningTarget('2026-12-07'), rows: zonnebelt, quotationId: 'jan-typte-dit', offerteNaam: 'x', mode: 'wijziging' });
+  assert.equal(handwerk.actie, 'niet gevonden');
+  const geen = placeJob({ tabs: tabs(), target: planningTarget(null), rows: zonnebelt, quotationId: 'q1', offerteNaam: 'x', mode: 'wijziging' });
+  assert.equal(geen.actie, 'tab ontbreekt'); // in deze test bestaat "Geen datum" niet
+  assert.deepEqual(geen.requests, []);
+});
+
+test('planning: kolomindeling volgt de tabnaam', () => {
+  assert.equal(layoutForTab("Okt' 26"), 'maand');
+  assert.equal(layoutForTab("Jun '26"), 'oud');
+  assert.equal(layoutForTab('2027'), 'oud');
+  assert.equal(layoutForTab('Geen datum'), 'geenDatum');
 });

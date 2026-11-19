@@ -1,25 +1,31 @@
-// POST /api/planning/plaats — waar in de tab komen de rijen, en de batchUpdate
-// voor Google Sheets. Tweede stap van de n8n-flow (docs/PLANNING-SHEET.md):
+// POST /api/planning/plaats — wat er met een klus in de Sheet moet gebeuren, en
+// de batchUpdate voor Google Sheets. Tweede stap van de n8n-flow (docs/PLANNING-SHEET.md):
 //   1. POST /api/planning        → target (tab, blok) + rows (cellen)
-//   2. n8n leest die tab (spreadsheets.get, includeGridData, A1:M400)
-//   3. POST /api/planning/plaats → requests; n8n stuurt die naar :batchUpdate
+//   2. n8n leest de hele Sheet (spreadsheets.get, includeGridData, A1:M400 per tab)
+//   3. POST /api/planning/plaats → actie + requests; n8n stuurt requests naar :batchUpdate
+// actie: nieuw | verplaatst | al goed | niet gevonden | tab ontbreekt.
+// mode "nieuw" bij quotation.accepted, "wijziging" bij deal.updated (dan nooit aanmaken).
 // Zuiver rekenen, geen database; zelfde sleutel als /api/planning.
 import { NextResponse } from 'next/server';
-import { placeRows, type GridCell, type SheetTarget } from '@/lib/planning-sheet';
+import { placeJob, type GridCell, type SheetTarget, type TabGrid } from '@/lib/planning-sheet';
 import { authorized } from '@/lib/planning-token';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
+type SheetsResponse = {
+  sheets?: { properties?: { sheetId?: number; title?: string }; data?: { rowData?: { values?: GridCell[] }[] }[] }[];
+};
+
 interface Body {
-  /** Het antwoord van spreadsheets.get voor één tab (sheets[0]). */
-  sheet?: {
-    sheets?: { properties?: { sheetId?: number; title?: string }; data?: { rowData?: { values?: GridCell[] }[] }[] }[];
-  };
+  /** spreadsheets.get met alle tabs (includeGridData). */
+  spreadsheet?: SheetsResponse;
   target?: SheetTarget;
   rows?: Record<string, string | number>[];
   quotationId?: string;
+  dealId?: string;
   offerteNaam?: string;
+  mode?: 'nieuw' | 'wijziging';
 }
 
 export async function POST(request: Request) {
@@ -32,22 +38,27 @@ export async function POST(request: Request) {
   } catch {
     return NextResponse.json({ ok: false, error: 'Body is geen JSON' }, { status: 400 });
   }
-  const tab = body.sheet?.sheets?.[0];
-  const sheetId = tab?.properties?.sheetId;
-  if (sheetId == null || !body.target || !Array.isArray(body.rows) || !body.rows.length || !body.quotationId) {
+  const tabs: TabGrid[] = (body.spreadsheet?.sheets ?? [])
+    .filter((s) => s.properties?.sheetId != null && s.properties?.title)
+    .map((s) => ({
+      sheetId: s.properties!.sheetId!,
+      title: s.properties!.title!,
+      grid: (s.data?.[0]?.rowData ?? []).map((r) => r.values ?? []),
+    }));
+  if (!tabs.length || !body.target || !Array.isArray(body.rows) || !body.rows.length || !body.quotationId) {
     return NextResponse.json(
-      { ok: false, error: 'sheet (met sheetId), target, rows en quotationId zijn verplicht' },
+      { ok: false, error: 'spreadsheet (met tabs), target, rows en quotationId zijn verplicht' },
       { status: 400 },
     );
   }
-  const grid = (tab?.data?.[0]?.rowData ?? []).map((r) => r.values ?? []);
-  const result = placeRows({
-    grid,
-    sheetId,
+  const result = placeJob({
+    tabs,
     target: body.target,
     rows: body.rows,
     quotationId: body.quotationId,
+    dealId: body.dealId,
     offerteNaam: body.offerteNaam ?? '',
+    mode: body.mode === 'wijziging' ? 'wijziging' : 'nieuw',
   });
-  return NextResponse.json({ ok: true, tab: tab?.properties?.title, ...result });
+  return NextResponse.json({ ok: true, ...result });
 }
