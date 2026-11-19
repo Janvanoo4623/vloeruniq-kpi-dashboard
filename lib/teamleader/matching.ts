@@ -103,6 +103,30 @@ const NO_LABOR_RE =
 const HAS_LABOR_RE = /\bleg(?:gen?|service)\b|\bgelegd\b|\bmont(?:age|eren)\b|\baanbreng(?:en)?\b/i;
 
 /**
+ * Is deze regel een vloer (en geen overig product, trapmateriaal of afwerking)?
+ * Overige producten worden vóór deze test herkend met `classifyExtra`.
+ * Gedeeld met lib/planning-sheet.ts, zodat de planning dezelfde regels volgt.
+ */
+export function isFloorLine(rawDesc: string): boolean {
+  const descTrimmed = rawDesc.trim();
+  const desc = rawDesc.toLowerCase();
+  if (desc.includes('trap')) return false; // overige trapregels (profielsets, plateau) blijven erbuiten
+  // "kitten langs wand" finishing line — but never drop a priced floor line.
+  if (FINISHING_RE.test(desc) && !P_NUMBER_TEST.test(descTrimmed)) return false;
+  return (
+    P_NUMBER_TEST.test(descTrimmed) ||
+    FLOOR_TYPE_RE.test(descTrimmed) ||
+    (POURED_FLOOR_RE.test(descTrimmed) && !REMOVAL_RE.test(descTrimmed))
+  );
+}
+
+/** Legservice: uitsluiting wordt vóór het woord "leggen" zelf getest. */
+export function laborRuleOf(rawDesc: string): LaborRule {
+  const desc = rawDesc.toLowerCase();
+  return NO_LABOR_RE.test(desc) ? 'excluded' : HAS_LABOR_RE.test(desc) ? 'included' : 'unknown';
+}
+
+/**
  * Naam afleiden uit de omschrijving als er géén P-nummer is en geen naam uit de
  * prijslijst matcht. Zonder dit verdwijnt de regel volledig: hij telt wél mee in
  * m² en omzet, maar duikt nergens op als "vloer zonder inkoopprijs" — want die
@@ -236,15 +260,7 @@ export function parseQuotation(
         });
         continue;
       }
-      if (desc.includes('trap')) continue; // overige trapregels (profielsets, plateau) blijven erbuiten
-      // "kitten langs wand" finishing line — but never drop a priced floor line.
-      if (FINISHING_RE.test(desc) && !P_NUMBER_TEST.test(descTrimmed)) continue;
-
-      const isFloor =
-        P_NUMBER_TEST.test(descTrimmed) ||
-        FLOOR_TYPE_RE.test(descTrimmed) ||
-        (POURED_FLOOR_RE.test(descTrimmed) && !REMOVAL_RE.test(descTrimmed));
-      if (!isFloor) continue;
+      if (!isFloorLine(rawDesc)) continue;
 
       const quantity = item.quantity ?? 0;
       const { revenue: lineRevenue, revenueBeforeDiscount } = netto(brutoRegel);
@@ -304,11 +320,7 @@ export function parseQuotation(
             : 0;
 
       // Legservice → labour. Exclusion is tested before the word "leggen" itself.
-      const laborRule: LaborRule = NO_LABOR_RE.test(desc)
-        ? 'excluded'
-        : HAS_LABOR_RE.test(desc)
-          ? 'included'
-          : 'unknown';
+      const laborRule = laborRuleOf(rawDesc);
       const laborPerM2 = laborRule === 'excluded' ? 0 : costs.alwaysPerM2;
       if (laborRule === 'unknown') needsReview = true;
 

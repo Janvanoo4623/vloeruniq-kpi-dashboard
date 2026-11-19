@@ -7,12 +7,14 @@ import { AUTH_COOKIE, verifyToken } from './lib/auth-cookie';
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Public paths: the login page/API, and the cron sync (which self-protects
-  // with CRON_SECRET and is called without a session cookie).
+  // Public paths: the login page/API, the cron sync (self-protects with
+  // CRON_SECRET) and the planning endpoint for n8n (PLANNING_API_SECRET).
+  // Both are called without a session cookie.
   if (
     pathname === '/login' ||
     pathname.startsWith('/api/login') ||
-    pathname.startsWith('/api/sync')
+    pathname.startsWith('/api/sync') ||
+    pathname === '/api/planning' // n8n, self-protected with PLANNING_API_SECRET
   ) {
     return NextResponse.next();
   }

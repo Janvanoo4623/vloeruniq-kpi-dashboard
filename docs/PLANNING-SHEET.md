@@ -163,6 +163,45 @@ in kolom A vrije tekst als "Feb '27", "2e kwartaal 2027", "begin mei".
   "append" onderaan de tab werkt dus niet. Voorstel: een vast blok "Nog in te plannen" bovenaan
   elke maandtab.
 
+## Gebouwd — endpoint `POST /api/planning` (2026-11-19)
+
+`lib/planning-sheet.ts` (zuiver, getest in `tests/planning-sheet.test.ts`) + `app/api/planning/route.ts`.
+
+**Invoer** (JSON): `naam`, `plaats`, `telefoon`, `datumUitvoering` (YYYY-MM-DD of leeg) en
+`quotation` = de `data` van Teamleader `quotations.info` (of `lines` al plat). n8n haalt die op met
+zijn eigen Teamleader-token; het endpoint praat nooit zelf met Teamleader en leest geen database.
+
+**Uitvoer**: `target` `{ tab, block, layout }`, `rows` = per rij `{ kolomletter: waarde }`,
+`overigWerk` (sleuven, vloerverwarming, fermacell, verwijderen — voor Opmerkingen, niet geschreven).
+
+**Beveiliging**: `Authorization: Bearer <sleutel>`. Sleutel maken: `npm run planning:token` → sleutel
+in `.env.local` (`PLANNING_API_SECRET`), alleen de sha256-hash in Supabase
+(`app_settings.planning_api`), daar leest productie hem. Los van `CRON_SECRET`. `proxy.ts` laat
+alleen dit pad zonder sessie door.
+
+**Waarom de ruwe offerteregels** en niet de opgeslagen offerte: (1) plint staat vaak met €0 op de
+offerte ("op nacalculatie") en de sync bewaart geen regels van €0; (2) de webhook komt op het moment
+van akkoord, de sync pas later.
+
+**Regels** (elk getoetst tegen Jans echte rijen):
+- Eén rij per vloerregel, niet samengevoegd: offertes zetten dezelfde vloer per verdieping op een
+  eigen regel (46 + 46 m²) en Jan maakt daar ook twee rijen van. Verdieping (K) blijft handwerk.
+- Vloer zonder legservice → m² in K, J leeg (telt niet mee in het maandtotaal).
+- Vloernaam = deel vóór de eerste `|`. Jan kort vaak in ("P420 Brown"); wij laten de volle naam staan.
+- M = plint, trap, mat (`classifyExtra`), met aantal: `70m1 …`, `… (26 treden)`, `2x …`. Een plint
+  van €0 naast dezelfde plint mét aantal telt één keer. Tapijt per m² krijgt een vloerrij.
+
+**Vergelijking met Jans Sheet** (Jul–Dec 26 + 2027 + Geen datum; 177 rijen, per offerte de
+volledigste rij; script in scratchpad, niet in de repo):
+- 124 van 146 klussen gekoppeld aan een offerte op naam (de rest: projectklanten als "Chinees",
+  "Klus via Avanta", fases zonder offerte).
+- **81% van Jans m²-rijen** (115/142) komt binnen 1 m² terug. De rest is Jans eigen aanpassing
+  (opgemeten, afgerond, andere versie van de offerte) of een offerte per kamer die Jan samenvoegt.
+- **Kolom M**: Jan had iets en wij niets bij 3 van 69 klussen (was 33 vóór de €0-regels meetelden).
+- Gevonden bug, apart op te pakken: regels die met **"Click PVC"** beginnen zonder P-nummer worden
+  niet als vloer herkend (`FLOOR_TYPE_RE` kent alleen "klik"). Raakt ook m² en marge in het
+  dashboard (o.a. offerte 1241, "Click PVC Tegels Basic Natural"); fixen met de margediff.
+
 ## Open vragen
 
 Alleen gevraagd wat niet uit de Sheet of de data te halen is (2026-11-18):
