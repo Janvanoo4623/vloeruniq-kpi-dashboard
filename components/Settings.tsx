@@ -59,7 +59,7 @@ export default function Settings({ initial }: { initial: State }) {
           kpi: data.kpi ?? state.kpi,
           quality: state.quality,
         });
-        setMessage(okMessage ?? 'Opgeslagen.');
+        setMessage(data.melding ?? okMessage ?? 'Opgeslagen.');
         return true;
       }
       setMessage(data.error || 'Opslaan mislukt.');

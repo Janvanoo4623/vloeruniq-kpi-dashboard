@@ -7,6 +7,7 @@ import {
   getCurrentCosts,
   listExclusions,
   addPrice,
+  getPriceRows,
   addCost,
   addExclusion,
   removeExclusion,
@@ -41,6 +42,7 @@ export async function POST(request: Request) {
     // Instellingen boven de tabel; 2000-01-01 betekent 'met terugwerkende
     // kracht', want dat ligt ruim vóór de oudste offerte.
     let effectiveFrom: string | undefined;
+    let melding: string | undefined;
     if (body.effectiveFrom != null) {
       effectiveFrom = String(body.effectiveFrom).trim();
       if (!/^\d{4}-\d{2}-\d{2}$/.test(effectiveFrom)) return bad('Ongeldige ingangsdatum.');
@@ -51,6 +53,18 @@ export async function POST(request: Request) {
         const code = String(body.code ?? '').trim();
         const price = Number(body.price);
         if (!code || !Number.isFinite(price) || price < 0) return bad('Ongeldige prijs of code.');
+        // Een EERSTE prijs voor een product bestond altijd al, hij was alleen niet
+        // vastgelegd (zelfde regel als de snelinvoer op Controleren). "Vanaf vandaag"
+        // liet alle bestaande offertes zonder prijs: Jan vulde op 2026-11-20 elf
+        // overige producten zo in. Wie bewust een datum kiest, krijgt die datum.
+        if (effectiveFrom == null) {
+          const lower = code.toLowerCase();
+          const bestaat = (await getPriceRows()).some((r) => r.code.trim().toLowerCase() === lower);
+          if (!bestaat) {
+            effectiveFrom = '2000-01-01';
+            melding = 'Opgeslagen. Eerste prijs voor dit product: geldt ook voor oudere offertes.';
+          }
+        }
         await addPrice(code, price, effectiveFrom);
         break;
       }
@@ -82,7 +96,7 @@ export async function POST(request: Request) {
       default:
         return bad('Onbekende actie.');
     }
-    return NextResponse.json({ ok: true, ...(await currentState()) });
+    return NextResponse.json({ ok: true, ...(melding ? { melding } : {}), ...(await currentState()) });
   } catch (err) {
     return NextResponse.json(
       { ok: false, error: err instanceof Error ? err.message : String(err) },
