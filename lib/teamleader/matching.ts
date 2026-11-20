@@ -181,6 +181,45 @@ export function discountFactor(
   return Math.min(1, totalExcl / positief);
 }
 
+type DetailWithLines = {
+  grouped_lines?: {
+    line_items?: { description?: string; quantity?: number; total?: { tax_exclusive?: { amount?: number } } }[];
+  }[];
+} | null;
+
+/**
+ * Korting over de VLOER (Jan, 2026-11-20: "In principe is de korting niet over
+ * de plinten maar over de vloer"). Vervangt de verdeling over alle regels van
+ * 2026-11-18 voor de regels die we opslaan. Bijna alle kortingsregels zijn
+ * algemeen ("Regiokorting", "Korting", "Korting >100m2"); een productkorting als
+ * "korting plint" kwam in de dump niet voor.
+ *
+ * Korting = som van de positieve regels − offertetotaal. Die gaat in zijn geheel
+ * van de vloerregels af; overige producten houden hun bedrag. Is er geen vloer,
+ * of is de korting groter dan het vloerbedrag (alternatieven, rare offertes),
+ * dan naar rato over alles, zoals voorheen. Het offertetotaal en de marge per
+ * offerte veranderen niet — alleen hoe de omzet over vloer en plinten verdeeld is.
+ */
+export function discountFactors(detail: DetailWithLines, totalExcl: number): { floor: number; other: number } {
+  let positief = 0;
+  let vloer = 0;
+  for (const g of detail?.grouped_lines ?? []) {
+    for (const item of g.line_items ?? []) {
+      const a = item.total?.tax_exclusive?.amount ?? 0;
+      if (!(a > 0)) continue;
+      positief += a;
+      const d = item.description ?? '';
+      if (!classifyExtra(d, item.quantity ?? 0, a) && isFloorLine(d)) vloer += a;
+    }
+  }
+  if (!(totalExcl > 0) || !(positief > 0)) return { floor: 1, other: 1 };
+  const korting = positief - totalExcl;
+  if (korting <= 0) return { floor: 1, other: 1 };
+  if (vloer > korting) return { floor: (vloer - korting) / vloer, other: 1 };
+  const f = totalExcl / positief;
+  return { floor: f, other: f };
+}
+
 export function parseQuotation(
   summary: TLQuotationSummary,
   detail: TLQuotationDetail | null,
@@ -227,10 +266,12 @@ export function parseQuotation(
   let needsReview = false;
   const products: string[] = []; // matched floor products (P-numbers / names), distinct
   const lines: QuotationLine[] = []; // per-product line stats for top-products aggregation
-  const factor = discountFactor(detail, totalExcl);
+  const factors = discountFactors(detail as DetailWithLines, totalExcl);
   /** Regelbedrag na korting, plus het bedrag ervóór als er korting was. */
-  const netto = (bruto: number) =>
-    factor < 1 ? { revenue: round(bruto * factor), revenueBeforeDiscount: bruto } : { revenue: bruto };
+  const netto = (bruto: number, soort: 'floor' | 'other') => {
+    const factor = factors[soort];
+    return factor < 1 ? { revenue: round(bruto * factor), revenueBeforeDiscount: bruto } : { revenue: bruto };
+  };
 
   for (const group of detail?.grouped_lines ?? []) {
     for (const item of group.line_items ?? []) {
@@ -249,7 +290,7 @@ export function parseQuotation(
       // Herkend op het bedrag vóór korting: de prijsgrenzen in classifyExtra
       // zijn op lijstprijzen gemeten.
       const extra = brutoRegel !== 0 ? classifyExtra(rawDesc, item.quantity ?? 0, brutoRegel) : null;
-      const { revenue: extraRevenue, revenueBeforeDiscount: extraBruto } = netto(brutoRegel);
+      const { revenue: extraRevenue, revenueBeforeDiscount: extraBruto } = netto(brutoRegel, 'other');
       if (extra) {
         const qty = extra.quantity ?? item.quantity ?? 0;
         const cpu = priceConfig.nameMatches.find((nm) => nm.name === extra.code.toLowerCase())?.price;
@@ -270,7 +311,7 @@ export function parseQuotation(
       if (!isFloorLine(rawDesc)) continue;
 
       const quantity = item.quantity ?? 0;
-      const { revenue: lineRevenue, revenueBeforeDiscount } = netto(brutoRegel);
+      const { revenue: lineRevenue, revenueBeforeDiscount } = netto(brutoRegel, 'floor');
       totalM2 += quantity;
       omzetVloer += lineRevenue;
 

@@ -140,6 +140,15 @@ const MAT_RE = /entreemat|droogloopmat|schoonloopmat/i;
 const PER_RUNNING_METER_RE = /strekkende meter/i;
 
 const CARPET_RE = /tapijt/i;
+// Tapijt van de rol per strekkende meter (Jan 2026-11-20: "per strekkende meter op
+// 4 mtr breed, dus 1x4 = 4m2"). Herkend aan de tekst of aan de prijs: per m² ligt
+// tapijt rond €30–52, per strekkende meter rond €90–170. Het aantal wordt m²
+// (meters × rolbreedte), zodat materiaal en arbeid allebei per m² rekenen.
+const CARPET_PER_M2_RE = /per\s*m(?:2|²)/i;
+const CARPET_RUNNING_RE = /strekkende\s*meter/i;
+const CARPET_RUNNING_MIN_PRICE = 80;
+const ROLL_WIDTH_RE = /\b([345]\d{2})\s*cm\b/i;
+const DEFAULT_ROLL_WIDTH_M = 4;
 
 // Kurkstuc/KorqStuc op wanden en plafonds (7 regels in de dump van 2026-11-18).
 // Overal in de tekst: "Wand uitvlakken met Ardex R1 | Aanbrengen 2 lagen
@@ -208,7 +217,14 @@ export function classifyExtra(rawDesc: string, quantity: number, revenue: number
   }
 
   if (CARPET_RE.test(head)) {
-    return fixed ? { code: 'Tapijt (vast bedrag)', unit: 'stuk' } : { code: 'Tapijt', unit: 'm2' };
+    if (fixed) return { code: 'Tapijt (vast bedrag)', unit: 'stuk' };
+    const perMeter = !CARPET_PER_M2_RE.test(desc) && (CARPET_RUNNING_RE.test(desc) || unitPrice >= CARPET_RUNNING_MIN_PRICE);
+    if (perMeter) {
+      const w = desc.match(ROLL_WIDTH_RE);
+      const breedte = w ? Number(w[1]) / 100 : DEFAULT_ROLL_WIDTH_M;
+      return { code: 'Tapijt', unit: 'm2', quantity: Math.round(quantity * breedte * 100) / 100 };
+    }
+    return { code: 'Tapijt', unit: 'm2' };
   }
 
   if (CORK_PLASTER_RE.test(desc) && !fixed) return { code: 'Kurkstuc', unit: 'm2' };

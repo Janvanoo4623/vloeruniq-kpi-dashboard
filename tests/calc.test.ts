@@ -476,7 +476,7 @@ test('nacalculatie: nooit meer dan er boven de offerte is gefactureerd', () => {
 
 // ── Korting naar rato (2026-11-18) ───────────────────────────────────────
 
-test('korting: negatieve regel wordt naar rato over alle regels verdeeld', async () => {
+test('korting: negatieve regel gaat van de vloer af, de plint houdt zijn prijs', async () => {
   const { parseQuotation } = await import('../lib/teamleader/matching');
   const regel = (description: string, quantity: number, amount: number) => ({
     description,
@@ -509,11 +509,13 @@ test('korting: negatieve regel wordt naar rato over alle regels verdeeld', async
     { pNumbers: { P700: 30 }, nameMatches: [] } as never,
     { alwaysPerM2: 10, gluedPerM2: 5, selfAdhesivePerM2: 6 },
   );
-  const factor = 6647.94 / (6090.91 + 1306.12);
+  // Jan 2026-11-20: "de korting is niet over de plinten maar over de vloer".
   assert.equal(q.lines?.length, 2, 'de kortingsregel is geen product');
-  assert.equal(q.lines?.[0].revenue, Math.round(6090.91 * factor * 100) / 100);
+  assert.equal(q.lines?.[0].revenue, Math.round((6090.91 - 749.09) * 100) / 100);
   assert.equal(q.lines?.[0].revenueBeforeDiscount, 6090.91);
-  assert.equal(q.omzetVloer, Math.round(6090.91 * factor * 100) / 100);
+  assert.equal(q.omzetVloer, Math.round((6090.91 - 749.09) * 100) / 100);
+  assert.equal(q.lines?.[1].revenue, 1306.12);
+  assert.equal(q.lines?.[1].revenueBeforeDiscount, undefined);
   // Vloer + plint samen = offertetotaal (op afronding na).
   const som = (q.lines ?? []).reduce((t, l) => t + l.revenue, 0);
   assert.ok(Math.abs(som - 6647.94) < 0.02);
@@ -526,6 +528,27 @@ test('korting: zonder korting of zonder totaal blijven de bedragen gelijk', asyn
   assert.equal(discountFactor(d, 0), 1, 'geen totaal: niets aannemen');
   assert.equal(discountFactor(d, 1200), 1, 'nooit boven 1');
   assert.equal(discountFactor(d, 900), 0.9);
+});
+
+test('korting zonder vloer, of groter dan de vloer: naar rato over alles', async () => {
+  const { discountFactors } = await import('../lib/teamleader/matching');
+  const r = (description: string, quantity: number, amount: number) => ({ description, quantity, total: { tax_exclusive: { amount } } });
+  const alleenPlint = { grouped_lines: [{ line_items: [r('MDF Plint 90x12 | Incl. montage', 60, 1000), r('Korting', 1, -100)] }] };
+  assert.deepEqual(discountFactors(alleenPlint, 900), { floor: 0.9, other: 0.9 });
+  const kleineVloer = { grouped_lines: [{ line_items: [r('PVC Stroken P405 | Incl. leggen', 2, 100), r('MDF Plint 90x12 | Incl. montage', 60, 900), r('Korting', 1, -200)] }] };
+  assert.deepEqual(discountFactors(kleineVloer, 800), { floor: 0.8, other: 0.8 });
+  assert.deepEqual(discountFactors(kleineVloer, 1000), { floor: 1, other: 1 });
+});
+
+test('tapijt per strekkende meter wordt m² (meters × rolbreedte)', async () => {
+  const { classifyExtra } = await import('../lib/extras');
+  assert.equal(classifyExtra('Tapijt Nifty 0900 Groen 400cm breed | Incl. leggen | Prijs per strekkende meter', 5.6, 509)?.quantity, 22.4);
+  assert.equal(classifyExtra('Tapijt Roxburgh kleur 87 incl. leggen | 500cm breed', 4.6, 490)?.quantity, 23);
+  // Zonder breedte en zonder tekst: herkend aan de prijs, standaard 4 m.
+  assert.equal(classifyExtra('Tapijt Touch of Cashmere kleur 72 | Incl. lijmen en leggen tapijt', 5.1, 716)?.quantity, 20.4);
+  // Per m², ook met een rolbreedte erbij: niet omrekenen.
+  assert.equal(classifyExtra('Tapijt Touch of Marrakesh 7614 | Incl. leggen tapijt | 400cm breed | Prijs per m2', 10.28, 446)?.quantity, undefined);
+  assert.equal(classifyExtra('Tapijttegels Skyper 6488 | incl. leggen tapijttegels', 125, 3750)?.quantity, undefined);
 });
 
 test('korting op de factuur: nacalculatie rekent na korting, kortingsregel is geen plint', async () => {

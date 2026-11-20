@@ -4,7 +4,7 @@ import { apiCall, mapLimit } from './client';
 import { FETCH_CONCURRENCY } from './constants';
 import { round } from './dates';
 import { classifyExtra } from '../extras';
-import { discountFactor } from './matching';
+import { discountFactors } from './matching';
 import * as db from '../db';
 import type { InvoiceExtraLine, InvoiceRow } from '../types';
 
@@ -15,12 +15,12 @@ interface TLInvoiceDetail {
 
 /**
  * De overige producten op één factuur, opgeteld per code, ná korting: een
- * negatieve regel is korting en wordt naar rato over de regels verdeeld, net als
- * op de offerte (zie discountFactor in matching.ts).
+ * negatieve regel is korting en gaat van de vloer af, net als op de offerte (zie
+ * discountFactors in matching.ts).
  */
 export function extrasFromInvoice(detail: TLInvoiceDetail | null): InvoiceExtraLine[] {
   const perCode = new Map<string, InvoiceExtraLine>();
-  const factor = discountFactor(detail, detail?.total?.tax_exclusive?.amount ?? 0);
+  const factor = discountFactors(detail, detail?.total?.tax_exclusive?.amount ?? 0).other;
   for (const g of detail?.grouped_lines ?? []) {
     for (const item of g.line_items ?? []) {
       const bruto = item.total?.tax_exclusive?.amount ?? 0;
@@ -50,7 +50,9 @@ export async function syncInvoiceExtras(invoices: InvoiceRow[], limit = Infinity
   try {
     const store = await db.getInvoiceExtras();
     const todo = invoices
-      .filter((i) => i.status !== 'draft' && i.totalExcl > 0 && !store.invoices[i.id]?.net)
+      // versie 2 (2026-11-20): korting over de vloer + kurkstuc/sleuven/vloerverwarming.
+      // Oudere ingangen worden één keer opnieuw opgehaald.
+      .filter((i) => i.status !== 'draft' && i.totalExcl > 0 && store.invoices[i.id]?.versie !== 2)
       .sort((a, b) => b.invoiceDate.localeCompare(a.invoiceDate));
     const batch = todo.slice(0, limit);
     if (batch.length === 0) return { fetched: 0, remaining: 0 };
@@ -65,7 +67,7 @@ export async function syncInvoiceExtras(invoices: InvoiceRow[], limit = Infinity
     batch.forEach((inv, i) => {
       const d = details[i];
       if (d === undefined) return;
-      store.invoices[inv.id] = { dealId: inv.dealId, lines: extrasFromInvoice(d), net: true };
+      store.invoices[inv.id] = { dealId: inv.dealId, lines: extrasFromInvoice(d), net: true, versie: 2 };
     });
     await db.setInvoiceExtras(store);
     return { fetched: batch.length, remaining: todo.length - batch.length };

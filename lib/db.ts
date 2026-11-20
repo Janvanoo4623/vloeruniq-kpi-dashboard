@@ -835,7 +835,7 @@ export interface InvoiceExtrasStore {
    * ingang zonder wordt opnieuw opgehaald: de offertes rekenen sindsdien na
    * korting, en een factuur vóór korting zou het verschil als nacalculatie tellen.
    */
-  invoices: Record<string, { dealId: string; lines: import('./types').InvoiceExtraLine[]; net?: true }>;
+  invoices: Record<string, { dealId: string; lines: import('./types').InvoiceExtraLine[]; net?: true; versie?: number }>;
 }
 export const EMPTY_INVOICE_EXTRAS: InvoiceExtrasStore = { invoices: {} };
 

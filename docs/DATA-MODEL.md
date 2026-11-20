@@ -570,6 +570,26 @@ korting van een ander onderdeel draagt. Een negatieve regel is altijd korting, n
   vóór korting naast een offerte ná korting het verschil als nacalculatie tellen.
 - Wordt bij de **sync** toegepast, niet bij het lezen: oude offertes krijgen het pas na een backfill.
 
+### Korting over de vloer — 2026-11-20 (vervangt de verdeling over alle regels)
+
+Jan: "In principe is de korting niet over de plinten maar over de vloer." Regel nu
+(`discountFactors` in `matching.ts`): korting = som positieve regels − offertetotaal, in zijn geheel
+van de **vloerregels** af; overige producten houden hun bedrag. Geen vloer, of korting ≥ vloerbedrag:
+naar rato over alles zoals hierboven. Facturen idem (`extrasFromInvoice` gebruikt de factor voor
+overige producten); ingangen in `invoice_extras` zonder `versie: 2` worden één keer opnieuw opgehaald.
+
+- Kortingsteksten in de dump zijn vrijwel allemaal algemeen (Regiokorting 176×, Korting 168×, Korting
+  in de regio, Kenniskorting, Korting >100m2 …); "korting plint" kwam niet voor.
+- De data bevestigt het rekenkundig niet: van 279 offertes met korting, vloer én overig product is de
+  korting 27× een rond percentage van de vloer en 34× van het totaal (bv. precies 10,00%). Jan rekent
+  soms over het totaal, maar bedoelt de korting voor de vloer. Het gaat om toerekening, niet om geld:
+  per offerte veranderen omzet en marge niet (bij volledig beprijsde offertes).
+- Schatting op geaccepteerde offertes (dump): vloeromzet −€19k (€44,68 → €44,04 per m²), plinten +€5k.
+- Ook vóór korting verkoopt Vloeruniq plinten meestal onder Jans €16,48 ex btw (€19,95 incl.): mediaan
+  €14,83/m, 53% van de meters tussen €12 en €15. Plinten blijven dus dicht bij de kostprijs als ze
+  worden uitbesteed (€10/m). Eigen mensen doen ±50 m in 2–2,5 uur met z'n tweeën à €45/u (≈ €4/m),
+  maar dat is volgens Jan de uitzondering: het tarief blijft €10/m.
+
 ## Arbeid per categorie — input 2026-11-18, gebouwd 2026-11-19
 
 Besluit (gesprek Jan, 2026-11-18): bij overige producten **arbeid apart van materiaal**. Arbeid krijgt
@@ -674,11 +694,14 @@ een andere marge, elke wijziging zit in een plint- of lavasteenregel. Marge geac
 
 ### Nog aan Jan gevraagd
 
-- **Tapijt €24 per m1**: per strekkende meter van de rol (400 cm breed ≈ €6/m²) of per m²?
-  Tapijt staat in de offertes op beide manieren (per m² rond €45–52, per strekkende meter rond
-  €90–140). Tot het antwoord er is: geen arbeid op tapijt (tarief `arbeid:tapijt` = €0 per m², aan te
-  passen in Instellingen → Kosten).
-- **Plinten**: klopt €10/m arbeid + €4,36/m inkoop? Dan verkoopt hij plinten rond kostprijs (zie diff).
+Beantwoord 2026-11-20:
+- **Tapijt**: €24 per strekkende meter van een rol van 4 m = **€6/m²** (`arbeid:tapijt`). Tapijt per
+  strekkende meter (tekst "strekkende meter", of €80+ per eenheid zonder "per m2") wordt in
+  `classifyExtra` omgerekend naar m²: meters × rolbreedte ("400cm"/"500cm", anders 4 m). Zo rekenen
+  materiaal en arbeid allebei per m². Gecontroleerd op de dump: rollen komen uit op €21–35/m²,
+  tapijttegels en ondertapijt blijven ongemoeid. Werkt na een backfill.
+- **Plinten**: €10/m (uitbesteed) en €4,36/m inkoop kloppen; verkoop €19,95/m incl. btw; korting
+  hoort bij de vloer (zie "Korting over de vloer").
 
 ## "Click PVC" en "Zelf leggen" — 2026-11-19
 

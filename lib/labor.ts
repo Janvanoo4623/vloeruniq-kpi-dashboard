@@ -26,7 +26,7 @@ export const LABOR_CATEGORIES: LaborCategory[] = [
   { key: 'arbeid:trap_overzet', label: 'Traprenovatie overzettreden', unit: 'per trap', fallback: 720, note: 'bij verkoop per trede: 1 trap per 14 treden' },
   { key: 'arbeid:trap_tapijt', label: 'Trap met tapijt', unit: 'per trap', fallback: 360 },
   { key: 'arbeid:entreemat', label: 'Entreematten', unit: 'per meter of m²', fallback: 7.5 },
-  { key: 'arbeid:tapijt', label: 'Tapijt leggen', unit: 'per m²', fallback: 0, note: 'nog open: Jan noemde €24 per m¹ (rol 4 m breed ≈ €6/m²?)' },
+  { key: 'arbeid:tapijt', label: 'Tapijt leggen', unit: 'per m²', fallback: 6, note: '€24 per strekkende meter van een rol van 4 m (Jan 2026-11-20)' },
   { key: 'arbeid:kurkstuc', label: 'Kurkstuc aanbrengen', unit: 'per m²', fallback: 26 },
   { key: 'arbeid:sleuven', label: 'Sleuven dichtzetten', unit: 'per m²', fallback: 1.25 },
   { key: 'arbeid:lavasteen', label: 'Lavasteen gietvloer', unit: 'per m²', fallback: 15, note: 'in plaats van het legtarief' },
