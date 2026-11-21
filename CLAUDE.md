@@ -39,6 +39,7 @@ a live web dashboard the business owner and his client can view on any device.
 - `docs/API.md` — Teamleader endpoints used + this app's internal API routes.
 - `docs/DEPLOYMENT.md` — Vercel + Upstash + env vars + password auth.
 - `docs/ROADMAP.md` — build phases and status.
+- `docs/changelog/` — **logboek per dag** (kaart per wijziging: effect op de cijfers, wat Jan merkt). Bijwerken bij elke push die live gaat; format in `docs/changelog/README.md`.
 - `docs/ATTRIBUTIE.md` — plan omzet per campagne (click-ID), wat de website nu doet.
 - `docs/PLANNING-SHEET.md` — Jans planning-Sheet, wat n8n vanuit Teamleader moet vullen, open vragen.
 - `docs/UI.md` — **navigation (9 sections), the page template, colour and chart rules.** Read before
