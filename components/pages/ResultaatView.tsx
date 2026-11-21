@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AlertTriangle, CircleCheck, Coins, Factory, Receipt, Scale, ShieldCheck, Wallet } from 'lucide-react';
-import type { ResultaatData, ResultMonth } from '@/lib/resultaat';
+import { resultMonthsFor, resultOf as resultaat, resultTotals, type ResultaatData, type ResultMonth } from '@/lib/resultaat';
 import type { LedgerKind } from '@/lib/moneybird';
 import { formatDateTime, formatEuro, formatPercent } from '@/lib/format';
 import { useDashboard } from '@/components/layout/DashboardProvider';
@@ -33,9 +33,6 @@ const SOORT: Record<LedgerKind, string> = {
   other_income_expenses: 'Overig',
 };
 
-const resultaat = (m: Pick<ResultMonth, 'revenue' | 'directCosts' | 'expenses' | 'other'>) =>
-  m.revenue - m.directCosts - m.expenses + m.other;
-
 /**
  * Resultaat, opgebouwd als elke pagina sinds 2026-10-19:
  *  1. het kerngetal (bedrijfsresultaat) in de zwarte kaart, met wat de andere
@@ -54,17 +51,10 @@ export default function ResultaatView({ data }: { data: ResultaatData }) {
     if (refreshCount > 0) router.refresh();
   }, [refreshCount, router]);
 
-  const compleet = data.months.filter((m) => m.complete);
-
-  // De periodekiezer werkt in dagen, de boekhouding in maanden: de hele maanden
-  // die de periode raakt, en anders de laatste drie complete.
-  const { maanden, terugval } = useMemo(() => {
-    const van = range.from.slice(0, 7);
-    const tot = range.to.slice(0, 7);
-    const binnen = compleet.filter((m) => m.month >= van && m.month <= tot);
-    if (binnen.length > 0) return { maanden: binnen, terugval: false };
-    return { maanden: compleet.slice(-3), terugval: true };
-  }, [compleet, range.from, range.to]);
+  const { maanden, terugval } = useMemo(
+    () => resultMonthsFor(data.months, range.from, range.to),
+    [data.months, range.from, range.to],
+  );
 
   if (!data.configured) {
     return (
@@ -81,16 +71,11 @@ export default function ResultaatView({ data }: { data: ResultaatData }) {
     );
   }
 
-  const t = maanden.reduce(
-    (a, m) => ({ revenue: a.revenue + m.revenue, directCosts: a.directCosts + m.directCosts, expenses: a.expenses + m.expenses, other: a.other + m.other }),
-    { revenue: 0, directCosts: 0, expenses: 0, other: 0 },
-  );
-  const res = resultaat(t);
-  const brutoPct = t.revenue > 0 ? ((t.revenue - t.directCosts) / t.revenue) * 100 : null;
-  const resPct = t.revenue > 0 ? (res / t.revenue) * 100 : null;
-  const metCalc = maanden.filter((m) => m.calcMarginPct != null && m.revenue > 0);
-  const calcPct =
-    metCalc.length > 0 ? metCalc.reduce((s, m) => s + (m.calcMarginPct ?? 0) * m.revenue, 0) / metCalc.reduce((s, m) => s + m.revenue, 0) : null;
+  const t = resultTotals(maanden);
+  const res = t.result;
+  const brutoPct = t.brutoPct;
+  const resPct = t.resultPct;
+  const calcPct = t.calcPct;
   const lopend = maanden.some((m) => m.running);
   const periode =
     maanden.length === 1 ? lang(maanden[0].month) : `${lang(maanden[0].month)} t/m ${lang(maanden[maanden.length - 1].month)}`;

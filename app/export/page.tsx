@@ -18,6 +18,7 @@ import { computeLost } from '@/lib/lost';
 import { perM2Stats, planningOverview } from '@/lib/insights';
 import { DEFAULT_KPI_SETTINGS, parseKpiSettings } from '@/lib/kpi-settings';
 import { buildAdsPayload, PLATFORMS } from '@/lib/ads-payload';
+import { buildResultaat, resultMonthsFor, resultOf, resultTotals } from '@/lib/resultaat';
 import { leadStats, PLATFORM_LABEL, PLATFORM_SOURCE_LABEL } from '@/lib/ads';
 import { formatDateTime, formatEuro, formatNumber, formatPercent, formatProduct } from '@/lib/format';
 import type { InvoicingSummary, QuotationRow } from '@/lib/types';
@@ -131,11 +132,17 @@ export default async function ExportPage({
   // Marketing: advertentiekosten uit ads_daily, omzet en marge uit Teamleader
   // (leadbron per kanaal) — dezelfde functies als het tabblad Marketing.
   const ads = await buildAdsPayload(from, to, compare);
+
+  // Resultaat: dezelfde maanden en optelling als de pagina Resultaat.
+  const resultaat = await buildResultaat({ invoices, quotations, exclusions });
+  const { maanden: resMaanden, terugval: resTerugval } = resultMonthsFor(resultaat.months, from, to);
+  const resT = resultTotals(resMaanden);
   const kanalen = PLATFORMS.filter((p) => ads.platforms[p].connected);
   const adsTot = ads.total.totals;
   const adsVorig = ads.total.prevTotals;
 
   const MAANDEN = ['januari', 'februari', 'maart', 'april', 'mei', 'juni', 'juli', 'augustus', 'september', 'oktober', 'november', 'december'];
+  const maandNaam = (m: string) => `${MAANDEN[Number(m.slice(5, 7)) - 1]} ${m.slice(0, 4)}`;
   const leesbaar = (d: string, metJaar: boolean) =>
     `${Number(d.slice(8, 10))} ${MAANDEN[Number(d.slice(5, 7)) - 1]}${metJaar ? ` ${d.slice(0, 4)}` : ''}`;
   const periode = `${leesbaar(from, from.slice(0, 4) !== to.slice(0, 4))} t/m ${leesbaar(to, true)}`;
@@ -256,6 +263,40 @@ export default async function ExportPage({
           ])}
         />
       </Blad>
+
+      {resultaat.configured && resMaanden.length > 0 && (
+        <Blad
+          titel="Resultaat"
+          ondertitel={`Omzet uit Teamleader, kosten uit Moneybird — ex btw, ${
+            resMaanden.length === 1 ? maandNaam(resMaanden[0].month) : `${maandNaam(resMaanden[0].month)} t/m ${maandNaam(resMaanden[resMaanden.length - 1].month)}`
+          }${resTerugval ? ' (laatste complete maanden; de periode valt vóór de complete boekhouding)' : ''}`}
+        >
+          <Kpis
+            rijen={[
+              ['Bedrijfsresultaat vóór belasting', formatEuro(resT.result), null],
+              ['Gefactureerd', formatEuro(resT.revenue), null],
+              ['Directe kosten (inkoop, uitbesteed werk)', formatEuro(resT.directCosts), null],
+              ['Bedrijfskosten (vaste lasten)', formatEuro(resT.expenses), null],
+              ['Brutomarge, echt', formatPercent(resT.brutoPct), null],
+              ['Brutomarge, berekend uit de prijslijst', resT.calcPct != null ? formatPercent(resT.calcPct) : '—', null],
+            ]}
+            vergelijking={false}
+          />
+          <Tabel
+            titel="Per maand"
+            kop={['Maand', 'Gefactureerd', 'Directe kosten', 'Bedrijfskosten', 'Resultaat']}
+            rechts={[false, true, true, true, true]}
+            rijen={resMaanden.map((m) => [
+              maandNaam(m.month) + (m.running ? ' (lopend)' : ''),
+              formatEuro(m.revenue),
+              formatEuro(m.directCosts),
+              formatEuro(m.expenses),
+              formatEuro(resultOf(m)),
+            ])}
+            voetnoot={`Moneybird bijgewerkt ${formatDateTime(resultaat.syncedAt)}. Maanden vóór ${maandNaam(resultaat.startMonth)} tellen niet mee: daarvoor was de boekhouding nog niet compleet.`}
+          />
+        </Blad>
+      )}
 
       <Blad titel="Cashflow" ondertitel="Huidige stand, bedragen incl btw">
         <Kpis

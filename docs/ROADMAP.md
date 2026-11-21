@@ -98,7 +98,7 @@ ontgrendeld. Werkt pas vooruit: historische deals hebben geen click-ID.
 - [ ] Loonkosten: waar worden die geboekt? (staan niet in Moneybird)
 - [ ] Google/Meta-afschrijvingen boeken op reclamekosten, anders is het resultaat te rooskleurig.
 - [ ] Startmaand bijstellen zodra de boekhouding vanaf eerder compleet is.
-- [ ] Resultaat ook in het exportrapport (`/export`).
+- [x] Resultaat ook in het exportrapport (`/export`) — 2026-11-21, zelfde maanden en optelling als de pagina (`resultMonthsFor`, `resultTotals`).
 
 ## Premiumronde — 2026-10-16
 - [x] Overzicht: briefing, belijst, maanddoel, tegels met sparklines, rustige pijltjes, presets in de verloopgrafiek.

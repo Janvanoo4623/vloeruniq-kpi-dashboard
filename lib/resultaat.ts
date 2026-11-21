@@ -121,3 +121,52 @@ export async function buildResultaat(input: {
     months,
   };
 }
+
+/** Bedrijfsresultaat vóór belasting van een maand of een optelling van maanden. */
+export const resultOf = (m: Pick<ResultMonth, 'revenue' | 'directCosts' | 'expenses' | 'other'>): number =>
+  m.revenue - m.directCosts - m.expenses + m.other;
+
+/**
+ * Welke maanden bij een periode horen. De periodekiezer werkt in dagen, de
+ * boekhouding in maanden: de complete maanden die de periode raken, en anders
+ * de laatste drie complete (`terugval`). Gedeeld door de pagina Resultaat en
+ * het exportrapport, zodat die nooit iets anders zeggen.
+ */
+export function resultMonthsFor(months: ResultMonth[], from: string, to: string): { maanden: ResultMonth[]; terugval: boolean } {
+  const compleet = months.filter((m) => m.complete);
+  const van = from.slice(0, 7);
+  const tot = to.slice(0, 7);
+  const binnen = compleet.filter((m) => m.month >= van && m.month <= tot);
+  if (binnen.length > 0) return { maanden: binnen, terugval: false };
+  return { maanden: compleet.slice(-3), terugval: true };
+}
+
+export interface ResultTotals {
+  revenue: number;
+  directCosts: number;
+  expenses: number;
+  other: number;
+  result: number;
+  /** Omzet min directe kosten, als % van de omzet. */
+  brutoPct: number | null;
+  resultPct: number | null;
+  /** Berekende marge uit de prijslijst, gewogen naar omzet. */
+  calcPct: number | null;
+}
+
+export function resultTotals(maanden: ResultMonth[]): ResultTotals {
+  const t = maanden.reduce(
+    (a, m) => ({ revenue: a.revenue + m.revenue, directCosts: a.directCosts + m.directCosts, expenses: a.expenses + m.expenses, other: a.other + m.other }),
+    { revenue: 0, directCosts: 0, expenses: 0, other: 0 },
+  );
+  const result = resultOf(t);
+  const metCalc = maanden.filter((m) => m.calcMarginPct != null && m.revenue > 0);
+  const calcOmzet = metCalc.reduce((s, m) => s + m.revenue, 0);
+  return {
+    ...t,
+    result,
+    brutoPct: t.revenue > 0 ? ((t.revenue - t.directCosts) / t.revenue) * 100 : null,
+    resultPct: t.revenue > 0 ? (result / t.revenue) * 100 : null,
+    calcPct: calcOmzet > 0 ? metCalc.reduce((s, m) => s + (m.calcMarginPct ?? 0) * m.revenue, 0) / calcOmzet : null,
+  };
+}
