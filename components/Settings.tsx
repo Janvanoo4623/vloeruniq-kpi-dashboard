@@ -382,7 +382,7 @@ function ExtraPrices({
         Inkoop per klus, op aantal groepen (staffel van de installateur). De meerprijs per groep komt
         erbij als de offerte frezen door een tegel- of betonvloer noemt.
       </p>
-      <PriceRows rows={FLOOR_HEATING_PRICE_CODES} {...rowProps} />
+      <PriceRows rows={FLOOR_HEATING_PRICE_CODES} header="Inkoop incl. aanleg (ex btw)" {...rowProps} />
     </div>
   );
 }
@@ -394,6 +394,7 @@ const EXTRA_ROWS = EXTRA_PRODUCTS.filter((x) => x.code !== FLOOR_HEATING_CODE).m
 
 function PriceRows({
   rows,
+  header = 'Materiaal (ex btw)',
   huidig,
   edits,
   setEdits,
@@ -403,6 +404,7 @@ function PriceRows({
   datum,
 }: {
   rows: { code: string; label: string }[];
+  header?: string;
   huidig: Map<string, CurrentPrice>;
   edits: Record<string, string>;
   setEdits: React.Dispatch<React.SetStateAction<Record<string, string>>>;
@@ -417,7 +419,7 @@ function PriceRows({
           <thead className="bg-sunk text-xs text-ink-mute">
             <tr className="border-b border-line">
               <th className="px-3 py-2 text-left font-medium">Product</th>
-              <th className="px-3 py-2 text-left font-medium">Materiaal (ex btw)</th>
+              <th className="px-3 py-2 text-left font-medium">{header}</th>
               <th className="px-3 py-2 text-left font-medium">Geldig sinds</th>
               <th className="px-3 py-2" />
             </tr>
