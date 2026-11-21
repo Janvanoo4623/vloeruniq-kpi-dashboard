@@ -107,7 +107,7 @@ ontgrendeld. Werkt pas vooruit: historische deals hebben geen click-ID.
 - [x] Markt op Trends (CBS consumentenvertrouwen en invoerprijzen).
 - [x] Merk: logo, favicon, loginpagina met eigen vloer. Laadbalk en optellende hoofdgetallen.
 - [ ] Google-reviews (eigen + concurrenten) — vraagt een Google Places API-sleutel.
-- [~] Wekelijkse samenvatting per mail aan Jan: `GET /api/samenvatting` + n8n-flow "Weekoverzicht – maandagmail" (LrYnfTWNSZFxITZ6, maandag 7:45). Staat uit; eerst naar Jasper ter controle.
+- [x] Wekelijkse samenvatting per mail aan Jan: `GET /api/samenvatting` + n8n-flow "Weekoverzicht – maandagmail" (LrYnfTWNSZFxITZ6, maandag 7:45, aan sinds 2026-11-21, naar Jan + Jasper).
 - [ ] Maanddoelen invullen (Jan), capaciteit in m²/week invullen (Jan).
 - [ ] Inkoopfacturen in Moneybird afletteren — 12 stuks (€61k) staan nog 'te laat', vertekent de cashprognose.
 
