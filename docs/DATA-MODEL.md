@@ -703,6 +703,10 @@ Beantwoord 2026-11-20:
 - **Plinten**: €10/m (uitbesteed) en €4,36/m inkoop kloppen; verkoop €19,95/m incl. btw; korting
   hoort bij de vloer (zie "Korting over de vloer").
 
+- **Verwerkingskosten** (rollers, lijmkammen, mesjes) — beantwoord 2026-11-21: staan al in
+  Moneybird, dus zitten in **Resultaat**. Bewust NIET in de marge per offerte of als kostenpost per
+  m² — dan tellen ze dubbel. De marge per offerte blijft een brutomarge (materiaal + arbeid).
+
 ## Vloerverwarming: staffel van de installateur — 2026-11-21
 
 Jan stuurde de inkooplijst "Installateurs Fresen 2026" (Vloerverwarming Oost-Nederland). Die is een
