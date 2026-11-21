@@ -72,6 +72,7 @@ Phased build. Status updated as we go.
 
 
 ## Idee: conversies terugkoppelen naar Google en Meta (click-ID tracking)
+Uitgewerkt plan + wat de live site nu doet: `docs/ATTRIBUTIE.md` (2026-11-21).
 Doel: Google Ads en Meta niet alleen op "formulier ingevuld" laten sturen, maar op wat er
 daarna gebeurt — offerte gewonnen, gefactureerd, marge. En in het dashboard per campagne
 kunnen zien wat er écht uit komt, in plaats van via de grove leadbron in Teamleader.
@@ -106,7 +107,7 @@ ontgrendeld. Werkt pas vooruit: historische deals hebben geen click-ID.
 - [x] Markt op Trends (CBS consumentenvertrouwen en invoerprijzen).
 - [x] Merk: logo, favicon, loginpagina met eigen vloer. Laadbalk en optellende hoofdgetallen.
 - [ ] Google-reviews (eigen + concurrenten) — vraagt een Google Places API-sleutel.
-- [ ] Wekelijkse samenvatting per mail/WhatsApp aan Jan.
+- [~] Wekelijkse samenvatting per mail aan Jan: `GET /api/samenvatting` + n8n-flow "Weekoverzicht – maandagmail" (LrYnfTWNSZFxITZ6, maandag 7:45). Staat uit; eerst naar Jasper ter controle.
 - [ ] Maanddoelen invullen (Jan), capaciteit in m²/week invullen (Jan).
 - [ ] Inkoopfacturen in Moneybird afletteren — 12 stuks (€61k) staan nog 'te laat', vertekent de cashprognose.
 
