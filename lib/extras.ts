@@ -29,6 +29,8 @@
 // nooit aan zonder dat opnieuw te doen: een geraden patroon heeft eerder alle
 // vloer-m² op nul gezet.
 
+import { FLOOR_HEATING_PRICE_CODES } from './floor-heating';
+
 export type ExtraUnit = 'trede' | 'trap' | 'm1' | 'lengte' | 'm2' | 'stuk' | 'groep';
 
 export const UNIT_LABEL: Record<ExtraUnit, string> = {
@@ -85,7 +87,12 @@ export const EXTRA_PRODUCTS: { code: string; unit: ExtraUnit }[] = [
   { code: 'Vloerverwarming', unit: 'groep' },
 ];
 
-const UNIT_BY_CODE = new Map(EXTRA_PRODUCTS.map((p) => [p.code.toLowerCase(), p.unit]));
+// De staffelcodes van vloerverwarming ("Vloerverwarming 5 groepen") zijn
+// prijscodes, geen regelcodes, maar horen net zo min op een vloerregel.
+const UNIT_BY_CODE = new Map<string, ExtraUnit>([
+  ...EXTRA_PRODUCTS.map((p) => [p.code.toLowerCase(), p.unit] as const),
+  ...FLOOR_HEATING_PRICE_CODES.map((p) => [p.code.toLowerCase(), 'stuk' as ExtraUnit] as const),
+]);
 
 export const isExtraCode = (code: string): boolean => UNIT_BY_CODE.has(code.trim().toLowerCase());
 export const unitOfExtra = (code: string): ExtraUnit | null => UNIT_BY_CODE.get(code.trim().toLowerCase()) ?? null;

@@ -8,6 +8,7 @@ import DataQualityTab from './DataQualityTab';
 import type { QualityReport } from '@/lib/data-quality';
 import { formatProduct } from '@/lib/format';
 import { EXTRA_PRODUCTS, UNIT_LABEL, isExtraCode } from '@/lib/extras';
+import { FLOOR_HEATING_CODE, FLOOR_HEATING_PRICE_CODES } from '@/lib/floor-heating';
 import { LABOR_CATEGORIES, isLaborKey } from '@/lib/labor';
 
 const TABS = [
@@ -365,15 +366,52 @@ function ExtraPrices({
 }) {
   const [edits, setEdits] = useState<Record<string, string>>({});
   const huidig = new Map(prices.map((p) => [p.code.toLowerCase(), p]));
+  const rowProps = { huidig, edits, setEdits, post, busy, keuze, datum };
 
   return (
     <div className="mt-6">
       <p className="text-sm font-medium text-ink">Overige producten</p>
       <p className="mb-2 mt-0.5 text-xs text-ink-mute">
-        Trappen, plinten, tapijt, entreematten, kurkstuc, sleuven, vloerverwarming en verwijderen.
+        Trappen, plinten, tapijt, entreematten, kurkstuc, sleuven en verwijderen.
         Vul de <strong>materiaalprijs</strong> per eenheid in, zonder montage: de arbeid komt erbij
         per categorie (Instellingen → Kosten). Ze tellen niet mee in de verkochte m².
       </p>
+      <PriceRows rows={EXTRA_ROWS} {...rowProps} />
+      <p className="mt-5 text-sm font-medium text-ink">Vloerverwarming (installateur)</p>
+      <p className="mb-2 mt-0.5 text-xs text-ink-mute">
+        Inkoop per klus, op aantal groepen (staffel van de installateur). De meerprijs per groep komt
+        erbij als de offerte frezen door een tegel- of betonvloer noemt.
+      </p>
+      <PriceRows rows={FLOOR_HEATING_PRICE_CODES} {...rowProps} />
+    </div>
+  );
+}
+
+const EXTRA_ROWS = EXTRA_PRODUCTS.filter((x) => x.code !== FLOOR_HEATING_CODE).map((x) => ({
+  code: x.code,
+  label: UNIT_LABEL[x.unit],
+}));
+
+function PriceRows({
+  rows,
+  huidig,
+  edits,
+  setEdits,
+  post,
+  busy,
+  keuze,
+  datum,
+}: {
+  rows: { code: string; label: string }[];
+  huidig: Map<string, CurrentPrice>;
+  edits: Record<string, string>;
+  setEdits: React.Dispatch<React.SetStateAction<Record<string, string>>>;
+  post: Post;
+  busy: boolean;
+  keuze: Ingang;
+  datum: string;
+}) {
+  return (
       <div className="overflow-auto rounded-xl border border-line">
         <table className="w-full border-collapse text-sm">
           <thead className="bg-sunk text-xs text-ink-mute">
@@ -385,7 +423,7 @@ function ExtraPrices({
             </tr>
           </thead>
           <tbody className="divide-y divide-hair">
-            {EXTRA_PRODUCTS.map((x) => {
+            {rows.map((x) => {
               const p = huidig.get(x.code.toLowerCase());
               const val = edits[x.code] ?? (p ? String(p.price) : '');
               const nieuweDatum = !!p && keuze !== 'vandaag' && (ingangsdatum(keuze, datum) ?? '') !== p.effectiveFrom;
@@ -406,7 +444,7 @@ function ExtraPrices({
                         onChange={(e) => setEdits((s) => ({ ...s, [x.code]: e.target.value }))}
                         className="w-24 rounded border border-line px-2 py-1 text-sm tabular-nums outline-none focus:border-accent"
                       />
-                      <span className="text-xs text-ink-faint">{UNIT_LABEL[x.unit]}</span>
+                      <span className="text-xs text-ink-faint">{x.label}</span>
                     </div>
                   </td>
                   <td className="px-3 py-2 text-xs text-ink-faint tabular-nums">
@@ -438,7 +476,6 @@ function ExtraPrices({
           </tbody>
         </table>
       </div>
-    </div>
   );
 }
 

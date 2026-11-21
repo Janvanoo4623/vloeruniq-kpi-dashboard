@@ -598,3 +598,36 @@ test('toegevoegde vloerregel verschuift de regelcorrecties niet', () => {
   assert.equal(r.totalM2, 25);
   assert.equal(r.omzetVloer, 750);
 });
+
+test('vloerverwarming: staffel per aantal groepen, meerprijs tegels, alleen vanaf ingangsdatum', () => {
+  const staffel = [
+    { code: 'Vloerverwarming 5 groepen', price: 1640, effectiveFrom: '2026-01-01' },
+    { code: 'Vloerverwarming 7 groepen', price: 1870, effectiveFrom: '2026-01-01' },
+    { code: 'Vloerverwarming meerprijs tegelvloer', price: 200, effectiveFrom: '2026-01-01' },
+  ];
+  const vv = (id: string, groepen: number, omzet: number, desc: string, datum = '2026-08-21') =>
+    offerte({ id, dateCreated: datum, revenueExVat: omzet, lines: [extra('Vloerverwarming', 'groep', groepen, omzet, desc)] });
+  const [gewoon, tegel, oud] = resolveQuotations(
+    [
+      vv('a', 5, 2050, 'Vloerverwarming 5 groepen | incl. plaatsen verdeler'),
+      vv('b', 7, 3504, 'Vloerverwarming 7 groepen | Door tegelvloer frezen'),
+      vv('c', 5, 1558, 'Vloerverwarming 5 groepen | Incl. montage', '2025-07-08'),
+    ],
+    invoer({ prices: staffel }),
+  );
+  assert.equal(gewoon.lines?.[0].margin, 2050 - 1640);
+  assert.equal(tegel.lines?.[0].margin, 3504 - 1870 - 7 * 200);
+  // Vóór de lijst van 2026: geen inkoop bekend, dus geen marge (geen verlies op de oude lijst).
+  assert.equal(oud.lines?.[0].margin, null);
+  // Een staffelcode is nooit een vloerprijs.
+  const [vloer] = resolveQuotations([offerte({ id: 'd', dateCreated: '2026-08-21', lines: [regel('PVC geschikt voor vloerverwarming 5 groepen', 10, 400)] })], invoer({ prices: staffel }));
+  assert.equal(vloer.lines?.[0].margin, null);
+});
+
+test('vloerverwarming: extra groepen op de factuur kosten het verschil tussen de staffels', async () => {
+  const { floorHeatingCost } = await import('../lib/floor-heating');
+  const p = (c: string) => ({ 'Vloerverwarming 5 groepen': 1640, 'Vloerverwarming 6 groepen': 1760 } as Record<string, number>)[c] ?? null;
+  assert.equal(floorHeatingCost(1, 'Nacalculatie', p, 5), 120);
+  assert.equal(floorHeatingCost(6, '', p), 1760);
+  assert.equal(floorHeatingCost(7, '', p), null);
+});

@@ -27,6 +27,7 @@ import { buildSnapshot } from './teamleader/aggregate';
 import type { AggLine } from './teamleader/quotations';
 import { deriveDateParts } from './teamleader/dates';
 import { isExtraCode } from './extras';
+import { FLOOR_HEATING_CODE, floorHeatingCost } from './floor-heating';
 import type {
   InvoiceExtraLine,
   QuotationFields,
@@ -237,6 +238,16 @@ function costForExtra(line: QuotationLine, config: PriceConfig, override: Quotat
   const lower = line.code.trim().toLowerCase();
   const special = override?.prices[lower];
   if (special != null) return special;
+  if (line.code === FLOOR_HEATING_CODE) {
+    // Staffel per aantal groepen: inkoop voor de hele klus, terug naar per groep.
+    const qty = line.qty ?? 0;
+    const price = (code: string) => {
+      const c = code.toLowerCase();
+      return override?.prices[c] ?? config.nameMatches.find((n) => n.name === c)?.price ?? null;
+    };
+    const total = floorHeatingCost(qty, line.desc ?? '', price, line.baseQty ?? 0);
+    return total == null ? null : total / qty;
+  }
   const nm = config.nameMatches.find((n) => n.name === lower);
   if (nm) return nm.price;
   return line.costPerUnit ?? null;
@@ -454,6 +465,7 @@ function addInvoiceExtras(
         margin: null,
         desc: 'Nacalculatie (gefactureerd, niet op de offerte)',
         source: 'factuur',
+        ...(f.code === FLOOR_HEATING_CODE && o.qty > 0 ? { baseQty: o.qty } : {}),
       });
     }
     if (regels.length === 0) continue;

@@ -107,6 +107,12 @@ export interface QuotationLine {
   /** Arbeid in euro's voor deze regel (overig product), bij het lezen berekend. */
   laborCost?: number;
   /**
+   * Vloerverwarming op een factuurregel (nacalculatie): het aantal groepen dat
+   * al op de offerte stond. De extra groepen kosten dan het verschil tussen de
+   * staffels (lib/floor-heating.ts).
+   */
+  baseQty?: number;
+  /**
    * 'factuur' = nacalculatie: alleen op de factuur gezet, bij het lezen toegevoegd.
    * 'handmatig' = door een mens toegevoegd in de offertemodal (QuotationFields.addedLines).
    * Geen van beide bestaat in de opgeslagen offerte, dus ze tellen nooit mee in lineCount.

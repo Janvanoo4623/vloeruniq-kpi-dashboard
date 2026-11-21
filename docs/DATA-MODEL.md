@@ -703,6 +703,29 @@ Beantwoord 2026-11-20:
 - **Plinten**: €10/m (uitbesteed) en €4,36/m inkoop kloppen; verkoop €19,95/m incl. btw; korting
   hoort bij de vloer (zie "Korting over de vloer").
 
+## Vloerverwarming: staffel van de installateur — 2026-11-21
+
+Jan stuurde de inkooplijst "Installateurs Fresen 2026" (Vloerverwarming Oost-Nederland). Die is een
+**staffel per aantal groepen**, geen prijs per groep: 1 groep €1.180 … 5 groepen €1.640, 6 groepen
+€1.760 … 13 groepen €2.795, plus **€200 per groep door tegels** en **€400 per groep door beton**
+(ex btw). Radiator afkoppelen, optimizer en by-pass komen in de offerteteksten niet voor.
+
+- `lib/floor-heating.ts`: elke staffel is een eigen prijscode in `product_prices`
+  ("Vloerverwarming 5 groepen", "Vloerverwarming meerprijs tegelvloer"), dus met ingangsdatum en te
+  wijzigen in Instellingen → Prijzen (eigen blok onder Overige producten). De codes tellen als
+  `isExtraCode`, zodat ze nooit op een vloerregel matchen.
+- `lib/resolve.ts` `costForExtra`: voor "Vloerverwarming" is de inkoop staffel(groepen) + meerprijs
+  × groepen (tegel/beton uit de regeltekst; alleen Wim Muller 2026-08-10 noemt tegels). Een
+  factuurregel met extra groepen bovenop de offerte kost het verschil tussen de staffels
+  (`baseQty`).
+- **Ingangsdatum 2026-01-01, niet met terugwerkende kracht** (besluit Jasper 2026-11-21): in 2024–2025
+  verkochten ze 5 groepen vaak voor €1.558 en 6 voor €1.690, onder deze inkoop — die lijst was dus
+  lager. Bij Jan opgevraagd; tot dan geen vloerverwarmingsmarge vóór 2026.
+- Diff (gesimuleerd vóór het invoeren): 23 offertes veranderen, alle met vloerverwarming uit 2026.
+  Marge geaccepteerd €526.084 → €529.068, offertes zonder marge 57 → 56. Omhoog omdat de
+  vloerverwarmingsomzet eerder naar rato de marge van de vloer kreeg; nu €50–410 per klus. Godec
+  (2026-09-18, 6 groepen voor €1.723) zakt onder de inkoop (−€37).
+
 ## "Click PVC" en "Zelf leggen" — 2026-11-19
 
 Gevonden bij de vergelijking met Jans planning-Sheet. Twee gaten in de vloerherkenning
