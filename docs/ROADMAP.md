@@ -130,10 +130,13 @@ gemarkeerde staaf met ballon); (4) "Verdieping" (`DetailsLabel`) met de bestaand
 - [ ] Offertes toont "conversie" over de periode (gewonnen/beslist), Pijplijn "winkans" over de
       uitgeharde historie — twee definities naast elkaar; eventueel één naam/uitleg kiezen.
 
-## Input Jan 18 november 2026 — nog niet gebouwd
-- [ ] Arbeid per categorie bij overige producten: tarieven van Jan ontvangen, eenheden botsen deels.
-      Zie `DATA-MODEL.md` "Arbeid per categorie" (tabel + open vragen).
-- [ ] Nieuwe categorieën: sleuven dichtzetten, kurkstuc/beton ciré, mogelijk vloerverwarming (±€170k zonder kostprijs).
-- [ ] Legtarief per vloertype (lavasteen €15/m² i.p.v. €17).
-- [ ] Jan wijzen op "Nieuwe kostenpost" = per m² op alle vloer, niet voor materiaal.
-- [ ] Planning-Sheet automatisch vullen via n8n (kolommen G–M). Zie `PLANNING-SHEET.md`.
+## Input Jan 18 november 2026
+- [x] Arbeid per categorie bij overige producten (live 2026-11-20, `lib/labor.ts`).
+- [x] Sleuven dichtzetten, kurkstuc, vloerverwarming als overig product; vloerverwarming met de
+      staffel van de installateur vanaf 2026-01-01 (live 2026-11-21, `lib/floor-heating.ts`).
+- [x] Eigen legtarief gietvloer (lavasteen €15, microcement €26).
+- [x] "Nieuwe kostenpost" weigert `arbeid:`-namen en waarschuwt dat het per m² op alle vloer is.
+- [x] Verwerkingskosten: zitten in Moneybird/Resultaat, niet in de marge (2026-11-21).
+- [ ] Jan: prijslijst vloerverwarming 2025; prijzen kurkstuc, vloer verwijderen per m², tapijt vast bedrag.
+- [~] Planning-Sheet automatisch vullen via n8n: schaduwmodus sinds 2026-11-19, overstap na ±2 weken.
+      Zie `PLANNING-SHEET.md`.
