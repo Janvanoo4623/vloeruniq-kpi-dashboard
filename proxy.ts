@@ -15,7 +15,8 @@ export async function proxy(request: NextRequest) {
     pathname.startsWith('/api/login') ||
     pathname.startsWith('/api/sync') ||
     pathname === '/api/planning' || // n8n, self-protected with the planning key
-    pathname === '/api/planning/plaats'
+    pathname === '/api/planning/plaats' ||
+    pathname === '/api/samenvatting' // n8n weekmail, zelfde sleutel als de planning
   ) {
     return NextResponse.next();
   }

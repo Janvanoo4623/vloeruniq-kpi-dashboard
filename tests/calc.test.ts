@@ -631,3 +631,10 @@ test('vloerverwarming: extra groepen op de factuur kosten het verschil tussen de
   assert.equal(floorHeatingCost(6, '', p), 1760);
   assert.equal(floorHeatingCost(7, '', p), null);
 });
+
+test('weekoverzicht: vorige week is maandag t/m zondag, ook als de mail op zondag of maandag draait', async () => {
+  const { previousWeek } = await import('../lib/weekly-summary');
+  assert.deepEqual(previousWeek('2026-11-23'), { from: '2026-11-16', to: '2026-11-22', prevFrom: '2026-11-09', prevTo: '2026-11-15' });
+  assert.equal(previousWeek('2026-11-29').from, '2026-11-16'); // zondag: nog steeds de week ervoor
+  assert.equal(previousWeek('2026-01-05').from, '2025-12-29'); // over de jaargrens
+});
