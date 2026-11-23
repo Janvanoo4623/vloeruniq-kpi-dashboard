@@ -117,9 +117,9 @@ export function weeklyMail(s: WeeklySummary, dashboardUrl: string): { subject: s
       titel: 'Verkoop',
       regels: [
         `Gewonnen: ${formatNumber(s.won.count)} offertes, ${formatEuro(s.won.revenue)} (${verschil(s.won.revenue, s.wonPrev.revenue)})`,
+        ...s.topWon.map((q) => `  · ${q.name}: ${formatEuro(q.revenue)}${q.marginPct != null ? `, marge ${formatPercent(q.marginPct)}` : ', marge nog onbekend'}`),
         `Marge: ${formatEuro(s.won.margin)} (${formatPercent(s.won.marginPct)}), ${formatNumber(s.won.m2)} m² verkocht`,
         `Nieuwe offertes: ${formatNumber(s.newQuotes.count)}, samen ${formatEuro(s.newQuotes.revenue)}`,
-        ...s.topWon.map((q) => `  · ${q.name}: ${formatEuro(q.revenue)}${q.marginPct != null ? `, marge ${formatPercent(q.marginPct)}` : ', marge nog onbekend'}`),
       ],
     },
     {
