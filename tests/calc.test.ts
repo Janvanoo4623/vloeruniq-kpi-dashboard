@@ -638,3 +638,22 @@ test('weekoverzicht: vorige week is maandag t/m zondag, ook als de mail op zonda
   assert.equal(previousWeek('2026-11-29').from, '2026-11-16'); // zondag: nog steeds de week ervoor
   assert.equal(previousWeek('2026-01-05').from, '2025-12-29'); // over de jaargrens
 });
+
+// ── Per m²: vóór korting en hele offerte ─────────────────────────────────
+test('perM2Stats: marge vóór korting en over de hele offerte', async () => {
+  const { perM2Stats } = await import('../lib/insights');
+  // 10 m² vloer, €500 op de regel, €50 korting → €450; inkoop €20/m² = €200.
+  const vloer: QuotationLine = { ...regel('P100', 10, 450), revenueBeforeDiscount: 500, purchasePerM2: 20, margin: 250 };
+  // Plus €100 plinten met €40 marge: offerte-omzet €550, offertemarge €290.
+  const q = offerte({ id: 'a', lines: [vloer], revenueExVat: 550, margin: 290 });
+  const s = perM2Stats([q]);
+  assert.equal(s.revenuePerM2, 45);
+  assert.equal(s.marginPerM2, 25);
+  assert.equal(s.revenueBeforeDiscountPerM2, 50);
+  assert.equal(s.discountPerM2, 5);
+  assert.equal(s.marginBeforeDiscountPerM2, 30);
+  assert.equal(s.marginBeforeDiscountPct, 60);
+  assert.equal(s.wholeRevenuePerM2, 55);
+  assert.equal(s.wholeMarginPerM2, 29);
+  assert.equal(s.wholeMarginPct, 52.7);
+});

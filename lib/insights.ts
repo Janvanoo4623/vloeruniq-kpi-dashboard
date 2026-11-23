@@ -593,6 +593,21 @@ export interface PerM2Stats {
   costPerM2: number | null;
   marginPerM2: number | null;
   marginPct: number | null;
+  /** Vloeromzet per m² zoals op de regels, vóór de korting van de offerte. */
+  revenueBeforeDiscountPerM2: number | null;
+  /** Korting per m² vloer (vóór min na). */
+  discountPerM2: number | null;
+  /** Marge per m² vloer als er geen korting was gegeven. */
+  marginBeforeDiscountPerM2: number | null;
+  marginBeforeDiscountPct: number | null;
+  /**
+   * De héle offerte (vloer + plinten, trappen, tapijt, vloerverwarming …) per m²
+   * vloer: alleen offertes met vloer-m² en een marge, zodat teller en noemer over
+   * dezelfde offertes gaan. Marge = de offertemarge (naar rato bij onvolledige dekking).
+   */
+  wholeRevenuePerM2: number | null;
+  wholeMarginPerM2: number | null;
+  wholeMarginPct: number | null;
 }
 
 /**
@@ -621,14 +636,24 @@ export function perM2Stats(quotations: QuotationRow[]): PerM2Stats {
   let purchase = 0;
   let underlay = 0;
   let labor = 0;
+  let revenueBefore = 0;
+  let wholeM2 = 0;
+  let wholeRevenue = 0;
+  let wholeMargin = 0;
 
   for (const q of quotations) {
     if (q.status !== 'accepted') continue;
     m2Total += q.totalM2;
+    if (q.totalM2 > 0 && q.margin != null) {
+      wholeM2 += q.totalM2;
+      wholeRevenue += q.revenueExVat;
+      wholeMargin += q.margin;
+    }
     for (const l of q.lines ?? []) {
       if (l.purchasePerM2 == null || l.margin == null) continue;
       m2Priced += l.m2;
       revenue += l.revenue;
+      revenueBefore += l.revenueBeforeDiscount ?? l.revenue;
       purchase += l.purchasePerM2 * l.m2;
       underlay += (l.underlayPerM2 ?? l.gluedPerM2 ?? 0) * l.m2;
       labor += (l.laborPerM2 ?? 0) * l.m2;
@@ -646,10 +671,19 @@ export function perM2Stats(quotations: QuotationRow[]): PerM2Stats {
       costPerM2: null,
       marginPerM2: null,
       marginPct: null,
+      revenueBeforeDiscountPerM2: null,
+      discountPerM2: null,
+      marginBeforeDiscountPerM2: null,
+      marginBeforeDiscountPct: null,
+      wholeRevenuePerM2: null,
+      wholeMarginPerM2: null,
+      wholeMarginPct: null,
     };
   }
 
   const per = (v: number) => Math.round((v / m2Priced) * 100) / 100;
+  const pct = (m: number, r: number) => (r > 0 ? Math.round((m / r) * 1000) / 10 : null);
+  const perWhole = (v: number) => (wholeM2 > 0 ? Math.round((v / wholeM2) * 100) / 100 : null);
   const cost = purchase + underlay + labor;
   return {
     m2Priced: Math.round(m2Priced * 10) / 10,
@@ -661,5 +695,12 @@ export function perM2Stats(quotations: QuotationRow[]): PerM2Stats {
     costPerM2: per(cost),
     marginPerM2: per(revenue - cost),
     marginPct: revenue > 0 ? Math.round(((revenue - cost) / revenue) * 1000) / 10 : null,
+    revenueBeforeDiscountPerM2: per(revenueBefore),
+    discountPerM2: per(revenueBefore - revenue),
+    marginBeforeDiscountPerM2: per(revenueBefore - cost),
+    marginBeforeDiscountPct: pct(revenueBefore - cost, revenueBefore),
+    wholeRevenuePerM2: perWhole(wholeRevenue),
+    wholeMarginPerM2: perWhole(wholeMargin),
+    wholeMarginPct: pct(wholeMargin, wholeRevenue),
   };
 }

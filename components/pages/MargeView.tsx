@@ -102,13 +102,23 @@ export default function MargeView({
         >
           <MiniStat label="Totale marge" value={formatEuro(totals.totalMargin)} sub={`${formatPercent(totals.avgMarginPct)} van de omzet`} />
           <MiniStat label="Marge op de vloer" value={formatPercent(perM2.marginPct)} sub="van de vloeromzet" bar={perM2.marginPct != null ? perM2.marginPct / 100 : null} />
+          <MiniStat
+            label="Marge per m² zonder korting"
+            value={formatEuro(perM2.marginBeforeDiscountPerM2, true)}
+            sub={`${formatPercent(perM2.marginBeforeDiscountPct)} · korting kost ${formatEuro(perM2.discountPerM2, true)} per m²`}
+          />
+          <MiniStat
+            label="Per m², hele offerte met plinten, trappen enz."
+            value={formatEuro(perM2.wholeMarginPerM2, true)}
+            sub={`${formatPercent(perM2.wholeMarginPct)} van ${formatEuro(perM2.wholeRevenuePerM2, true)} omzet per m²`}
+          />
         </HeroCard>
         <InsightCard items={inzichten} />
       </div>
 
       {/* 2. Tegels */}
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
-        <StatTile Icon={Receipt} label="Omzet per m²" value={formatEuro(perM2.revenuePerM2, true)} sub="wat de vloer opbrengt" />
+        <StatTile Icon={Receipt} label="Omzet per m²" value={formatEuro(perM2.revenuePerM2, true)} sub={perM2.discountPerM2 ? `na ${formatEuro(perM2.discountPerM2, true)} korting · ${formatEuro(perM2.revenueBeforeDiscountPerM2, true)} op de offerte` : 'wat de vloer opbrengt'} />
         <StatTile
           Icon={Factory}
           label="Kostprijs per m²"
