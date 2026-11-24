@@ -13,9 +13,12 @@ import { formatProduct } from '@/lib/format';
  */
 export default function QuotationCorrection({ q }: { q: QuotationRow }) {
   const codes = useMemo(() => {
-    const seen = new Map<string, number | undefined>();
-    for (const l of q.lines ?? []) if (!seen.has(l.code)) seen.set(l.code, l.purchasePerM2);
-    return [...seen.entries()].map(([code, base]) => ({ code, base }));
+    // Vloer: inkoop per m². Overig product: materiaal per eigen eenheid (m1, groep, trede …).
+    const seen = new Map<string, { base: number | undefined; unit: string }>();
+    for (const l of q.lines ?? [])
+      if (!seen.has(l.code))
+        seen.set(l.code, l.kind === 'extra' ? { base: l.costPerUnit, unit: l.unit ?? 'stuk' } : { base: l.purchasePerM2, unit: 'm²' });
+    return [...seen.entries()].map(([code, v]) => ({ code, ...v }));
   }, [q.lines]);
 
   const [noLabor, setNoLabor] = useState(false);
@@ -90,8 +93,8 @@ export default function QuotationCorrection({ q }: { q: QuotationRow }) {
 
       {codes.length > 0 && (
         <div className="mt-3 space-y-1.5">
-          <p className="text-[11px] text-ink-faint">Afwijkende inkoopprijs per vloerregel (€/m²)</p>
-          {codes.map(({ code, base }) => (
+          <p className="text-[11px] text-ink-faint">Afwijkende inkoopprijs voor deze offerte (materiaal, ex btw)</p>
+          {codes.map(({ code, base, unit }) => (
             <div key={code} className="flex items-center gap-2">
               <span className="w-40 shrink-0 truncate rounded bg-sunk px-1.5 py-0.5 text-xs font-medium text-ink-soft">
                 {formatProduct(code)}
@@ -102,7 +105,7 @@ export default function QuotationCorrection({ q }: { q: QuotationRow }) {
                 onChange={(e) => setPrices((p) => ({ ...p, [code]: e.target.value }))}
                 onKeyDown={(e) => e.key === 'Enter' && savePrice(code)}
                 inputMode="decimal"
-                placeholder={base != null ? `standaard ${base}` : '/m²'}
+                placeholder={base != null ? `standaard ${Math.round(base * 100) / 100}` : `per ${unit}`}
                 disabled={busy}
                 className="w-24 rounded-md border border-line bg-white px-1.5 py-0.5 text-xs outline-none focus:border-accent"
               />
@@ -114,6 +117,7 @@ export default function QuotationCorrection({ q }: { q: QuotationRow }) {
               >
                 {busy ? '…' : 'Opslaan'}
               </button>
+              <span className="text-[11px] text-ink-faint">per {unit}</span>
               {(prices[code] ?? '') !== '' && (
                 <button
                   type="button"
