@@ -146,7 +146,8 @@ const PLINTH_MOUNT_ONLY_RE = /^(plaatsen|monteren)\b/i;
 const MAT_RE = /entreemat|droogloopmat|schoonloopmat/i;
 const PER_RUNNING_METER_RE = /strekkende meter/i;
 
-const CARPET_RE = /tapijt/i;
+// "Vloerbedekking ambian houston" is tapijt van de rol (Glenn en Anne Krommendijk, 2026-11-24).
+const CARPET_RE = /tapijt|vloerbedekking/i;
 // Tapijt van de rol per strekkende meter (Jan 2026-11-20: "per strekkende meter op
 // 4 mtr breed, dus 1x4 = 4m2"). Herkend aan de tekst of aan de prijs: per m² ligt
 // tapijt rond €30–52, per strekkende meter rond €90–170. Het aantal wordt m²

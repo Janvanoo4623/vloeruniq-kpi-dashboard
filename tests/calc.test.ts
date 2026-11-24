@@ -669,3 +669,34 @@ test('noLabor haalt arbeid van overige producten, behalve bij "Incl. montage"', 
   assert.equal(p.margin, 200 - 40 * 3);
   assert.ok((m.laborCost ?? 0) > 0, 'montage-regel houdt zijn arbeid');
 });
+
+// ── Vloerherkenning op merk + afgesproken totaalbedrag (2026-11-24) ───────
+test('vloer op merknaam of "visgraat" midden in de tekst, niet bij plint of toelichting', async () => {
+  const { isFloorLine } = await import('../lib/teamleader/matching');
+  for (const v of ['Siena Warm Beige Visgraat', 'Tété 051 HONEY WHITE | SPC 312', 'Castell Premium 871 029', 'Pure', 'Griante 10', 'Vinyl Supreme Beton 400cm', 'Spigato Viranto visgraat click SRC', 'SOIL - Klik PVC'])
+    assert.ok(isFloorLine(v), v);
+  for (const n of ['Plakplint bodiax ultradun | Bijpassende kleur klik pvc', 'Leggen visgraat pvc a €19,50 per m2', '70m2 Band en zwarte bies incl. montage', 'Purenatuur kit'])
+    assert.ok(!isFloorLine(n), n);
+});
+
+test('totaalbedrag gaat naar de vloeren op €0, naar m²', async () => {
+  const { parseQuotation } = await import('../lib/teamleader/matching');
+  const regel = (description: string, quantity: number, amount: number) => ({ description, quantity, total: { tax_exclusive: { amount } } });
+  const summary = { id: 'k', status: 'accepted', created_at: '2025-07-07T00:00:00Z', updated_at: '2025-07-08T00:00:00Z', total: { tax_exclusive: { amount: 3000 }, tax_inclusive: { amount: 3630 } } };
+  const parse = (lines: ReturnType<typeof regel>[]) =>
+    parseQuotation(summary as never, { grouped_lines: [{ line_items: lines }] } as never, {}, { pNumbers: {}, nameMatches: [] } as never, { alwaysPerM2: 10, gluedPerM2: 5, selfAdhesivePerM2: 6 });
+  // Koopman-vorm: twee vloeren met m², allebei €0, één totaalregel.
+  const q = parse([regel('Hongaarse Punt (P623)', 100, 0), regel('PVC Tegels P340', 50, 0), regel('Totaalbedrag', 1, 3000)]);
+  assert.equal(q.totalM2, 150);
+  assert.equal(q.omzetVloer, 3000);
+  assert.equal(q.lines?.[0].revenue, 2000);
+  // Webbink-vorm: m² alleen in de tekst.
+  const w = parse([regel('77m2 Weense Punt P623 Brown', 0, 0), regel('Totaal', 1, 3000)]);
+  assert.equal(w.totalM2, 77);
+  // Peelen-vorm: geen m² te vinden → niets verdelen (anders lijkt alles winst).
+  const p = parse([regel('PVC Stroken VT Wonen', 0, 0), regel('Totaalbedrag', 1, 3000)]);
+  assert.equal(p.omzetVloer, 0);
+  // Vloer heeft al een bedrag → totaalregel blijft erbuiten.
+  const a = parse([regel('PVC Visgraat P700', 60, 2000), regel('Totaalbedrag', 1, 1000)]);
+  assert.equal(a.omzetVloer, 2000);
+});

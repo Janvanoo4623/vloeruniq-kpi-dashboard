@@ -744,3 +744,36 @@ allemaal met Click/Zelf leggen in de tekst, niets anders.** Op geaccepteerde off
 PVC | Zelf leggen" verliest €714 legkosten. Werkt pas na een **backfill** (regels worden bij de sync
 opgeslagen); de Click-vloeren hebben daarna nog een inkoopprijs nodig (afgeleide naam, bv. "Click
 PVC Mist").
+
+## Alles op de offerte telt mee — 2026-11-24
+
+Aanleiding: Jan (Luuc Markvoort) — Fermacell leggen en egaliseren stonden op de offerte maar niet in
+het dashboard. Dump van alle regelteksten van de 497 gewonnen offertes (alleen lezen, met de lock):
+102 positieve regels, **€113.597** telden nergens mee (niet als vloer, niet als overig product).
+
+| Groep | Omzet | Regels | Aanpak |
+|---|---|---|---|
+| Vloer niet herkend (merknaam vooraan, visgraat/klik pvc/SPC midden in de tekst) | €44.767 | 17 | **gebouwd**, behalve Wessels ("Ruimte 1.18 …:", product alleen in de uitgebreide omschrijving) → Jan: *Vloer toevoegen* |
+| Totaalbedrag (vloeren op €0, prijs op één regel) | €30.488 | 8 | **gebouwd** waar m² bekend zijn; Peelen, Buena Vista (geen m²), A Scholten en Pim Glaser (totaal hoort bij vloerverwarming, die op €0 staat) niet |
+| Egaliseren, egaline, lijm, primer, schuren | €9.544 | 24 | categorie, prijs van Jan |
+| Band en bies | €6.813 | 15 | categorie, prijs van Jan |
+| Fermacell | €6.273 | 3 | categorie, prijs van Jan |
+| Vloerverwarming frezen, cv-ketel, gasgroepen | €5.425 | 5 | categorie, prijs van Jan |
+| Overig (radiatoren, traptreden, profielen, reparatie) | €4.524 | 11 | per stuk, Jan |
+| Snijden en kitten langs plint | €2.206 | 9 | arbeid per meter, Jan |
+| Coating | €1.662 | 3 | Jan |
+| Losse ondervloer | €1.112 | 2 | bestaande ondervloerprijs |
+| Toeslag < 30 m², bezorgkosten | €782 | 5 | geen kosten |
+
+Gebouwd (sync, `lib/teamleader/matching.ts`; werkt pas na een backfill):
+- `isFloorLine`: ook `FLOOR_BRAND_RE` (vinyl, siena, tété, pure, griante, castell vooraan) en
+  `FLOOR_WORD_RE` (visgraat, klik/click pvc, spc ergens in de tekst), niet bij plint/band/bies of een
+  toelichting die met leggen/egaliseren/een getal begint ("Leggen visgraat pvc a €19,50 per m2").
+- `totalOnFloor`: zijn álle vloerregels €0 en is er een regel "Totaalbedrag/Totaalprijs/Afgesproken
+  totaalbedrag", dan gaat dat bedrag naar de vloeren, naar m² (m² uit het aantal, uit de tekst
+  "77m2 …", of bij één vloer uit de totaalregel "per m2"). Zonder m² niets.
+- `lib/extras.ts`: "Vloerbedekking" = tapijt.
+- Simulatie op de dump: 15 offertes, +784 m², +€35.781 vloeromzet. Koopman −€2.126 → omzet €5.785
+  op de vloer.
+- Bewust niet: "Egaliseren, lijmen en leggen" als losse regel naast "alleen leveren" (Jurian
+  Boksebeld, Hazelhoff, €3,4k): hoort bij de vloer, volgt met de categorieën.

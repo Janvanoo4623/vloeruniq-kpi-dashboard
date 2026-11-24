@@ -43,6 +43,19 @@ const FLOOR_TYPE_RE = /^(pvc|visgraat|stroken|tegels|hongaarse|weense|klik|click
 // no P-number, so a priced floor line is never excluded even if it mentions kit.
 // NB: do NOT match "snij" — every floor line carries "incl. X% snijverlies".
 const FINISHING_RE = /kitt/i;
+// Vloeren die met een merk of collectie beginnen in plaats van met een vloertype
+// ("Siena Warm Beige Visgraat", "Tété 051 Honey White | SPC 312", "Castell Premium
+// 871", "Pure", "Griante 10", "Vinyl Supreme Beton"). Gevonden in de dump van alle
+// gewonnen offertes van 2026-11-24: 9 regels, €21k omzet die nergens meetelde.
+// Elk woord gecontroleerd: aan het begin van een regel staat het alleen op vloeren.
+const FLOOR_BRAND_RE = /^(vinyl|siena|t[ée]t[ée]|pure\b|griante|castell)/i;
+// Vloertype midden in de tekst ("Spigato Viranto visgraat click", "SOIL - Klik
+// PVC", "… | SPC 312"). Niet bij plinten, band en bies: "Plakplint | bijpassende
+// kleur klik pvc" is geen vloer.
+const FLOOR_WORD_RE = /\b(visgraat|kli[ck]k? ?pvc|click ?pvc|spc)\b/i;
+// Ook niet bij toelichtingsregels als "Leggen visgraat pvc a €19,50 per m2" of
+// "70m2 PVC Visgraat … x €36,95" (Nico Traanman): die beginnen met een handeling of een aantal.
+const NOT_FLOOR_WORD_RE = /plint|\bband\b|\bbies\b|ondervloer$|^\s*(leggen|egalis|\d)/i;
 // Gietvloeren (lavasteen, microcement) beginnen niet met een vloertype maar met
 // een merk ("Concrada Microcement 2k gietvloer ...") en zijn dus nooit als vloer
 // herkend. Gecheckt op alle 432 geaccepteerde/open offertes (2026-11-05): het
@@ -123,6 +136,8 @@ export function isFloorLine(rawDesc: string): boolean {
   return (
     P_NUMBER_TEST.test(descTrimmed) ||
     FLOOR_TYPE_RE.test(descTrimmed) ||
+    FLOOR_BRAND_RE.test(descTrimmed) ||
+    (FLOOR_WORD_RE.test(descTrimmed) && !NOT_FLOOR_WORD_RE.test(descTrimmed)) ||
     (POURED_FLOOR_RE.test(descTrimmed) && !REMOVAL_RE.test(descTrimmed))
   );
 }
@@ -220,6 +235,49 @@ export function discountFactors(detail: DetailWithLines, totalExcl: number): { f
   return { floor: f, other: f };
 }
 
+type LineItem = NonNullable<NonNullable<NonNullable<DetailWithLines>['grouped_lines']>[number]['line_items']>[number];
+
+const TOTAL_LINE_RE = /^\s*(afgesproken\s+)?totaal(bedrag|prijs)?\b/i;
+const M2_IN_DESC_RE = /^\s*(\d+(?:[.,]\d+)?)\s*m(?:2|²)\b/i;
+const PER_M2_RE = /per\s*m(?:2|²)/i;
+
+/**
+ * Afgesproken totaalbedrag (2026-11-24). Soms staan de vloeren op €0 en staat de
+ * prijs op één regel "Totaalbedrag" / "Totaalprijs" / "Afgesproken totaalbedrag
+ * 62,- per m2" (Koopman, Heinsmann, fam. Valk, Webbink …). Dan telde de vloer
+ * met €0 omzet maar wél met kosten: Koopman kwam op −€2.126 marge.
+ *
+ * Alleen als ÁLLE vloerregels €0 zijn: dan gaat het totaalbedrag naar de vloer,
+ * verdeeld naar m². Staat er bij een vloerregel geen aantal, dan het aantal uit
+ * de tekst ("77m2 Weense Punt …"), of bij één vloerregel het aantal van een
+ * totaalregel "per m2". Zonder m² gebeurt er niets (Peelen, Buena Vista): een
+ * vloer zonder m² heeft geen kosten, dan zou het hele bedrag winst lijken.
+ * Wat er verder op €0 staat (plinten, band en bies) zit zo in de vloeromzet.
+ */
+function totalOnFloor(detail: DetailWithLines): Map<LineItem, { bedrag: number; m2: number }> {
+  const out = new Map<LineItem, { bedrag: number; m2: number }>();
+  const items = (detail?.grouped_lines ?? []).flatMap((g) => g.line_items ?? []);
+  const bedrag = (it: LineItem) => it.total?.tax_exclusive?.amount ?? 0;
+  const totaalRegels = items.filter((it) => bedrag(it) > 0 && TOTAL_LINE_RE.test(it.description ?? ''));
+  const totaal = totaalRegels.reduce((t, it) => t + bedrag(it), 0);
+  if (!(totaal > 0)) return out;
+  const vloeren = items.filter((it) => !TOTAL_LINE_RE.test(it.description ?? '') && isFloorLine(it.description ?? ''));
+  if (!vloeren.length || vloeren.some((it) => bedrag(it) !== 0)) return out;
+  const m2 = vloeren.map((it) => {
+    if ((it.quantity ?? 0) > 0) return it.quantity as number;
+    const t = (it.description ?? '').match(M2_IN_DESC_RE);
+    return t ? Number(t[1].replace(',', '.')) : 0;
+  });
+  if (vloeren.length === 1 && m2[0] === 0) {
+    const perM2 = totaalRegels.find((it) => PER_M2_RE.test(it.description ?? '') && (it.quantity ?? 0) > 1);
+    if (perM2) m2[0] = perM2.quantity as number;
+  }
+  const som = m2.reduce((t, v) => t + v, 0);
+  if (!(som > 0)) return out;
+  vloeren.forEach((it, i) => out.set(it, { bedrag: round((totaal * m2[i]) / som), m2: m2[i] }));
+  return out;
+}
+
 export function parseQuotation(
   summary: TLQuotationSummary,
   detail: TLQuotationDetail | null,
@@ -273,12 +331,15 @@ export function parseQuotation(
     return factor < 1 ? { revenue: round(bruto * factor), revenueBeforeDiscount: bruto } : { revenue: bruto };
   };
 
+  const totaal = totalOnFloor(detail as DetailWithLines);
+
   for (const group of detail?.grouped_lines ?? []) {
     for (const item of group.line_items ?? []) {
       const rawDesc = item.description ?? '';
       const desc = rawDesc.toLowerCase();
       const descTrimmed = rawDesc.trim();
-      const brutoRegel = item.total?.tax_exclusive?.amount ?? 0;
+      const verdeeld = totaal.get(item);
+      const brutoRegel = verdeeld?.bedrag ?? item.total?.tax_exclusive?.amount ?? 0;
 
       // Een negatieve regel is korting ("korting plint", "gratis entreemat"),
       // geen product: hij zit al in de factor hierboven.
@@ -310,7 +371,7 @@ export function parseQuotation(
       }
       if (!isFloorLine(rawDesc)) continue;
 
-      const quantity = item.quantity ?? 0;
+      const quantity = verdeeld?.m2 ?? item.quantity ?? 0;
       const { revenue: lineRevenue, revenueBeforeDiscount } = netto(brutoRegel, 'floor');
       totalM2 += quantity;
       omzetVloer += lineRevenue;
