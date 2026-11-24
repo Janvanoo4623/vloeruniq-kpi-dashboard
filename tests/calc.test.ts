@@ -657,3 +657,15 @@ test('perM2Stats: marge vóór korting en over de hele offerte', async () => {
   assert.equal(s.wholeMarginPerM2, 29);
   assert.equal(s.wholeMarginPct, 52.7);
 });
+
+// ── Los verkocht: ook geen arbeid op plinten, tenzij de regel montage noemt ──
+test('noLabor haalt arbeid van overige producten, behalve bij "Incl. montage"', () => {
+  const plak: QuotationLine = { code: 'Plinten', kind: 'extra', unit: 'm1', qty: 40, revenue: 200, m2: 0, margin: null, desc: 'Plakplint bodiax ultradun' };
+  const mont: QuotationLine = { ...plak, qty: 10, revenue: 150, desc: 'MDF Plint 90x12 | Incl. montage' };
+  const q = offerte({ id: 'los', lines: [regel('P100', 20, 500), plak, mont] });
+  const [r] = resolveQuotations([q], invoer({ overrides: { los: { prices: { plinten: 3 }, noLabor: true } } }));
+  const [, p, m] = r.lines!;
+  assert.equal(p.laborCost, 0);
+  assert.equal(p.margin, 200 - 40 * 3);
+  assert.ok((m.laborCost ?? 0) > 0, 'montage-regel houdt zijn arbeid');
+});

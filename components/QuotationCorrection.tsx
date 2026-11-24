@@ -85,7 +85,7 @@ export default function QuotationCorrection({ q }: { q: QuotationRow }) {
           onChange={toggleNoLabor}
           className="h-3.5 w-3.5 rounded border-line accent-accent"
         />
-        Los verkocht — geen legservice (haalt de arbeidskosten €/m² eruit)
+        Los verkocht — geen legservice (haalt alle arbeid eruit, ook van plinten, trappen enz.)
       </label>
 
       {codes.length > 0 && (

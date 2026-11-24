@@ -234,6 +234,9 @@ export function overriddenFieldKeys(fields: QuotationFields | undefined): Set<st
  * offerte, dan de prijslijst op exact de code (geen deelmatch op de
  * omschrijving — zie lib/extras.ts), dan wat er bij de sync is vastgelegd.
  */
+/** Regeltekst die zegt dat er gemonteerd wordt; dan blijft de arbeid, ook bij "los verkocht". */
+const EXTRA_MONTAGE_RE = /(?<!excl\.?\s*)(incl\.?\s*)?(montage|plaatsen|monteren)/i;
+
 function costForExtra(line: QuotationLine, config: PriceConfig, override: QuotationOverride | undefined): number | null {
   const lower = line.code.trim().toLowerCase();
   const special = override?.prices[lower];
@@ -286,7 +289,15 @@ function recompute(
     if (l.kind !== 'extra') return;
     const qty = l.qty ?? 0;
     const cpu = costForExtra(l, config, override) ?? (LABOR_ONLY_CODES.has(l.code) ? 0 : null);
-    const labor = round2(laborForExtra(l.code, qty, l.desc ?? '', costs.laborRates ?? LABOR_FALLBACK));
+    // "Los verkocht — geen legservice" (noLabor) geldt ook voor plinten, trappen
+    // enz. (Tiebot: plakplinten alleen geleverd). Behalve als de regel zelf
+    // montage noemt ("Incl. montage" bij van der Veen, Sulayman, Goorman), bij
+    // nacalculatie uit facturen (geen tekst om op af te gaan), en bij
+    // codes die alleen arbeid zijn — daar ís de arbeid het product.
+    const labor =
+      override?.noLabor && l.source !== 'factuur' && !LABOR_ONLY_CODES.has(l.code) && !EXTRA_MONTAGE_RE.test(l.desc ?? '')
+        ? 0
+        : round2(laborForExtra(l.code, qty, l.desc ?? '', costs.laborRates ?? LABOR_FALLBACK));
     if (cpu == null) {
       extraLines.set(i, { ...l, margin: null, laborCost: labor });
       return;
